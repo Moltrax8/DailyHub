@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PersonalNoteApp" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Widget'tan açılan görev seçme ekranı: saydam pencere. Karartma (scrim) ve ortalanmış
+         dialog kartı Compose içinde çizilir; böylece ana uygulama gibi tam ekran açılmaz. -->
+    <style name="Theme.PersonalNoteApp.WidgetConfig" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+    </style>
+</resources>

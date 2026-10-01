@@ -1,0 +1,623 @@
+openapi: 3.0.3
+info:
+  title: DailyHub External Integrations
+  version: 0.2.0
+  description: |
+    HTTP surface **consumed** by the DailyHub Android client
+    (`com.moltrax.personalnoteapp`, `app/src/main/java/.../data/remote`).
+
+    DailyHub owns no server. This file documents the two remote APIs it calls:
+
+    1. **ExerciseDB via RapidAPI** (`data/remote/exercisedb/ExerciseDbApi.kt`,
+       wired in `di/NetworkModule.kt`) — exercise library metadata + demo GIF URLs.
+       Optional: empty `EXERCISEDB_KEY` still builds/runs, videos just don't load.
+    2. **Google Drive v3 subset** (`data/remote/drive/DriveApiService.kt`,
+       auth in `data/remote/drive/DriveAuthService.kt`) — local-first backup/sync.
+       The whole dataset is one JSON snapshot file `tasks_sync.json`
+       (`data/remote/drive/model/SyncMetadata.kt`, `version: 3`) stored in the
+       user's Drive `appDataFolder`. No ETag / If-Match: conflicts are resolved
+       client-side with pull-merge-push (last-write-wins on `updatedAt`).
+       Currently gated by `FeatureFlags.DRIVE_SYNC_ENABLED = false`.
+
+    Field types mirror the Kotlin models: ids are UUID strings, timestamps are
+    epoch-millis (`int64`), booleans are JSON booleans (SQLite stores them as 0/1).
+servers:
+  - url: https://exercisedb.p.rapidapi.com/
+    description: ExerciseDB API via RapidAPI
+  - url: https://www.googleapis.com
+    description: Google Drive API v3
+tags:
+  - name: ExerciseDB
+    description: Exercise library consumed by WorkoutRepositoryImpl.
+  - name: DriveSync
+    description: Backup file discovery, download and upload used by SyncRepositoryImpl.
+security: []
+paths:
+  /exercises:
+    get:
+      tags: [ExerciseDB]
+      summary: List exercises (paginated)
+      operationId: listExercises
+      security:
+        - RapidApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Page of exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExerciseDbItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /exercises/bodyPartList:
+    get:
+      tags: [ExerciseDB]
+      summary: List distinct body parts
+      operationId: listBodyParts
+      security:
+        - RapidApiKey: []
+      responses:
+        '200':
+          description: Body part names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: [back, cardio, chest, lower arms, upper legs, waist]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /exercises/bodyPart/{bodyPart}:
+    get:
+      tags: [ExerciseDB]
+      summary: List exercises for one body part
+      operationId: listExercisesByBodyPart
+      security:
+        - RapidApiKey: []
+      parameters:
+        - name: bodyPart
+          in: path
+          required: true
+          schema:
+            type: string
+          example: chest
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Matching exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExerciseDbItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /exercises/name/{name}:
+    get:
+      tags: [ExerciseDB]
+      summary: Search exercises by name
+      operationId: searchExercisesByName
+      security:
+        - RapidApiKey: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          example: bench press
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Matching exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExerciseDbItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /drive/v3/files:
+    get:
+      tags: [DriveSync]
+      summary: Find the backup file by name
+      description: |
+        Mirrors `DriveApiService.findOrNull()`: `GET /drive/v3/files?spaces=...
+        &q=name='tasks_sync.json'&fields=files(id)`.
+        `spaces` is `appDataFolder` when `BuildConfig.DRIVE_SCOPE` contains
+        `appdata`, else `drive`. Empty `files` array means "no backup yet".
+      operationId: findBackupFile
+      security:
+        - DriveOAuth: []
+      parameters:
+        - name: spaces
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [appDataFolder, drive]
+          example: appDataFolder
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          example: name='tasks_sync.json'
+        - name: fields
+          in: query
+          schema:
+            type: string
+            default: files(id)
+      responses:
+        '200':
+          description: File lookup result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [files]
+                properties:
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      required: [id]
+                      properties:
+                        id:
+                          type: string
+                          description: Drive file id, cached in DataStore `drive_file_id`.
+        '401':
+          $ref: '#/components/responses/DriveUnauthorized'
+  /drive/v3/files/{fileId}:
+    get:
+      tags: [DriveSync]
+      summary: Download the backup snapshot
+      description: |
+        Mirrors `DriveApiService.download()`: `GET /drive/v3/files/{fileId}?alt=media`
+        decodes to `SyncMetadata`. `404` means the file was deleted remotely and is
+        treated as "no backup", not an error.
+      operationId: downloadBackupFile
+      security:
+        - DriveOAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: alt
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [media]
+      responses:
+        '200':
+          description: Snapshot content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncMetadata'
+        '404':
+          description: File deleted remotely — client recreates it on next push.
+  /upload/drive/v3/files:
+    post:
+      tags: [DriveSync]
+      summary: Create the backup file (multipart)
+      description: |
+        Mirrors the create branch of `DriveApiService.upload()`:
+        `multipart/related` body with metadata part
+        `{"name":"tasks_sync.json","parents":["appDataFolder"]}` plus the
+        `SyncMetadata` JSON content part.
+      operationId: createBackupFile
+      security:
+        - DriveOAuth: []
+      parameters:
+        - name: uploadType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [multipart]
+        - name: fields
+          in: query
+          schema:
+            type: string
+            default: id
+      requestBody:
+        required: true
+        content:
+          multipart/related:
+            schema:
+              type: object
+              required: [metadata, content]
+              properties:
+                metadata:
+                  type: object
+                  required: [name, parents]
+                  properties:
+                    name:
+                      type: string
+                      enum: [tasks_sync.json]
+                    parents:
+                      type: array
+                      items:
+                        type: string
+                      example: [appDataFolder]
+                content:
+                  $ref: '#/components/schemas/SyncMetadata'
+      responses:
+        '200':
+          description: Created file id
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/DriveUnauthorized'
+  /upload/drive/v3/files/{fileId}:
+    patch:
+      tags: [DriveSync]
+      summary: Overwrite the backup file (media upload)
+      description: |
+        Mirrors the update branch of `DriveApiService.upload()`:
+        `PATCH ...?uploadType=media` with `Content-Type: application/json`
+        and the full `SyncMetadata` body. `404` falls back to create.
+      operationId: updateBackupFile
+      security:
+        - DriveOAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: uploadType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [media]
+        - name: fields
+          in: query
+          schema:
+            type: string
+            default: id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncMetadata'
+      responses:
+        '200':
+          description: Updated file id
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        '404':
+          description: File deleted remotely — client retries as create.
+        '401':
+          $ref: '#/components/responses/DriveUnauthorized'
+components:
+  securitySchemes:
+    RapidApiKey:
+      type: apiKey
+      in: header
+      name: X-RapidAPI-Key
+      description: |
+        RapidAPI key for ExerciseDB (`BuildConfig.EXERCISEDB_KEY` from
+        `local.properties` `EXERCISEDB_KEY`). Optional — requests without it are
+        rejected with 401/403 and the app falls back to cached/offline content.
+    DriveOAuth:
+      type: oauth2
+      description: |
+        Google OAuth2 access token (`Authorization: Bearer <token>` from
+        `GoogleAuthUtil.getToken("oauth2:<scope>")`). Default scope
+        `https://www.googleapis.com/auth/drive.appdata` (BuildConfig.DRIVE_SCOPE).
+      flows:
+        authorizationCode:
+          authorizationUrl: https://accounts.google.com/o/oauth2/auth
+          tokenUrl: https://oauth2.googleapis.com/token
+          scopes:
+            https://www.googleapis.com/auth/drive.appdata: Read/write app-private backup file.
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 100
+    OffsetParam:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    Unauthorized:
+      description: Missing/invalid RapidAPI key.
+    DriveUnauthorized:
+      description: Missing/expired OAuth token or ungranted Drive scope.
+  schemas:
+    ExerciseDbItem:
+      title: ExerciseDbItem
+      description: Raw ExerciseDB record (`ExerciseDbItem` in `ExerciseDbApi.kt`).
+      type: object
+      required: [id, name, bodyPart]
+      properties:
+        id:
+          type: string
+          example: '0001'
+        name:
+          type: string
+          example: barbell bench press
+        bodyPart:
+          type: string
+          example: chest
+        equipment:
+          type: string
+          nullable: true
+          example: barbell
+        gifUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Demo animation; cached to `filesDir/exercise_media/` by `ExerciseVideoStorage`.
+        instructions:
+          type: array
+          items:
+            type: string
+    SyncMetadata:
+      title: SyncMetadata
+      description: |
+        Root of `tasks_sync.json` (`SyncMetadata`, `version: 4`).
+        Missing arrays default to `[]` so v1/v2/v3 backups still decode.
+        LWW merge: tasks and workout groups by `updatedAt` (strict `>` keeps local
+        on ties); categories and sessions union by key with tombstone-wins
+        (`isDeleted` on either side stays deleted); sessions otherwise keep local.
+        List order travels as a `taskOrder` id vector with its own LWW clock
+        (`taskOrderUpdatedAt`); absent/empty vector keeps local order.
+      type: object
+      required: [version, lastModifiedUtc]
+      properties:
+        version:
+          type: integer
+          default: 4
+          example: 4
+        lastModifiedUtc:
+          type: string
+          format: date-time
+          description: Informational `Instant.now().toString()`; conflict resolution uses per-record `updatedAt`, not this field.
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskJson'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryJson'
+        workoutGroups:
+          type: array
+          description: "Includes tombstones (isDeleted=true) so deletes propagate."
+          items:
+            $ref: '#/components/schemas/WorkoutGroup'
+        workoutSessions:
+          type: array
+          description: "Immutable logs incl. tombstones, unioned by id (tombstone wins, else local)."
+          items:
+            $ref: '#/components/schemas/WorkoutSession'
+        taskOrder:
+          type: array
+          description: Task ids in ascending sortOrder; applied when taskOrderUpdatedAt is newer.
+          items:
+            type: string
+        taskOrderUpdatedAt:
+          type: integer
+          format: int64
+          default: 0
+          description: LWW clock for the order vector (DataStore `task_order_updated_at`).
+    TaskJson:
+      title: TaskJson
+      description: Sync form of `domain.model.Task` (same shape as Room `tasks` row).
+      type: object
+      required: [id, title, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        notes: { type: string, nullable: true }
+        dueDate: { type: integer, format: int64, nullable: true, description: Epoch-millis deadline. }
+        priority: { $ref: '#/components/schemas/Priority', default: MEDIUM }
+        isDone: { type: boolean, default: false }
+        isRecurring: { type: boolean, default: false }
+        intervalDays:
+          type: integer
+          nullable: true
+          description: Legacy cadence; used when `recurrenceType` is null or INTERVAL.
+        recurrenceType: { $ref: '#/components/schemas/RecurrenceType', nullable: true }
+        recurrenceDaysOfWeek:
+          type: array
+          items: { type: integer, minimum: 1, maximum: 7 }
+          description: ISO weekday set for WEEKLY recurrence; empty = task's own weekday.
+        focusDurationSeconds: { type: integer, default: 1500 }
+        category:
+          type: string
+          nullable: true
+          description: Category name (natural key into `categories`).
+        subtasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubTask'
+        createdAt: { type: integer, format: int64 }
+        updatedAt:
+          type: integer
+          format: int64
+          description: LWW clock for sync.
+        completedAt: { type: integer, format: int64, nullable: true }
+        sortOrder:
+          type: integer
+          format: int64
+          description: Ascending manual order; new tasks get min-1.
+        linkedWorkoutId:
+          type: string
+          nullable: true
+          description: Single-workout link; mutually exclusive with `linkedProgramId`.
+        linkedProgramId:
+          type: string
+          nullable: true
+        programStartIndex: { type: integer, default: 0 }
+        isPenalty:
+          type: boolean
+          default: false
+          deprecated: true
+          description: Removed gamification flag; always false, kept for old backups.
+        isDeleted:
+          type: boolean
+          default: false
+          description: Tombstone — hidden in UI, included in sync so deletes propagate.
+    CategoryJson:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        isPermanent:
+          type: boolean
+          default: false
+          description: Permanent wins on merge when either side is true.
+        isDeleted:
+          type: boolean
+          default: false
+          description: Tombstone — hidden in UI, wins over live rows on merge.
+    SubTask:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        isDone: { type: boolean, default: false }
+    WorkoutGroup:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        workouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workout'
+        currentIndex: { type: integer, default: 0 }
+        createdAt: { type: integer, format: int64 }
+        updatedAt:
+          type: integer
+          format: int64
+          description: LWW clock; legacy rows fall back to `createdAt`.
+        isDeleted:
+          type: boolean
+          default: false
+          description: Tombstone — hidden in UI, included in sync.
+    Workout:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutExercise'
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+    WorkoutExercise:
+      type: object
+      required: [id, exerciseId, exerciseName]
+      properties:
+        id: { type: string, format: uuid }
+        exerciseId: { type: string }
+        exerciseName: { type: string }
+        plannedSets:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlannedSet'
+        orderIndex: { type: integer, default: 0 }
+        type: { $ref: '#/components/schemas/ExerciseType' }
+    PlannedSet:
+      type: object
+      description: Weight sets use reps/weightKg; cardio uses durationSeconds + steps/distanceMeters.
+      properties:
+        reps: { type: integer, default: 0 }
+        weightKg: { type: number, format: double, nullable: true }
+        durationSeconds: { type: integer, nullable: true }
+        steps: { type: integer, nullable: true }
+        distanceMeters: { type: number, format: double, nullable: true }
+    WorkoutSession:
+      type: object
+      required: [id, workoutId, workoutName, startedAt]
+      properties:
+        id: { type: string, format: uuid }
+        workoutId: { type: string }
+        workoutName: { type: string }
+        startedAt: { type: integer, format: int64 }
+        completedAt: { type: integer, format: int64, nullable: true }
+        loggedExercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoggedExercise'
+        taskId:
+          type: string
+          nullable: true
+          description: Sport task that produced this session, if any.
+        isDeleted:
+          type: boolean
+          default: false
+          description: Tombstone — hidden in UI, wins over live rows on merge.
+    LoggedExercise:
+      type: object
+      required: [exerciseId, exerciseName]
+      properties:
+        exerciseId: { type: string }
+        exerciseName: { type: string }
+        sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoggedSet'
+        type: { $ref: '#/components/schemas/ExerciseType' }
+    LoggedSet:
+      type: object
+      properties:
+        reps: { type: integer, default: 0 }
+        weightKg: { type: number, format: double, nullable: true }
+        durationSeconds: { type: integer, nullable: true }
+        steps: { type: integer, nullable: true }
+        distanceMeters: { type: number, format: double, nullable: true }
+        completedAt: { type: integer, format: int64 }
+    Priority:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+    RecurrenceType:
+      type: string
+      enum: [DAILY, WEEKLY, MONTHLY, INTERVAL]
+      description: Null (absent) = legacy interval behaviour via `intervalDays`.
+    ExerciseType:
+      type: string
+      enum: [WEIGHTLIFTING, BODYWEIGHT, DURATION, CARDIO]
+      description: Derived by `ExerciseType.classify()`; unknown names fall back to WEIGHTLIFTING.

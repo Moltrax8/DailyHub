@@ -1,0 +1,48 @@
+# ─── Android / Kotlin ───────────────────────────────────────────────────────
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+.kotlin/
+
+# Secrets
+local.properties
+app/google-services.json
+
+# Memory / heap dumps (can be hundreds of MB)
+*.hprof
+
+# ─── Flutter remnants (project was migrated from Flutter to native Android) ──
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+.pub-cache/
+.pub/
+.env
+.env.*
+!.env.example
+
+# Signing
+*.jks
+*.keystore
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+desktop.ini
+*.log
+*.apk
+*.aab
+
+# Local-only working docs (never commit)
+ROADMAP.md

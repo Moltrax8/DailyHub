@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DailyHub</string>
+    <string name="widget_description">Shows your pending tasks</string>
+
+    <!-- Common actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_ok">OK</string>
+    <string name="action_add">Add</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_close">Close</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_back">Back</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="loading">Loading…</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_tasks">Tasks</string>
+    <string name="nav_workouts">Workout</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_workout_label">Workout</string>
+
+    <!-- Units -->
+    <string name="unit_kg">kg</string>
+    <string name="unit_m">m</string>
+
+    <!-- Login -->
+    <string name="login_subtitle">Sign in with your Google account</string>
+    <string name="login_button">Sign in with Google</string>
+    <string name="login_drive_permission_error">Drive permission error: %1$s</string>
+
+    <!-- Home -->
+    <string name="home_title">My Tasks</string>
+    <string name="home_pending_badge">%1$d pending</string>
+    <string name="home_manage_categories">Manage categories</string>
+    <string name="home_new_task">New task</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_calendar">Calendar</string>
+    <string name="filter_all">All</string>
+    <string name="filter_active">Active</string>
+    <string name="filter_done">Completed</string>
+    <string name="empty_done">No completed tasks</string>
+    <string name="empty_all">No tasks yet</string>
+    <string name="empty_active">No pending tasks 🎉</string>
+    <string name="categories_all">All categories</string>
+    <string name="undo">Undo</string>
+    <string name="task_completed">Task completed</string>
+    <string name="workout_completed">Workout completed</string>
+    <string name="task_badge_done">Completed</string>
+    <string name="workout_summary_title">Workout Result</string>
+    <string name="workout_summary_empty">No data recorded for this session.</string>
+    <string name="workout_summary_no_logged">No sets entered</string>
+    <string name="workout_summary_total_sets">Total sets</string>
+    <string name="workout_summary_volume">Volume</string>
+    <string name="workout_summary_exercises">Exercises</string>
+    <string name="birthday_title">🎉 Happy birthday!</string>
+    <string name="birthday_msg_age">You turned %1$d today. Have a great day! 🎂</string>
+    <string name="birthday_msg">Today is your day! Have a great one! 🎂</string>
+    <string name="birthday_thanks">Thanks 🥳</string>
+    <string name="subtasks_incomplete_title">Subtasks not completed</string>
+    <string name="subtasks_incomplete_msg">This task still has %1$d open subtasks. Complete the task anyway?</string>
+    <string name="complete_anyway">Complete anyway</string>
+    <string name="permanent_categories">Permanent Categories</string>
+    <string name="permanent_categories_desc">Permanent categories stay visible in the filter even when empty and are not auto-deleted.</string>
+    <string name="no_permanent_categories">No permanent categories yet.</string>
+    <string name="new_permanent_category">New permanent category</string>
+    <string name="category_delete_title">Delete category</string>
+    <string name="category_delete_msg">\"%1$s\" category will be deleted. Tasks in this category will lose their category. Continue?</string>
+    <string name="cd_save_name">Save name</string>
+    <string name="cd_drag_reorder">Drag to reorder</string>
+    <string name="cd_recurring">Recurring</string>
+    <string name="cd_focus">Focus</string>
+
+    <!-- Workout completion (home) -->
+    <string name="workout_complete_title">Complete Workout</string>
+    <string name="workout_complete_subtitle">%1$s — open each exercise and enter your sets.</string>
+    <string name="workout_no_exercises">This workout has no exercises.</string>
+    <string name="complete">Complete</string>
+    <string name="set_count_type">%1$d sets · %2$s</string>
+    <string name="add_set">Add set</string>
+    <string name="add_entry">Add entry</string>
+    <string name="cd_remove_set">Remove set</string>
+
+    <!-- Form fields -->
+    <string name="field_reps">Reps</string>
+    <string name="field_kg">Kg</string>
+    <string name="field_added_kg">+Extra kg</string>
+    <string name="field_duration_sec">Time (s)</string>
+    <string name="field_duration_min">Time (min)</string>
+    <string name="field_steps_distance">Steps / Distance</string>
+    <string name="field_set">Sets</string>
+
+    <!-- Body type -->
+
+    <!-- Goal -->
+
+    <!-- Exercise type -->
+    <string name="exercise_type_weightlifting">Weights</string>
+    <string name="exercise_type_bodyweight">Bodyweight</string>
+    <string name="exercise_type_duration">Duration</string>
+    <string name="exercise_type_cardio">Cardio</string>
+
+    <!-- Onboarding -->
+
+    <!-- Profile -->
+    <string name="profile_sign_out">Sign Out</string>
+    <string name="profile_panel_profile">PROFILE</string>
+    <string name="cd_profile_photo">Profile photo</string>
+    <string name="profile_edit_name_title">Edit name</string>
+    <string name="profile_name_label">Display name</string>
+    <string name="profile_panel_info">PROFILE INFO</string>
+    <string name="profile_birthdate">Birth date</string>
+    <string name="profile_not_selected_tap">Not selected — tap to add</string>
+    <string name="profile_age_value">Age %1$d</string>
+    <string name="profile_settings_subtitle">Reminders, sync, language</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language_desc">Choose the app language. The change applies instantly, no restart needed.</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_task_reminders">Task Reminders</string>
+    <string name="settings_task_reminders_desc">Sends a reminder notification as a task\'s due time approaches.</string>
+    <string name="settings_default_alert">Default Reminder Time</string>
+    <string name="settings_notif_permission">Open / Manage Notification Permissions</string>
+    <string name="settings_section_sync">Synchronization</string>
+    <string name="settings_last_sync">Last sync: %1$s</string>
+    <string name="settings_never_synced">Not synced yet.</string>
+    <string name="settings_push">Push to Drive</string>
+    <string name="settings_pull">Pull from Drive</string>
+    <string name="settings_sign_out">Sign Out</string>
+    <string name="reminder_minutes_before">%1$d minutes before</string>
+    <string name="reminder_hours_before">%1$d hours before</string>
+    <string name="reminder_hours_minutes_before">%1$d h %2$d min before</string>
+
+    <!-- Stats -->
+
+    <!-- Sync banner -->
+    <string name="sync_in_progress">Syncing…</string>
+    <string name="sync_done">Synced</string>
+    <string name="sync_error_prefix">Error: %1$s</string>
+    <string name="sync_detail">Details</string>
+    <string name="sync_error_title">Sync Error</string>
+
+    <!-- Workout list -->
+    <string name="workout_new_program">New Program</string>
+    <string name="workout_program_name">Program name</string>
+    <string name="workout_my_workouts">My Workouts</string>
+    <string name="workout_no_programs">No programs yet</string>
+    <string name="workout_count">%1$d workouts</string>
+
+    <!-- Workout detail -->
+    <string name="workout_new_workout">New Workout</string>
+    <string name="workout_workout_name_hint">Workout name (e.g. Chest Day)</string>
+    <string name="workout_program_fallback">Program</string>
+    <string name="workout_add_workout">Add workout</string>
+    <string name="workout_no_workouts">No workouts yet.\nAdd one with the + at the bottom right.</string>
+    <string name="workout_add_exercise">Add exercise</string>
+    <string name="workout_no_exercises_hint">No exercises — add with +</string>
+    <string name="workout_edit_exercise">Edit exercise</string>
+    <string name="workout_start">Start</string>
+    <string name="workout_plan_values">Plan Values</string>
+    <string name="workout_add_exercise_title">Add Exercise</string>
+    <string name="workout_type_manual">Type (for manual add)</string>
+    <string name="workout_search_exercise">Search exercise name...</string>
+    <string name="workout_results">Results:</string>
+    <string name="workout_add_manual">Add \"%1$s\" manually</string>
+    <string name="workout_hint_weight">Enter your planned sets, reps and weight. These values pre-fill the completion screen.</string>
+    <string name="workout_hint_bodyweight">Bodyweight exercise: enter your planned reps. Leave empty if you don\'t use extra weight (belt/dumbbell).</string>
+    <string name="workout_hint_duration">Duration-based exercise (plank etc.): enter the time per set in seconds.</string>
+    <string name="workout_pick_another">← Pick another exercise</string>
+    <string name="workout_edit_exercise_title">Edit Exercise</string>
+    <string name="workout_type">Type</string>
+    <string name="workout_delete_exercise">Delete exercise</string>
+    <string name="plan_prefix">Plan:</string>
+    <string name="plan_sets_reps">%1$d sets × %2$d reps</string>
+    <string name="plan_sets_reps_bw">%1$d sets × %2$d reps (bodyweight)</string>
+    <string name="plan_sets_x">%1$d sets ×</string>
+    <string name="plan_duration">duration</string>
+
+    <!-- Live workout -->
+    <string name="live_workout_title">Workout</string>
+    <string name="live_workout_finish">Finish</string>
+    <string name="cd_how_to">How to</string>
+    <string name="live_sets_logged">%1$d sets logged</string>
+    <string name="set_index">Set %1$d: %2$s</string>
+    <string name="live_workout_done_title">Workout Completed</string>
+    <string name="live_workout_done_desc">Your sets are saved. If you like, the AI coach can analyze this session and give suggestions.</string>
+    <string name="logged_reps">%1$d reps</string>
+    <string name="logged_bodyweight">bodyweight</string>
+    <string name="logged_seconds">%1$d s</string>
+    <string name="logged_minutes">%1$d min</string>
+    <string name="logged_steps">%1$d steps</string>
+    <string name="logged_entry">entry</string>
+
+    <!-- Focus -->
+    <string name="focus_title">Focus</string>
+
+    <!-- Task detail -->
+    <string name="task_new">New Task</string>
+    <string name="task_edit">Edit Task</string>
+    <string name="task_title_field">Title</string>
+    <string name="task_notes_field">Notes</string>
+    <string name="task_deadline">Due Date and Time</string>
+    <string name="task_deadline_unset">Not set</string>
+    <string name="task_remove_deadline">Remove due date</string>
+    <string name="task_date">Date</string>
+    <string name="task_time">Time</string>
+    <string name="task_category">Category</string>
+    <string name="task_none">None</string>
+    <string name="task_permanent">Permanent</string>
+    <string name="task_new_category">New category</string>
+    <string name="task_add_category">Add category</string>
+    <string name="task_permanent_category_hint">Permanent category (stays even with no tasks)</string>
+    <string name="task_recurring">Recurring</string>
+    <string name="recurrence_daily">Daily</string>
+    <string name="recurrence_weekly">Weekly</string>
+    <string name="recurrence_monthly">Monthly</string>
+    <string name="recurrence_interval">Day interval</string>
+    <string name="task_which_days">Which days?</string>
+    <string name="task_no_days_hint">If no day is selected, the task repeats weekly based on its own day.</string>
+    <string name="task_every_n_days">Every how many days</string>
+    <string name="task_recurring_hint">A recurring task is not deleted when completed; its due date automatically moves to the next cycle.</string>
+    <string name="task_focus_duration">Focus duration: %1$d min</string>
+    <string name="task_focus_optional">Focus time (optional)</string>
+    <string name="task_link_workout">Link Workout</string>
+    <string name="task_single_workout">Single Workout</string>
+    <string name="task_whole_program">Whole Program</string>
+    <string name="task_pick_workout">Pick workout</string>
+    <string name="task_pick_program">Pick program</string>
+    <string name="task_program_label">Program</string>
+    <string name="task_program_days">%1$s (%2$d days)</string>
+    <string name="task_start_day">Start day</string>
+    <string name="task_program_advance_hint">Each time the task is completed, the program advances to the next day.</string>
+    <string name="task_past_date_error">A past date/time cannot be selected.</string>
+    <string name="task_subtasks">Subtasks</string>
+    <string name="task_remove_subtask">Remove subtask</string>
+    <string name="task_new_subtask">New subtask</string>
+    <string name="task_add_subtask">Add subtask</string>
+
+    <!-- Calendar -->
+    <string name="calendar_prev_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_no_tasks">No tasks for this day</string>
+    <string name="calendar_subtask_count">%1$d/%2$d subtasks</string>
+    <string name="weekday_mon">Mon</string>
+    <string name="weekday_tue">Tue</string>
+    <string name="weekday_wed">Wed</string>
+    <string name="weekday_thu">Thu</string>
+    <string name="weekday_fri">Fri</string>
+    <string name="weekday_sat">Sat</string>
+    <string name="weekday_sun">Sun</string>
+
+    <!-- Widget -->
+    <string name="widget_error">An error occurred</string>
+    <string name="widget_empty">No pending tasks 🎉</string>
+
+    <!-- Notifications -->
+    <string name="notif_title">⏰ Task reminder</string>
+    <string name="notif_body">%2$s left until \"%1$s\" is due.</string>
+    <string name="notif_channel_description">Task due-date reminders</string>
+    <string name="settings_exact_alarm_title">On-time alerts</string>
+    <string name="settings_exact_alarm_desc">Without exact-alarm permission reminders may arrive late. Grant it for on-time notifications.</string>
+    <string name="settings_exact_alarm_action">Open exact-alarm permission</string>
+    <string name="notif_permission_rationale">Notification permission is needed for reminders. Without it task alerts cannot be shown.</string>
+    <string name="notif_permission_open_settings">Open settings</string>
+    <string name="notif_time_very_short">a moment</string>
+    <string name="notif_time_minutes">%1$d minutes</string>
+    <string name="notif_time_one_hour">1 hour</string>
+    <string name="notif_time_hours">%1$d hours</string>
+
+    <!-- Exercise media -->
+    <string name="exercise_no_demo">No demo image for this exercise.</string>
+    <string name="exercise_demo_desc">Exercise demo</string>
+
+    <!-- Widget config -->
+    <string name="widget_config_title">Choose tasks to show in this widget</string>
+    <string name="widget_config_desc">You can select multiple tasks. If none is selected, all tasks are shown.</string>
+    <string name="widget_show_all">Show all</string>
+    <string name="widget_no_pending">No pending tasks yet.</string>
+
+    <!-- Profile default -->
+    <string name="profile_default_name">User</string>
+
+    <!-- Widget unknown task -->
+    <string name="task_not_found">Task not found</string>
+
+    <!-- Login Drive consent -->
+    <string name="login_drive_consent_denied">Drive permission not granted. Sync will not work.</string>
+
+    <!-- Focus play/pause -->
+    <string name="focus_play">Start</string>
+    <string name="focus_pause">Pause</string>
+
+    <!-- Priority -->
+    <string name="task_priority">Priority</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+
+    <!-- Exercise demo videos (user's own RapidAPI key) -->
+    <string name="settings_exercisedb_title">Exercise Demo Videos</string>
+    <string name="settings_exercisedb_desc">Your own RapidAPI (ExerciseDB) key for demo videos. Free tier at rapidapi.com. Leave empty to keep videos off; the app works either way.</string>
+    <string name="settings_exercisedb_hint">RapidAPI key</string>
+    <string name="settings_exercisedb_not_set">Not set</string>
+    <string name="settings_exercisedb_clear">Clear</string>
+
+    <!-- Workout JSON import/export -->
+    <string name="workout_import">Import</string>
+    <string name="workout_export_json">Export JSON</string>
+    <string name="workout_program_imported">Program imported successfully</string>
+    <string name="workout_program_exported">Program exported successfully</string>
+    <string name="workout_result_exported">Workout result exported</string>
+    <string name="workout_import_failed">Could not import workout program</string>
+    <string name="workout_import_unsupported">This workout program was created by a newer version of DailyHub.</string>
+    <string name="workout_import_too_large">File too large</string>
+    <string name="workout_export_failed">Export failed</string>
+    <string name="cd_import">Import program</string>
+    <string name="cd_export">Export JSON</string>
+    <string name="cd_more">Options</string>
+</resources>

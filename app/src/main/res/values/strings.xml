@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DailyHub</string>
+    <string name="widget_description">Bekleyen görevlerini gösterir</string>
+
+    <!-- Ortak eylemler -->
+    <string name="action_save">Kaydet</string>
+    <string name="action_cancel">İptal</string>
+    <string name="action_dismiss">Vazgeç</string>
+    <string name="action_ok">Tamam</string>
+    <string name="action_add">Ekle</string>
+    <string name="action_delete">Sil</string>
+    <string name="action_close">Kapat</string>
+    <string name="action_retry">Yeniden Dene</string>
+    <string name="action_back">Geri</string>
+    <string name="action_copy">Kopyala</string>
+    <string name="action_expand">Aç</string>
+    <string name="action_collapse">Kapat</string>
+    <string name="loading">Yükleniyor…</string>
+
+    <!-- Alt navigasyon -->
+    <string name="nav_tasks">Görevler</string>
+    <string name="nav_workouts">Antrenman</string>
+    <string name="nav_profile">Profil</string>
+    <string name="nav_workout_label">Antrenman</string>
+
+    <!-- Birimler -->
+    <string name="unit_kg">kg</string>
+    <string name="unit_m">m</string>
+
+    <!-- Giriş -->
+    <string name="login_subtitle">Google hesabınla giriş yap</string>
+    <string name="login_button">Google ile Giriş Yap</string>
+    <string name="login_drive_permission_error">Drive izni hatası: %1$s</string>
+
+    <!-- Ana ekran -->
+    <string name="home_title">Görevlerim</string>
+    <string name="home_pending_badge">%1$d bekliyor</string>
+    <string name="home_manage_categories">Kategorileri yönet</string>
+    <string name="home_new_task">Yeni görev</string>
+    <string name="tab_tasks">Görevler</string>
+    <string name="tab_calendar">Takvim</string>
+    <string name="filter_all">Tümü</string>
+    <string name="filter_active">Aktif</string>
+    <string name="filter_done">Tamamlananlar</string>
+    <string name="empty_done">Tamamlanan görev yok</string>
+    <string name="empty_all">Henüz görev yok</string>
+    <string name="empty_active">Bekleyen görev yok 🎉</string>
+    <string name="categories_all">Tüm kategoriler</string>
+    <string name="undo">Geri Al</string>
+    <string name="task_completed">Görev tamamlandı</string>
+    <string name="workout_completed">Antrenman tamamlandı</string>
+    <string name="task_badge_done">Tamamlandı</string>
+    <string name="workout_summary_title">Antrenman Sonucu</string>
+    <string name="workout_summary_empty">Bu seans için kayıtlı veri yok.</string>
+    <string name="workout_summary_no_logged">Set girilmedi</string>
+    <string name="workout_summary_total_sets">Toplam set</string>
+    <string name="workout_summary_volume">Hacim</string>
+    <string name="workout_summary_exercises">Hareketler</string>
+    <string name="birthday_title">🎉 Doğum günün kutlu olsun!</string>
+    <string name="birthday_msg_age">Bugün %1$d yaşına girdin. Harika bir gün olsun! 🎂</string>
+    <string name="birthday_msg">Bugün senin günün! Harika bir gün olsun! 🎂</string>
+    <string name="birthday_thanks">Teşekkürler 🥳</string>
+    <string name="subtasks_incomplete_title">Alt görevler tamamlanmadı</string>
+    <string name="subtasks_incomplete_msg">Bu görevde %1$d alt görev hâlâ açık. Yine de görevi tamamlamak istiyor musun?</string>
+    <string name="complete_anyway">Yine de tamamla</string>
+    <string name="permanent_categories">Kalıcı Kategoriler</string>
+    <string name="permanent_categories_desc">Kalıcı kategoriler, içlerinde görev olmasa bile filtrede görünür ve otomatik silinmez.</string>
+    <string name="no_permanent_categories">Henüz kalıcı kategori yok.</string>
+    <string name="new_permanent_category">Yeni kalıcı kategori</string>
+    <string name="category_delete_title">Kategoriyi sil</string>
+    <string name="category_delete_msg">\"%1$s\" kategorisi silinecek. Bu kategorideki görevlerin kategorisi kaldırılacak. Devam edilsin mi?</string>
+    <string name="cd_save_name">Adı kaydet</string>
+    <string name="cd_drag_reorder">Sürükleyerek sırala</string>
+    <string name="cd_recurring">Tekrarlayan</string>
+    <string name="cd_focus">Odak</string>
+
+    <!-- Antrenman tamamlama (ana ekran) -->
+    <string name="workout_complete_title">Antrenmanı Tamamla</string>
+    <string name="workout_complete_subtitle">%1$s — her hareketi açıp setlerini gir.</string>
+    <string name="workout_no_exercises">Bu antrenmanda hareket yok.</string>
+    <string name="complete">Tamamla</string>
+    <string name="set_count_type">%1$d set · %2$s</string>
+    <string name="add_set">Set ekle</string>
+    <string name="add_entry">Kayıt ekle</string>
+    <string name="cd_remove_set">Seti sil</string>
+
+    <!-- Form alanları -->
+    <string name="field_reps">Tekrar</string>
+    <string name="field_kg">Kg</string>
+    <string name="field_added_kg">+Ek kg</string>
+    <string name="field_duration_sec">Süre (sn)</string>
+    <string name="field_duration_min">Süre (dk)</string>
+    <string name="field_steps_distance">Adım / Mesafe</string>
+    <string name="field_set">Set</string>
+
+    <!-- Beden tipi -->
+
+    <!-- Hedef -->
+
+    <!-- Hareket tipi -->
+    <string name="exercise_type_weightlifting">Ağırlık</string>
+    <string name="exercise_type_bodyweight">Vücut Ağırlığı</string>
+    <string name="exercise_type_duration">Süre</string>
+    <string name="exercise_type_cardio">Kardiyo</string>
+
+    <!-- Onboarding -->
+
+    <!-- Profil -->
+    <string name="profile_sign_out">Oturumu Kapat</string>
+    <string name="profile_panel_profile">PROFİL</string>
+    <string name="cd_profile_photo">Profil fotoğrafı</string>
+    <string name="profile_edit_name_title">İsmi düzenle</string>
+    <string name="profile_name_label">Görünen ad</string>
+    <string name="profile_panel_info">PROFİL BİLGİLERİ</string>
+    <string name="profile_birthdate">Doğum tarihi</string>
+    <string name="profile_not_selected_tap">Seçilmedi — dokunarak ekle</string>
+    <string name="profile_age_value">Yaş %1$d</string>
+    <string name="profile_settings_subtitle">Hatırlatma, senkronizasyon, dil</string>
+
+    <!-- Ayarlar -->
+    <string name="settings_title">Ayarlar</string>
+    <string name="settings_section_language">Dil</string>
+    <string name="settings_language_desc">Uygulama dilini seç. Değişiklik anında uygulanır, yeniden başlatma gerekmez.</string>
+    <string name="settings_section_notifications">Bildirimler</string>
+    <string name="settings_task_reminders">Görev Hatırlatmaları</string>
+    <string name="settings_task_reminders_desc">Görev bitiş saatine yaklaşınca hatırlatma bildirimi gönderir.</string>
+    <string name="settings_default_alert">Varsayılan Uyarı Süresi</string>
+    <string name="settings_notif_permission">Bildirim İzinlerini Aç / Yönet</string>
+    <string name="settings_section_sync">Senkronizasyon</string>
+    <string name="settings_last_sync">Son senkronizasyon: %1$s</string>
+    <string name="settings_never_synced">Henüz senkronizasyon yapılmadı.</string>
+    <string name="settings_push">Drive\'a Gönder</string>
+    <string name="settings_pull">Drive\'dan Al</string>
+    <string name="settings_sign_out">Çıkış Yap</string>
+    <string name="reminder_minutes_before">%1$d dakika önce</string>
+    <string name="reminder_hours_before">%1$d saat önce</string>
+    <string name="reminder_hours_minutes_before">%1$d sa %2$d dk önce</string>
+
+    <!-- İstatistikler -->
+
+    <!-- Senkronizasyon banner -->
+    <string name="sync_in_progress">Senkronize ediliyor…</string>
+    <string name="sync_done">Senkronize edildi</string>
+    <string name="sync_error_prefix">Hata: %1$s</string>
+    <string name="sync_detail">Detay</string>
+    <string name="sync_error_title">Senkronizasyon Hatası</string>
+
+    <!-- Antrenman listesi -->
+    <string name="workout_new_program">Yeni Program</string>
+    <string name="workout_program_name">Program adı</string>
+    <string name="workout_my_workouts">Antrenmanlarım</string>
+    <string name="workout_no_programs">Henüz program yok</string>
+    <string name="workout_count">%1$d antrenman</string>
+
+    <!-- Antrenman detayı -->
+    <string name="workout_new_workout">Yeni Antrenman</string>
+    <string name="workout_workout_name_hint">Antrenman adı (örn. Göğüs Günü)</string>
+    <string name="workout_program_fallback">Program</string>
+    <string name="workout_add_workout">Antrenman ekle</string>
+    <string name="workout_no_workouts">Henüz antrenman yok.\nSağ alttaki + ile ekle.</string>
+    <string name="workout_add_exercise">Hareket ekle</string>
+    <string name="workout_no_exercises_hint">Hareket yok — + ile ekle</string>
+    <string name="workout_edit_exercise">Hareketi düzenle</string>
+    <string name="workout_start">Başlat</string>
+    <string name="workout_plan_values">Plan Değerleri</string>
+    <string name="workout_add_exercise_title">Hareket Ekle</string>
+    <string name="workout_type_manual">Tip (manuel ekleme için)</string>
+    <string name="workout_search_exercise">Hareket adı ara...</string>
+    <string name="workout_results">Sonuçlar:</string>
+    <string name="workout_add_manual">\"%1$s\" hareketini manuel ekle</string>
+    <string name="workout_hint_weight">Planladığın set, tekrar ve ağırlığı gir. Bu değerler tamamlama ekranını ön-doldurur.</string>
+    <string name="workout_hint_bodyweight">Vücut ağırlığı hareketi: planladığın tekrarı gir. Ek ağırlık (kemer/dumbbell) kullanmıyorsan boş bırak.</string>
+    <string name="workout_hint_duration">Süre bazlı hareket (plank vb.): set başına süreyi saniye olarak gir.</string>
+    <string name="workout_pick_another">← Başka hareket seç</string>
+    <string name="workout_edit_exercise_title">Hareketi Düzenle</string>
+    <string name="workout_type">Tip</string>
+    <string name="workout_delete_exercise">Hareketi sil</string>
+    <string name="plan_prefix">Plan:</string>
+    <string name="plan_sets_reps">%1$d set × %2$d tekrar</string>
+    <string name="plan_sets_reps_bw">%1$d set × %2$d tekrar (vücut ağırlığı)</string>
+    <string name="plan_sets_x">%1$d set ×</string>
+    <string name="plan_duration">süre</string>
+
+    <!-- Canlı antrenman -->
+    <string name="live_workout_title">Antrenman</string>
+    <string name="live_workout_finish">Bitir</string>
+    <string name="cd_how_to">Nasıl yapılır</string>
+    <string name="live_sets_logged">%1$d set kaydedildi</string>
+    <string name="set_index">Set %1$d: %2$s</string>
+    <string name="live_workout_done_title">Antrenman Tamamlandı</string>
+    <string name="live_workout_done_desc">Setlerin kaydedildi. İstersen AI koç bu seansı analiz edip öneri sunabilir.</string>
+    <string name="logged_reps">%1$d tekrar</string>
+    <string name="logged_bodyweight">vücut ağırlığı</string>
+    <string name="logged_seconds">%1$d sn</string>
+    <string name="logged_minutes">%1$d dk</string>
+    <string name="logged_steps">%1$d adım</string>
+    <string name="logged_entry">kayıt</string>
+
+    <!-- Odak -->
+    <string name="focus_title">Odak</string>
+
+    <!-- Görev detayı -->
+    <string name="task_new">Yeni Görev</string>
+    <string name="task_edit">Görevi Düzenle</string>
+    <string name="task_title_field">Başlık</string>
+    <string name="task_notes_field">Notlar</string>
+    <string name="task_deadline">Bitiş Tarihi ve Saati</string>
+    <string name="task_deadline_unset">Belirlenmedi</string>
+    <string name="task_remove_deadline">Bitiş tarihini kaldır</string>
+    <string name="task_date">Tarih</string>
+    <string name="task_time">Saat</string>
+    <string name="task_category">Kategori</string>
+    <string name="task_none">Yok</string>
+    <string name="task_permanent">Kalıcı</string>
+    <string name="task_new_category">Yeni kategori</string>
+    <string name="task_add_category">Kategori ekle</string>
+    <string name="task_permanent_category_hint">Kalıcı kategori (içinde görev olmasa da kalır)</string>
+    <string name="task_recurring">Tekrarlayan</string>
+    <string name="recurrence_daily">Her gün</string>
+    <string name="recurrence_weekly">Haftalık</string>
+    <string name="recurrence_monthly">Aylık</string>
+    <string name="recurrence_interval">Gün aralığı</string>
+    <string name="task_which_days">Hangi günler?</string>
+    <string name="task_no_days_hint">Gün seçilmezse görevin kendi gününe göre haftalık tekrar eder.</string>
+    <string name="task_every_n_days">Kaç günde bir</string>
+    <string name="task_recurring_hint">Tekrarlayan görev tamamlandığında silinmez; bitiş tarihi otomatik olarak bir sonraki döngüye taşınır.</string>
+    <string name="task_focus_duration">Odak süresi: %1$d dk</string>
+    <string name="task_focus_optional">Odak süresi (opsiyonel)</string>
+    <string name="task_link_workout">Antrenman Bağla</string>
+    <string name="task_single_workout">Tek Antrenman</string>
+    <string name="task_whole_program">Tüm Program</string>
+    <string name="task_pick_workout">Antrenman seç</string>
+    <string name="task_pick_program">Program seç</string>
+    <string name="task_program_label">Program</string>
+    <string name="task_program_days">%1$s (%2$d gün)</string>
+    <string name="task_start_day">Başlangıç günü</string>
+    <string name="task_program_advance_hint">Görev her tamamlandığında program bir sonraki güne ilerler.</string>
+    <string name="task_past_date_error">Geçmiş bir tarih/saat seçilemez.</string>
+    <string name="task_subtasks">Alt Görevler</string>
+    <string name="task_remove_subtask">Alt görevi sil</string>
+    <string name="task_new_subtask">Yeni alt görev</string>
+    <string name="task_add_subtask">Alt görev ekle</string>
+
+    <!-- Takvim -->
+    <string name="calendar_prev_month">Önceki ay</string>
+    <string name="calendar_next_month">Sonraki ay</string>
+    <string name="calendar_no_tasks">Bu gün için görev yok</string>
+    <string name="calendar_subtask_count">%1$d/%2$d alt görev</string>
+    <string name="weekday_mon">Pzt</string>
+    <string name="weekday_tue">Sal</string>
+    <string name="weekday_wed">Çar</string>
+    <string name="weekday_thu">Per</string>
+    <string name="weekday_fri">Cum</string>
+    <string name="weekday_sat">Cmt</string>
+    <string name="weekday_sun">Paz</string>
+
+    <!-- Widget -->
+    <string name="widget_error">Hata oluştu</string>
+    <string name="widget_empty">Bekleyen görev yok 🎉</string>
+
+    <!-- Bildirimler -->
+    <string name="notif_title">⏰ Görev hatırlatması</string>
+    <string name="notif_body">\"%1$s\" görevinin bitişine %2$s kaldı.</string>
+    <string name="notif_channel_description">Görev bitiş hatırlatmaları</string>
+    <string name="settings_exact_alarm_title">Tam zamanında uyarılar</string>
+    <string name="settings_exact_alarm_desc">Kesin alarmlara izin verilmezse hatırlatmalar gecikebilir. Tam zamanında bildirim için izin ver.</string>
+    <string name="settings_exact_alarm_action">Kesin alarm iznini aç</string>
+    <string name="notif_permission_rationale">Hatırlatmalar için bildirim izni gerekli. İzin verilmezse görev uyarıları gösterilemez.</string>
+    <string name="notif_permission_open_settings">Ayarları aç</string>
+    <string name="notif_time_very_short">çok az</string>
+    <string name="notif_time_minutes">%1$d dakika</string>
+    <string name="notif_time_one_hour">1 saat</string>
+    <string name="notif_time_hours">%1$d saat</string>
+
+    <!-- Egzersiz medyası -->
+    <string name="exercise_no_demo">Bu hareket için demo görseli yok.</string>
+    <string name="exercise_demo_desc">Egzersiz demosu</string>
+
+    <!-- Widget yapılandırma -->
+    <string name="widget_config_title">Bu widget\'ta gösterilecek görevleri seç</string>
+    <string name="widget_config_desc">Birden fazla görev seçebilirsin. Hiçbiri seçilmezse tüm görevler gösterilir.</string>
+    <string name="widget_show_all">Tümünü göster</string>
+    <string name="widget_no_pending">Henüz bekleyen görev yok.</string>
+
+    <!-- Profil varsayılan -->
+    <string name="profile_default_name">Kullanıcı</string>
+
+    <!-- Widget bilinmeyen görev -->
+    <string name="task_not_found">Görev bulunamadı</string>
+
+    <!-- Giriş Drive onayı -->
+    <string name="login_drive_consent_denied">Drive izni verilmedi. Senkronizasyon çalışmaz.</string>
+
+    <!-- Odak oynat/duraklat -->
+    <string name="focus_play">Başlat</string>
+    <string name="focus_pause">Duraklat</string>
+
+    <!-- Öncelik -->
+    <string name="task_priority">Öncelik</string>
+    <string name="priority_low">Düşük</string>
+    <string name="priority_medium">Orta</string>
+    <string name="priority_high">Yüksek</string>
+
+    <!-- Egzersiz demo videoları (kullanıcının kendi RapidAPI anahtarı) -->
+    <string name="settings_exercisedb_title">Egzersiz Demo Videoları</string>
+    <string name="settings_exercisedb_desc">Demo videoları için kendi RapidAPI (ExerciseDB) anahtarınız. Ücretsiz katman rapidapi.com adresinden alınır. Boş bırakılırsa videolar kapalı kalır, uygulama yine çalışır.</string>
+    <string name="settings_exercisedb_hint">RapidAPI anahtarı</string>
+    <string name="settings_exercisedb_not_set">Ayarlanmadı</string>
+    <string name="settings_exercisedb_clear">Temizle</string>
+
+    <!-- Antrenman JSON içe/dışa aktarma -->
+    <string name="workout_import">İçe Aktar</string>
+    <string name="workout_export_json">JSON Dışa Aktar</string>
+    <string name="workout_program_imported">Program içe aktarıldı</string>
+    <string name="workout_program_exported">Program dışa aktarıldı</string>
+    <string name="workout_result_exported">Antrenman sonucu dışa aktarıldı</string>
+    <string name="workout_import_failed">Antrenman programı içe aktarılamadı</string>
+    <string name="workout_import_unsupported">Bu antrenman programı daha yeni bir DailyHub sürümüyle oluşturuldu.</string>
+    <string name="workout_import_too_large">Dosya çok büyük</string>
+    <string name="workout_export_failed">Dışa aktarma başarısız</string>
+    <string name="cd_import">Program içe aktar</string>
+    <string name="cd_export">JSON dışa aktar</string>
+    <string name="cd_more">Seçenekler</string>
+</resources>
