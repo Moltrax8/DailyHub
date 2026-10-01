@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: DailyHub External Integrations
-  version: 0.2.0
+  version: 1.0.0
   description: |
     HTTP surface **consumed** by the DailyHub Android client
     (`com.moltrax.personalnoteapp`, `app/src/main/java/.../data/remote`).

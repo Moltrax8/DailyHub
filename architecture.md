@@ -2,7 +2,7 @@
 
 > Source of truth reverse-engineered from code (September 2026).
 > App module: `PersonalNoteApp` · package `com.moltrax.personalnoteapp`
-> Version `0.2` (`versionCode 2`) · `minSdk 26`, `targetSdk/compileSdk 35`, Java/Kotlin JVM `17`.
+> Version `1.0` (`versionCode 10`) · `minSdk 26`, `targetSdk/compileSdk 35`, Java/Kotlin JVM `17`.
 > Single-module native Android app: Kotlin + Jetpack Compose (Material 3) + Hilt + Room + DataStore + Retrofit + WorkManager + Glance.
 
 Related artefacts in this repo:
@@ -269,4 +269,4 @@ Commands (Windows): `gradlew.bat :app:assembleDebug` (auto-signed, unoptimised) 
 - Never resurrect deletes: workout-group deletes are tombstones (`isDeleted=1`, children removed), sessions are append-only, `food/vault/body-weight` tables are intentionally dropped — do not reintroduce them without a migration.
 - `linkedWorkoutId` and `linkedProgramId` are mutually exclusive; completing a program-linked task resolves that day's workout via `programStartIndex` + group `currentIndex`.
 - Drive sync has no server timestamps — `updatedAt`/`lastModifiedUtc` are client clocks; keep LWW comparisons as strict `>` so equal timestamps keep local.
-- `google-services.json` and `release.jks` are git-ignored secrets; `DailyHub-v0.2.apk` at repo root is a prebuilt artefact, not a build input.
+- `google-services.json` and `release.jks` are git-ignored secrets; release APKs (e.g. `DailyHub-v1.0.apk`) are published via GitHub Releases, never committed to the repo.
