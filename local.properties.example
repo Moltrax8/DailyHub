@@ -1,22 +1,22 @@
-# Bu dosyayı kopyalayıp local.properties olarak adlandır.
-# ASLA git'e commit etme — .gitignore'da zaten var.
+# Copy this file to local.properties.
+# NEVER commit it to git — it's already in .gitignore.
 
-# Android SDK yolu
-sdk.dir=C:\\Users\\<kullanıcı>\\AppData\\Local\\Android\\Sdk
+# Android SDK path
+sdk.dir=C:\\Users\\<user>\\AppData\\Local\\Android\\Sdk
 
 # Google Cloud Console → OAuth 2.0 Client IDs → Android
-# SHA-1 fingerprint + package name ile oluşturulur.
+# Created with your SHA-1 fingerprint + package name.
 GOOGLE_CLIENT_ID=your_web_client_id_here.apps.googleusercontent.com
 
-# ExerciseDB API Key (RapidAPI'den alınır — opsiyonel)
+# ExerciseDB API Key (from RapidAPI — optional)
 EXERCISEDB_KEY=your_exercisedb_key_here
 
-# Google Drive ayarları (değiştirmene gerek yok)
+# Google Drive settings (no need to change)
 DRIVE_FOLDER_NAME=DailyHubBackup
 DRIVE_SCOPE=https://www.googleapis.com/auth/drive.appdata
 
-# ── Release imzalama (yalnızca release APK/AAB üretirken gerekir) ──
-# release.jks dosyasını proje kökünde tut; .gitignore *.jks'i zaten yoksayar.
+# ── Release signing (only needed for release APK/AAB builds) ──
+# Keep the release.jks file in the project root; .gitignore already ignores *.jks.
 RELEASE_STORE_FILE=release.jks
 RELEASE_STORE_PASSWORD=your_keystore_password
 RELEASE_KEY_ALIAS=your_key_alias
