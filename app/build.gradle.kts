@@ -77,6 +77,14 @@ android {
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
+
+    applicationVariants.all {
+        outputs.all {
+            if (this is com.android.build.gradle.api.ApkVariantOutput) {
+                outputFileName = "DailyHub-v${versionName}.apk"
+            }
+        }
+    }
 }
 
 dependencies {
