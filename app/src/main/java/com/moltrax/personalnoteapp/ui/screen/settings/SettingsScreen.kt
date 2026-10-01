@@ -38,7 +38,7 @@ import com.moltrax.personalnoteapp.ui.i18n.AppLanguage
 import com.moltrax.personalnoteapp.ui.navigation.Login
 import com.moltrax.personalnoteapp.ui.theme.AppColors
 
-// Anlamlı hatırlatma ön ayarları (dakika)
+// Meaningful reminder presets (minutes)
 private val reminderPresets = listOf(5, 10, 15, 30, 45, 60, 90, 120, 180, 360, 720, 1440)
 
 private fun reminderLabel(context: Context, m: Int): String = when {
@@ -56,7 +56,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val language        by vm.language.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    // Kesin-alarm izni ayarlardan dönünce değişmiş olabilir; ON_RESUME'da tazele.
+    // The exact-alarm permission may have changed after returning from settings; refresh on ON_RESUME.
     var exactAlarmGranted by remember { mutableStateOf(vm.canScheduleExactAlarms()) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -68,8 +68,8 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    // Dil değişimini Activity-kapsamlı AppViewModel üzerinden yap; böylece kök composition'daki
-    // "Yükleniyor" göstergesi (MainActivity) aynı örneği dinler.
+    // Apply language changes via the Activity-scoped AppViewModel, so the "Loading"
+    // indicator (MainActivity) listens to the same instance.
     val appVm: AppViewModel = hiltViewModel(context.findActivity())
     var showKeyDialog by remember { mutableStateOf(false) }
     var keyInput by remember { mutableStateOf("") }
@@ -152,7 +152,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.settings_notif_permission)) }
-                // Kesin alarm izni yoksa hatırlatmalar gecikebilir — izin ekranına yönlendir.
+                // Without the exact-alarm permission reminders may be delayed — route to the permission screen.
                 if (!exactAlarmGranted) {
                     OutlinedButton(
                         onClick = { vm.openExactAlarmSettings() },
@@ -167,7 +167,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 }
             }
 
-            // --- Egzersiz demo videoları (kullanıcının kendi RapidAPI anahtarı) ---
+            // --- Exercise demo videos (the user's own RapidAPI key) ---
             SettingsSection(title = stringResource(R.string.settings_exercisedb_title), icon = Icons.Filled.FitnessCenter) {
                 val apiKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
                 Text(
@@ -196,9 +196,9 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 }
             }
 
-            // --- Senkronizasyon + Hesap ---
-            // Drive sync şimdilik kapalı (bkz. FeatureFlags): giriş yapılmadığından
-            // yedekleme/çıkış bölümleri gizlenir. Bayrak açılınca geri gelir.
+            // --- Sync + Account ---
+            // Drive sync is off for now (see FeatureFlags): since there is no sign-in, the
+            // backup/sign-out sections are hidden. They return once the flag is enabled.
             if (FeatureFlags.DRIVE_SYNC_ENABLED) {
                 SettingsSection(title = stringResource(R.string.settings_section_sync), icon = Icons.Filled.CloudSync) {
                     Text(
@@ -237,7 +237,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         }
     }
 
-    // RapidAPI anahtar giriş diyaloğu: kaydet boşsa temizler, iptal dokunmaz.
+    // RapidAPI key input dialog: saving with empty input clears it, cancel leaves it untouched.
     if (showKeyDialog) {
         AlertDialog(
             onDismissRequest = { showKeyDialog = false },
@@ -264,7 +264,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     }
 }
 
-/** İki dilli (TR/EN) modern seçici: yan yana iki seçilebilir buton. Seçim anında uygulanır. */
+/** Bilingual (TR/EN) modern picker: two selectable buttons side by side. The selection applies instantly. */
 @Composable
 private fun LanguageSelector(current: String, onSelect: (String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -289,7 +289,7 @@ private fun LanguageSelector(current: String, onSelect: (String) -> Unit) {
 }
 
 /**
- * Tek bir ayar grubu için yuvarlatılmış kart. Başlıkta bir ikon + bölüm adı; altında [content].
+ * Rounded card for a single settings group. An icon + section name in the header; [content] below.
  */
 @Composable
 private fun SettingsSection(
@@ -317,8 +317,8 @@ private fun SettingsSection(
 }
 
 /**
- * Bu context'i saran [ComponentActivity]'yi bulur. MainActivity, LocalContext'i yerelleştirilmiş bir
- * [ContextWrapper] ile sardığından doğrudan cast yerine zinciri yürümek gerekir.
+ * Finds the [ComponentActivity] wrapping this context. MainActivity wraps LocalContext in a localized
+ * [ContextWrapper], so the chain must be walked instead of casting directly.
  */
 private fun Context.findActivity(): ComponentActivity {
     var ctx: Context = this
@@ -329,7 +329,7 @@ private fun Context.findActivity(): ComponentActivity {
     error("SettingsScreen bir ComponentActivity içinde barındırılmalı")
 }
 
-/** Başlık + açıklama solda, sağda Switch — aç/kapat ayarları için hizalı satır. */
+/** Title + description on the left, Switch on the right — aligned row for on/off settings. */
 @Composable
 private fun SettingsSwitchRow(
     title: String,

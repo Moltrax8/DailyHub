@@ -9,8 +9,8 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Galeri seçimi modern Photo Picker (PickVisualMedia) ile yapılır; bu izin gerektirmez.
-         Aşağıdaki medya izinleri yalnızca olası doğrudan MediaStore erişimleri için tutulur. -->
+    <!-- Gallery selection is done with the modern Photo Picker (PickVisualMedia); it needs no permission.
+         The media permissions below are kept only for possible direct MediaStore access. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -62,10 +62,10 @@
                 android:resource="@xml/task_widget_info" />
         </receiver>
 
-        <!-- Widget'tan çark butonuyla açılan görev seçme ekranı. Saydam, ana uygulamadan ayrı bir
-             task'ta (taskAffinity boş) çalışır; recents'te görünmez. Böylece ana uygulama açılmaz ve
-             kapatıldığında doğrudan ana ekrana dönülür. Zorunlu kurulum kaldırıldığı için
-             APPWIDGET_CONFIGURE intent-filter'ı yoktur; yalnızca açık intent ile başlatılır. -->
+        <!-- Task-selection screen opened via the gear button from the widget. Transparent, runs in a
+             separate task from the main app (empty taskAffinity); invisible in recents. The main app thus never opens and
+             closing returns directly to the home screen. Since mandatory setup was removed, there is
+             no APPWIDGET_CONFIGURE intent-filter; it is only started via explicit intent. -->
         <activity
             android:name=".widget.TaskWidgetConfigActivity"
             android:exported="false"
@@ -74,8 +74,8 @@
             android:taskAffinity=""
             android:excludeFromRecents="true" />
 
-        <!-- Photo Picker backport: Android 11 ve altındaki cihazlarda Google Play hizmetleri
-             üzerinden modern Photo Picker modülünün yüklenmesini tetikler. -->
+        <!-- Photo Picker backport: triggers loading of the modern Photo Picker module via Google Play services
+             on devices running Android 11 and below. -->
         <service
             android:name="com.google.android.gms.metadata.ModuleDependencies"
             android:enabled="false"

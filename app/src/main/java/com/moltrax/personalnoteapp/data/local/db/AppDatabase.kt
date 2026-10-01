@@ -42,23 +42,23 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
-// Vault AES/GCM geçişi: kayıt başına rastgele salt sütunu (eski CBC kayıtlarında boş kalır)
+// Vault AES/GCM transition: per-record random salt column (left empty in legacy CBC records)
 val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE vault_entries ADD COLUMN salt TEXT NOT NULL DEFAULT ''")
     }
 }
 
-// Kasa (vault) özelliği kaldırıldı: tabloyu tamamen düşür.
+// Vault feature removed: drop the table entirely.
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("DROP TABLE IF EXISTS vault_entries")
     }
 }
 
-// Görevlere manuel sıralama (drag-and-drop) için sortOrder sütunu. Mevcut görevlere
-// -createdAt atanır: sortOrder ARTAN sırada okunduğunda en yeni görev üstte kalır,
-// yani eski "createdAt DESC" davranışı korunur.
+// sortOrder column for manual ordering (drag-and-drop) of tasks. Existing tasks get
+// -createdAt: when read in ASCENDING sortOrder, the newest task stays on top,
+// preserving the old "createdAt DESC" behavior.
 val MIGRATION_5_6 = object : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE tasks ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
@@ -66,8 +66,8 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
-// Kategori yaşam döngüsü: categories tablosu (name PK + isPermanent). Mevcut görevlerdeki
-// kategoriler geçici (isPermanent = 0) olarak tohumlanır.
+// Category lifecycle: categories table (name PK + isPermanent). Categories found in
+// existing tasks are seeded as temporary (isPermanent = 0).
 val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -88,33 +88,33 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
-// Besin kayıtlarına iliştirilen fotoğrafın iç depolama yolu için imagePath sütunu.
-// Mevcut kayıtlarda NULL kalır (fotoğrafsız).
+// imagePath column for the internal-storage path of the photo attached to nutrition records.
+// Stays NULL in existing records (no photo).
 val MIGRATION_7_8 = object : Migration(7, 8) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE food_entries ADD COLUMN imagePath TEXT")
     }
 }
 
-// Besin kayıtları için soft-delete: isDeleted sütunu. Mevcut kayıtlar silinmemiş (0) kabul edilir.
-// Silinen öğeler mezar taşı olarak kalır, böylece Drive senkronizasyonu onları diriltmez.
+// Soft-delete for nutrition records: isDeleted column. Existing records are considered not deleted (0).
+// Deleted items remain as tombstones so Drive sync does not resurrect them.
 val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE food_entries ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
     }
 }
 
-// Egzersiz tipi (ağırlık/kardiyo): workout_exercises tablosuna type sütunu. Mevcut hareketler
-// "WEIGHTLIFTING" varsayılır. Set verileri (kardiyo adım/mesafe dahil) JSON sütunlarda tutulduğundan
-// ek şema değişikliği gerekmez (eski JSON, varsayılan alanlarla geriye dönük uyumludur).
+// Exercise type (strength/cardio): type column on workout_exercises. Existing movements
+// default to "WEIGHTLIFTING". Since set data (including cardio steps/distance) is kept in JSON
+// columns, no further schema change is needed (old JSON stays backward compatible via default fields).
 val MIGRATION_9_10 = object : Migration(9, 10) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE workout_exercises ADD COLUMN type TEXT NOT NULL DEFAULT 'WEIGHTLIFTING'")
     }
 }
 
-// Görevlere tüm program (WorkoutGroup) bağlama: linkedProgramId + döngü başlangıç günü
-// (programStartIndex). Mevcut görevlerde program bağı yoktur (NULL / 0).
+// Attaching a whole program (WorkoutGroup) to tasks: linkedProgramId + cycle start day
+// (programStartIndex). Existing tasks have no program attachment (NULL / 0).
 val MIGRATION_10_11 = object : Migration(10, 11) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE tasks ADD COLUMN linkedProgramId TEXT")
@@ -122,9 +122,9 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
-// Vücut ağırlığı geçmişi: gelişim raporundaki çizgi grafiğin veri kaynağı. Günde tek kayıt
-// (epochDay birincil anahtar). Mevcut kullanıcılarda tablo boş başlar; ilk açılışta StatsViewModel
-// güncel kiloyu tek bir başlangıç noktası olarak tohumlar.
+// Body-weight history: data source for the line chart in the progress report. One record per day
+// (epochDay primary key). Starts empty for existing users; on first launch StatsViewModel
+// seeds the current weight as a single starting point.
 val MIGRATION_11_12 = object : Migration(11, 12) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -139,17 +139,17 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
     }
 }
 
-// Ceza Bölgesi: görevlere isPenalty sütunu. Bitiş süresi (deadline) geçtiği halde tamamlanmayan
-// spora linkli görevler için sistem otomatik kırmızı/silinemeyen ceza görevi üretir. Mevcut
-// görevler ceza değildir (0).
+// Penalty Zone: isPenalty column on tasks. For sport-linked tasks left incomplete past their
+// deadline, the system auto-generates a red/non-deletable penalty task. Existing
+// tasks are not penalties (0).
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE tasks ADD COLUMN isPenalty INTEGER NOT NULL DEFAULT 0")
     }
 }
 
-// Alt görevler (checklist) + zengin tekrar biçimi. subtasks/recurrenceDaysOfWeek JSON metin olarak
-// saklanır (Converters); recurrenceType eski görevlerde NULL kalır → intervalDays davranışı korunur.
+// Subtasks (checklist) + rich recurrence format. subtasks/recurrenceDaysOfWeek are stored as JSON
+// text (Converters); recurrenceType stays NULL on old tasks → intervalDays behavior is preserved.
 val MIGRATION_13_14 = object : Migration(13, 14) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE tasks ADD COLUMN recurrenceType TEXT")
@@ -158,10 +158,9 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
-// Senkronizasyon silme hatası düzeltmesi: workout_groups tablosuna updatedAt (LWW zaman damgası)
-// ve isDeleted (mezar taşı) sütunları. Mevcut gruplara updatedAt = createdAt verilir; hiçbiri
-// silinmiş değildir (0). Böylece silinen bir antrenman/grup Drive senkronizasyonundan sonra geri
-// dirilmez.
+// Sync deletion-bug fix: updatedAt (LWW timestamp) and isDeleted (tombstone) columns on
+// workout_groups. Existing groups get updatedAt = createdAt; none is deleted (0). This way a
+// deleted workout/group is not resurrected after Drive sync.
 val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE workout_groups ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
@@ -170,17 +169,17 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
-// Besin (food) özelliği tamamen kaldırıldı: tabloyu düşür. Mevcut kullanıcılarda kayıtlı besin
-// verisi varsa silinir; uygulamanın geri kalanı bu tablodan bağımsızdır.
+// Nutrition (food) feature fully removed: drop the table. Any stored nutrition data on
+// existing users is deleted; the rest of the app is independent of this table.
 val MIGRATION_15_16 = object : Migration(15, 16) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("DROP TABLE IF EXISTS food_entries")
     }
 }
 
-// 1) Antrenman seansını tamamlayan spor görevine bağlamak için workout_sessions.taskId sütunu
-//    (eski seanslarda NULL → göreve bağlı değil). 2) Fiziksel parametreler/kilo trend grafiği
-//    kaldırıldığı için vücut ağırlığı geçmişi (body_weight_entries) tablosu tamamen düşürülür.
+// 1) workout_sessions.taskId column to link a session to the sport task that completed it
+//    (NULL on old sessions → not linked to a task). 2) The body-weight history
+//    (body_weight_entries) table is dropped entirely since the body metrics/weight trend chart was removed.
 val MIGRATION_16_17 = object : Migration(16, 17) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE workout_sessions ADD COLUMN taskId TEXT")
@@ -188,10 +187,10 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
-// Silme mezar taşları: tasks/categories/workout_sessions tablolarına isDeleted sütunu.
-// Mevcut hiçbir kayıt silinmiş değildir (0). Bilinen sınırlama: v18 ÖNCESİ yapılmış silmeler
-// uzaktan bir kez geri gelebilir (yerelde mezar taşı yoktur); v18 sonrası tüm silmeler
-// tombstone ile yayılır ve diriltilmez.
+// Deletion tombstones: isDeleted column on tasks/categories/workout_sessions tables.
+// No existing record is deleted (0). Known limitation: deletions made BEFORE v18 may
+// come back once from remote (no local tombstone); after v18 all deletions propagate
+// via tombstone and are never resurrected.
 val MIGRATION_17_18 = object : Migration(17, 18) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE tasks ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
@@ -200,8 +199,8 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
     }
 }
 
-// Sık filtrelenen sütunlara indeks (kategori/link/oturum aramaları tam taramaydı).
-// İsimler Room'un varsayılan indeks adlarıyla birebir aynı olmalıdır (şema doğrulaması için).
+// Indexes on frequently filtered columns (category/link/session lookups were full scans).
+// Names must exactly match Room's default index names (for schema validation).
 val MIGRATION_18_19 = object : Migration(18, 19) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE INDEX IF NOT EXISTS index_tasks_category ON tasks (category)")

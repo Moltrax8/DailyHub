@@ -36,9 +36,9 @@ import java.util.Date
 import kotlin.math.roundToInt
 
 /**
- * Tamamlanan bir spor görevinin antrenman sonuç/özet sayfası: o gün yapılan tüm hareketleri ve her
- * hareket için girilen set/tekrar/ağırlık (veya süre/adım) detaylarını tek ekranda gösterir. Spor
- * görevi tamamlandıktan hemen sonra otomatik açılır; ayrıca tamamlananlar listesinde göreve tıklayınca.
+ * Result/summary page of a completed workout task: shows all exercises done that day plus the
+ * per-exercise set/reps/weight (or duration/steps) details on a single screen. Opens automatically
+ * right after the workout task is completed; also when tapping the task in the completed list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +53,7 @@ fun WorkoutSummaryScreen(
     val ctx = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // Dışa aktarımı bekleyen seans + önerilen dosya adı (picker dönüşünde yazılır, seans değişmez).
+    // Pending export: session + suggested file name (written when the picker returns, the session is unchanged).
     var pendingExport by remember { mutableStateOf<Pair<WorkoutSession, String>?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -118,7 +118,7 @@ private fun SummaryContent(session: WorkoutSession, ctx: Context, modifier: Modi
         .filter { it.type == ExerciseType.WEIGHTLIFTING }
         .flatMap { it.sets }
         .sumOf { (it.weightKg ?: 0.0) * it.reps }
-    // Tarih etiketi composition locale'una bağlı; dil değişince yeniden kurulur.
+    // Date label depends on the composition locale; recreated when the language changes.
     val locale = LocalConfiguration.current.locales[0]
     val summaryDateFmt = remember(locale) { SimpleDateFormat("d MMM yyyy · HH:mm", locale) }
 
@@ -140,7 +140,7 @@ private fun SummaryContent(session: WorkoutSession, ctx: Context, modifier: Modi
                 }
             }
         }
-        // Özet metrikler (toplam set + ağırlık hacmi)
+        // Summary metrics (total sets + lifted volume)
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SummaryStat(stringResource(R.string.workout_summary_total_sets), "$totalSets", Modifier.weight(1f))
@@ -207,7 +207,7 @@ private fun ExerciseSummaryCard(exercise: LoggedExercise, ctx: Context) {
     }
 }
 
-/** Tek bir kaydedilen setin tipe göre okunur metni (özet ekranı için). */
+/** Readable text of a single logged set by type (for the summary screen). */
 private fun formatLoggedSetSummary(ctx: Context, type: ExerciseType, set: LoggedSet): String {
     val kg = ctx.getString(R.string.unit_kg)
     return when (type) {

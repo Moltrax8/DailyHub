@@ -39,13 +39,13 @@ import okhttp3.OkHttpClient
 import java.io.File
 
 /**
- * Egzersiz demo medyasını oynatan ortak bileşen.
+ * Shared component that plays exercise demo media.
  *
- * - Gerçek videolar (.mp4/.webm/.m3u8 ...) AndroidX Media3 **ExoPlayer** ile oynatılır (döngülü).
- * - ExerciseDB animasyonlu **GIF**'leri ExoPlayer'ın oynatamadığı için Coil ile gösterilir.
+ * - Real videos (.mp4/.webm/.m3u8 ...) are played with AndroidX Media3 **ExoPlayer** (looped).
+ * - Animated **GIFs** from ExerciseDB cannot be played by ExoPlayer, so they are shown with Coil.
  *
- * [source] hem lokal dosya yolu (çevrimdışı indirilmiş) hem de uzak URL olabilir; ikisi de
- * desteklenir. Boş/null ise küçük bir bilgi metni gösterilir.
+ * [source] can be both a local file path (downloaded offline) and a remote URL; both are
+ * supported. If empty/null, a small info text is shown.
  */
 @Composable
 fun ExerciseMediaPlayer(
@@ -72,8 +72,8 @@ fun ExerciseMediaPlayer(
 
     val isRemote = source.startsWith("http", ignoreCase = true)
     val cleanPath = source.substringBefore('?')
-    // ExerciseDB demo'ları GIF'tir. Lokal dosyalarda uzantı (.gif), uzak adreste ise resim ucu
-    // (".../image") GIF olarak değerlendirilir (uzak URL'de uzantı yoktur).
+    // ExerciseDB demos are GIFs. For local files the extension (.gif) applies, while the remote
+    // image endpoint (".../image") is treated as GIF (remote URLs have no extension).
     val isGif = cleanPath.endsWith(".gif", ignoreCase = true) ||
         cleanPath.endsWith("/image", ignoreCase = true)
 
@@ -84,7 +84,7 @@ fun ExerciseMediaPlayer(
     }
 }
 
-/** Coil ImageLoader (GIF kod çözücüyle) animasyonlu demo gösterir. */
+/** Coil ImageLoader (with GIF decoder) shows the animated demo. */
 @Composable
 private fun GifPlayer(data: Any, modifier: Modifier, exerciseDbKey: String) {
     val context = LocalContext.current
@@ -99,9 +99,9 @@ private fun GifPlayer(data: Any, modifier: Modifier, exerciseDbKey: String) {
 }
 
 /**
- * Liste satırlarında (ör. arama sonuçları) kullanılan küçük kare demo önizlemesi. GIF'ler de
- * animasyonlu görünür. [source] lokal dosya yolu veya uzak URL olabilir; boş/null ise yer tutucu
- * bir ikon gösterilir.
+ * Small square demo preview used in list rows (e.g. search results). GIFs also
+ * appear animated. [source] can be a local file path or a remote URL; if empty/null a placeholder
+ * icon is shown.
  */
 @Composable
 fun ExerciseThumb(
@@ -141,9 +141,9 @@ fun ExerciseThumb(
 }
 
 /**
- * GIF kod çözücülü Coil ImageLoader'ı hatırlar (SDK 28+ ImageDecoder, altı GifDecoder).
- * ExerciseDB demo GIF'leri `…/image` ucundan gelir ve `X-RapidAPI-Key` header'ı ister; bu yüzden
- * yükleyiciye RapidAPI host'ları için anahtarı ekleyen bir OkHttp interceptor'ı verilir.
+ * Remembers a Coil ImageLoader with GIF decoding (SDK 28+ ImageDecoder, GifDecoder below).
+ * ExerciseDB demo GIFs come from the `…/image` endpoint and require the `X-RapidAPI-Key` header; hence
+ * the loader is given an OkHttp interceptor that adds the key for RapidAPI hosts.
  */
 @Composable
 private fun rememberGifImageLoader(exerciseDbKey: String): ImageLoader {
@@ -170,7 +170,7 @@ private fun rememberGifImageLoader(exerciseDbKey: String): ImageLoader {
     }
 }
 
-/** Media3 ExoPlayer ile gerçek videoyu döngüsel olarak oynatır; bileşen yok olunca serbest bırakır. */
+/** Plays the real video in a loop with Media3 ExoPlayer; releases it when the component is disposed. */
 @OptIn(UnstableApi::class)
 @Composable
 private fun ExoVideoPlayer(uri: Uri, modifier: Modifier) {

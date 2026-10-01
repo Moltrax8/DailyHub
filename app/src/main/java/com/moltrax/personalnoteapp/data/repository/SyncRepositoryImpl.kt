@@ -44,14 +44,14 @@ class SyncRepositoryImpl @Inject constructor(
     override val syncStatus: Flow<SyncStatus> = _status
 
     override suspend fun sync(manual: Boolean): SyncResult = runSync(manual) { token ->
-        // Önce çek + birleştir, sonra geri gönder: boş cihazın uzaktaki yedeği ezmesini önler
+        // Pull + merge first, then push back: prevents an empty device from overwriting the remote backup
         pullInternal(token)
         pushInternal(token)
         prefs.setLastSyncAt(Instant.now().toString())
     }
 
-    // Arka plan gönderimi: her zaman sessiz (manual = false). Kayıp güncellemeyi önlemek için
-    // salt push yerine çek-birleştir-gönder yapar; imza uyumluluğu için korunur.
+    // Background push: always silent (manual = false). To avoid lost updates it does
+    // pull-merge-push instead of a plain push; kept for signature compatibility.
     override suspend fun pushToDrive(): SyncResult = sync(manual = false)
 
     override suspend fun pullFromDrive(manual: Boolean): SyncResult = runSync(manual) { token ->
@@ -59,20 +59,20 @@ class SyncRepositoryImpl @Inject constructor(
     }
 
     override fun acknowledgeStatus() {
-        // Yalnızca başarı durumunu temizle; hata kullanıcı çözene kadar görünür kalsın.
+        // Only clear the success state; keep errors visible until the user resolves them.
         if (_status.value is SyncStatus.Synced) _status.value = SyncStatus.Idle
     }
 
     /**
-     * Ortak senkronizasyon iskeleti. Başarı durumu yalnızca [manual] tetiklemede ya da önceki
-     * durum HATA iken (hatadan kurtarma) gösterilir; normal arka plan senkronizasyonu sessizce
-     * Idle'a döner. Hatalar her durumda gösterilir.
+     * Common synchronization skeleton. The success state is only announced on a [manual] trigger
+     * or when the previous state was ERROR (error recovery); normal background sync quietly
+     * returns to Idle. Errors are always shown.
      *
-     * Sonucu [SyncResult] olarak da döner ki çağıran (öz. SyncWorker) success/retry/failure
-     * kararı verebilsin. Coroutine iptali ([CancellationException]) asla yutulmaz.
+     * Also returns the outcome as [SyncResult] so the caller (esp. SyncWorker) can decide
+     * success/retry/failure. Coroutine cancellation ([CancellationException]) is never swallowed.
      */
     private suspend fun runSync(manual: Boolean, block: suspend (token: String) -> Unit): SyncResult {
-        // Giriş yapılmamışsa sessizce geç (başlangıçtaki otomatik sync için).
+        // Skip silently when not signed in (for the automatic sync at startup).
         if (driveAuth.getLastSignedInAccount() == null) return SyncResult.Ok
         val announce = manual || _status.value is SyncStatus.Error
         if (announce) _status.value = SyncStatus.Syncing
@@ -90,11 +90,11 @@ class SyncRepositoryImpl @Inject constructor(
         }
     }
 
-    /** Geçici (ağ) hatalar yeniden denenebilir; auth/parse/programlama hataları kalıcıdır. */
+    /** Transient (network) errors are retryable; auth/parse/programming errors are permanent. */
     private fun Throwable.isRetryable(): Boolean =
         this is IOException || cause is IOException
 
-    // Hatanın tam detayını üretir: istisna türü + mesaj + (varsa) kök neden.
+    // Builds the full error detail: exception type + message + root cause (if any).
     private fun Throwable.detail(): String = buildString {
         append(this@detail::class.java.simpleName)
         message?.let { append(": "); append(it) }
@@ -106,7 +106,7 @@ class SyncRepositoryImpl @Inject constructor(
 
     private suspend fun pushInternal(token: String) {
         val meta = buildMetadata()
-        // Yeni cihazda ilk gönderimde uzaktaki mevcut dosyayı keşfet
+        // On the first push from a new device, discover the existing remote file
         val fileId = prefs.driveFileId.first() ?: driveApi.findOrNull(token)?.id
 
         val result = driveApi.upload(token, meta, fileId)
@@ -117,34 +117,34 @@ class SyncRepositoryImpl @Inject constructor(
         var fileId = prefs.driveFileId.first() ?: driveApi.findOrNull(token)?.id ?: return
         var remote = driveApi.download(token, fileId)
         if (remote == null) {
-            // Önbellekteki fileId bayat olabilir (dosya silinmiş / hesap değişmiş): önbelleği
-            // temizleyip yeniden keşfet; hâlâ yoksa çekecek yedek yoktur (sessiz dön).
+            // The cached fileId may be stale (file deleted / account changed): clear the cache
+            // and rediscover; if still missing there is no backup to pull (return silently).
             prefs.setDriveFileId(null)
             fileId = driveApi.findOrNull(token)?.id ?: return
             remote = driveApi.download(token, fileId) ?: return
         }
 
-        // Tasks — LWW by updatedAt (mezar taşları ham listede gelir; newer updatedAt kazanır,
-        // böylece silme de yayılır ve uzaktan diriltilmez). Eşitlikte kazanan deterministiktir.
+        // Tasks — LWW by updatedAt (tombstones arrive in the raw list; newer updatedAt wins,
+        // so deletions propagate and are not resurrected from remote). Ties resolve deterministically.
         val localTasks = taskRepo.getAllForSync()
         val mergedTasks = mergeById(localTasks, remote.tasks.map { it.toDomain() }, { it.id }) { l, r ->
             if (r.updatedAt > l.updatedAt) r else pickOnTie(l, r)
         }
-        // Liste sırası vektörü: karşı tarafın vektörü daha yeniyse benimse (satır saatlerine
-        // dokunmadan — sıra bilgisi vektörde taşınır, satır LWW'sini kirletmez); yoksa yerel
-        // sıra yayımlanır. Eşzamanlı yeniden sıralamalar artık kimerik karışım üretmez.
+        // List-order vector: adopt the peer's vector when it is newer (without touching row
+        // timestamps — order info travels in the vector and does not pollute row LWW); otherwise
+        // publish the local order. Concurrent reorderings no longer produce a chimeric mix.
         val localOrderTs = taskRepo.getTaskOrderTimestamp()
         val orderedTasks = if (remote.taskOrderUpdatedAt > localOrderTs && remote.taskOrder.isNotEmpty()) {
             taskRepo.setTaskOrderTimestamp(remote.taskOrderUpdatedAt)
             applyRemoteOrder(mergedTasks, remote.taskOrder)
         } else mergedTasks
         taskRepo.replaceAll(orderedTasks)
-        // Çekilen birleşim alarm-relevant bir şeyi değiştirdiyse (tamamlanma/silme/vade),
-        // sahnelenmiş alarmları tazele. Widget ayrıca DB gözlemcisiyle kendini günceller.
+        // If the pulled merge changed anything alarm-relevant (completion/deletion/due date),
+        // refresh staged alarms. The widget also updates itself via the DB observer.
         rescheduleAlarmsIfNeeded(localTasks, orderedTasks)
 
-        // Kategoriler — ada göre birleşim; mezar taşı bulaşıcıdır (bir tarafta silinmişse
-        // silinmiş kalır), kalıcılık iki taraftan biri kalıcıysa korunur.
+        // Categories — merge by name; tombstones are contagious (deleted on either side stays
+        // deleted), permanence is kept if either side is permanent.
         val mergedCategories = mergeById(
             categoryRepo.getAllForSync(), remote.categories.map { it.toDomain() }, { it.name },
         ) { l, r ->
@@ -153,18 +153,18 @@ class SyncRepositoryImpl @Inject constructor(
             } else if (l.isPermanent || r.isPermanent) l.copy(isPermanent = true) else l
         }
         categoryRepo.replaceAll(mergedCategories)
-        // Birleşim sonrası bağlı görevi kalmayan geçici kategorileri temizle
+        // After merging, clean up temporary categories left with no linked tasks
         categoryRepo.cleanupTemporary()
 
-        // Workout grupları — LWW: grup updatedAt'ine göre. Mezar taşları (isDeleted) dahil edilir,
-        // böylece bir tarafta silinen grup/antrenman karşı taraftan geri DİRİLTİLMEZ.
+        // Workout groups — LWW by group updatedAt. Tombstones (isDeleted) are included,
+        // so a group/workout deleted on one side is NOT resurrected from the other side.
         val mergedGroups = mergeById(workoutRepo.getGroupsForSync(), remote.workoutGroups, { it.id }) { l, r ->
             if (r.updatedAt > l.updatedAt) r else pickOnTie(l, r)
         }
         workoutRepo.replaceGroups(mergedGroups)
 
-        // Workout seansları — değişmez kayıtlar id'ye göre birleşir; mezar taşı bulaşıcıdır
-        // (bir tarafta silinmişse silinmiş kalır), çakışmada yereldeki alanlar korunur.
+        // Workout sessions — immutable records merge by id; tombstones are contagious
+        // (deleted on either side stays deleted), local fields win on conflict.
         val mergedSessions = mergeById(workoutRepo.getSessionsForSync(), remote.workoutSessions, { it.id }) { l, r ->
             if (l.isDeleted || r.isDeleted) l.copy(isDeleted = true) else l
         }
@@ -172,7 +172,7 @@ class SyncRepositoryImpl @Inject constructor(
     }
 
     private suspend fun buildMetadata(): SyncMetadata {
-        // Mezar taşları dahil — diğer cihazlar silmeleri öğrensin.
+        // Including tombstones — so other devices learn about deletions.
         val tasks = taskRepo.getAllForSync()
         return SyncMetadata(
             lastModifiedUtc = Instant.now().toString(),
@@ -186,9 +186,9 @@ class SyncRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Uzak sıra vektörünü yerel birleşmiş listeye uygular. Bilinmeyen (karşıda olmayan) id'ler
-     * listenin sonunda mevcut göreli sıralarıyla kalır. sortOrder yeniden yazılır ama updatedAt'e
-     * DOKUNULMAZ — sıra bilgisi vektörde taşındığından satır LWW saatleri kirletilmez.
+     * Applies the remote order vector to the locally merged list. Unknown ids (absent on the
+     * peer) stay at the end of the list in their current relative order. sortOrder is rewritten
+     * but updatedAt is NOT touched — since order info travels in the vector, row LWW clocks stay clean.
      */
     private fun applyRemoteOrder(tasks: List<Task>, order: List<String>): List<Task> {
         val rank = order.withIndex().associate { it.value to it.index }
@@ -199,14 +199,14 @@ class SyncRepositoryImpl @Inject constructor(
             }
     }
 
-    /** Alarm imzası: id → (tamamlandı mı, vade, silindi mi). Sıra değişiklikleri imzada yoktur. */
+    /** Alarm signature: id → (is done, due date, is deleted). Order changes are not in the signature. */
     private fun alarmSignature(tasks: List<Task>): Map<String, Triple<Boolean, Long?, Boolean>> =
         tasks.associate { it.id to Triple(it.isDone, it.dueDate, it.isDeleted) }
 
     /**
-     * Birleşim alarm-relevant bir şeyi değiştirdiyse sahnelenmiş alarmları tekilleştirilmiş
-     * yeniden kurma işiyle tazele (hayalet/eksik bildirim kalmasın). Değişiklik yoksa alarm
-     * sistemini uyandırma (pil/gürültü).
+     * If the merge changed anything alarm-relevant, refresh staged alarms with a deduplicated
+     * reschedule job (so no ghost/missing notifications remain). If nothing changed, do not
+     * wake the alarm system (battery/noise).
      */
     private fun rescheduleAlarmsIfNeeded(before: List<Task>, after: List<Task>) {
         if (alarmSignature(before) == alarmSignature(after)) return
@@ -218,9 +218,9 @@ class SyncRepositoryImpl @Inject constructor(
     }
 
     /**
-     * LWW eşitliğinde (aynı id + aynı updatedAt) kazananı deterministik seçer: iki cihaz da
-     * aynı girdilerle aynı sonucu hesaplar, böylece birleşim yakınsar. Sözlüksel sıralama
-     * keyfidir ama kararlıdır (zaman damgasının yerine geçmez, yalnızca eşitliği bozar).
+     * Picks a deterministic winner on an LWW tie (same id + same updatedAt): both devices
+     * compute the same result from the same inputs, so the merge converges. Lexicographic order
+     * is arbitrary but stable (it does not replace the timestamp, it only breaks ties).
      */
     private fun <T : Any> pickOnTie(local: T, remote: T): T =
         if (remote.toString() >= local.toString()) remote else local

@@ -12,15 +12,15 @@ interface WorkoutRepository {
     suspend fun saveSession(session: WorkoutSession)
     suspend fun deleteSession(id: String)
     suspend fun getSessions(): List<WorkoutSession>
-    /** Senkronizasyon için TÜM seanslar — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL sessions for sync — including deleted (tombstone) records. */
     suspend fun getSessionsForSync(): List<WorkoutSession>
     suspend fun getSessionById(id: String): WorkoutSession?
-    /** Bir spor görevine bağlı en son tamamlanmış seans (varsa). */
+    /** The latest completed session linked to a sport task (if any). */
     suspend fun getLatestSessionForTask(taskId: String): WorkoutSession?
 
-    // Senkronizasyon için toplu erişim
+    // Bulk access for sync
     suspend fun getGroups(): List<WorkoutGroup>
-    /** Senkronizasyon için TÜM gruplar — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL groups for sync — including deleted (tombstone) records. */
     suspend fun getGroupsForSync(): List<WorkoutGroup>
     suspend fun replaceGroups(groups: List<WorkoutGroup>)
     suspend fun replaceSessions(sessions: List<WorkoutSession>)
@@ -32,9 +32,8 @@ interface WorkoutRepository {
     suspend fun getExercisesByBodyPart(bodyPart: String): List<Exercise>
 
     /**
-     * Artık hiçbir antrenmanda kullanılmayan (yetim) önbellek hareketlerinin lokal demo
-     * medya dosyalarını ve kayıtlarını siler. Bir hareket/antrenman/program silindikten sonra
-     * çağrılır; cihaz hafızasının şişmesini önler.
+     * Deletes local demo media files and records of cached moves no longer used by any workout
+     * (orphans). Called after a move/workout/program is deleted; prevents device storage bloat.
      */
     suspend fun cleanupOrphanedExerciseMedia()
 }

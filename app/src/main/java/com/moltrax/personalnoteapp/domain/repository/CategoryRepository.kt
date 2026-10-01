@@ -6,21 +6,21 @@ import kotlinx.coroutines.flow.Flow
 interface CategoryRepository {
     fun observeAll(): Flow<List<Category>>
     suspend fun getAll(): List<Category>
-    /** Senkronizasyon için TÜM kategoriler — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL categories for sync — including deleted (tombstone) records. */
     suspend fun getAllForSync(): List<Category>
 
-    /** Tüm kategori tablosunu verilen listeyle değiştirir (sync birleştirmesi sonrası). */
+    /** Replaces the whole category table with the given list (after sync merge). */
     suspend fun replaceAll(categories: List<Category>)
 
-    /** Yoksa oluşturur. Varsa ve [isPermanent] true istenmişse kalıcıya yükseltir; aksi halde dokunmaz. */
+    /** Creates if missing. If it exists and [isPermanent] true is requested, promotes to permanent; otherwise leaves untouched. */
     suspend fun ensureExists(name: String, isPermanent: Boolean = false)
 
-    /** Kategoriyi yeniden adlandırır; bağlı görevleri yeni ada taşır. */
+    /** Renames the category; moves linked tasks to the new name. */
     suspend fun rename(oldName: String, newName: String)
 
-    /** Kategoriyi siler; bağlı görevlerin kategorisini null yapar. */
+    /** Deletes the category; nulls the category of linked tasks. */
     suspend fun delete(name: String)
 
-    /** Geçici olup bağlı görevi kalmayan kategorileri temizler. */
+    /** Cleans up temporary categories left with no linked tasks. */
     suspend fun cleanupTemporary()
 }

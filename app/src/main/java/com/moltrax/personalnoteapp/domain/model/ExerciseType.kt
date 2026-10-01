@@ -1,13 +1,13 @@
 package com.moltrax.personalnoteapp.domain.model
 
 /**
- * Bir hareketin giriş/ölçüm tipi. Canlı antrenman ekranındaki veri alanlarını ve EXP
- * (Progressive Overload) algoritmasını belirler:
- *  - [WEIGHTLIFTING]: set / tekrar / ağırlık (kg) ile ölçülür.
- *  - [BODYWEIGHT]: vücut ağırlığı hareketi (pull up, dips, push up). Tekrar ile ölçülür; ağırlık
- *    yerine "Vücut Ağırlığı" kullanılır, kullanıcı isterse ek (eklenen) ağırlık girebilir.
- *  - [DURATION]: süre bazlı izometrik hareket (plank, wall sit). Tekrar yerine set başına SÜRE girilir.
- *  - [CARDIO]: süre (dk) ve adım / mesafe ile ölçülür; gelişim tempo + dayanıklılık üzerinden hesaplanır.
+ * An exercise's input/measurement type. Determines the data fields on the live workout screen
+ * and the EXP (Progressive Overload) algorithm:
+ *  - [WEIGHTLIFTING]: measured with sets / reps / weight (kg).
+ *  - [BODYWEIGHT]: bodyweight move (pull up, dips, push up). Measured with reps; "Body Weight"
+ *    is used instead of weight, the user may optionally enter added weight.
+ *  - [DURATION]: duration-based isometric move (plank, wall sit). DURATION is entered per set instead of reps.
+ *  - [CARDIO]: measured with duration (min) and steps / distance; progress is computed via pace + endurance.
  */
 enum class ExerciseType(val displayName: String) {
     WEIGHTLIFTING("Ağırlık"),
@@ -15,25 +15,25 @@ enum class ExerciseType(val displayName: String) {
     DURATION("Süre"),
     CARDIO("Kardiyo");
 
-    /** EXP/giriş açısından ağırlık-benzeri mi (tekrar + ağırlık)? */
+    /** Whether weight-like in EXP/input terms (reps + weight)? */
     val isRepBased: Boolean get() = this == WEIGHTLIFTING || this == BODYWEIGHT
 
     companion object {
         fun fromName(name: String?): ExerciseType =
             entries.firstOrNull { it.name == name } ?: WEIGHTLIFTING
 
-        /** Süre bazlı (izometrik) hareketleri ada göre tanıyan anahtar kelimeler. */
+        /** Keywords that identify duration-based (isometric) moves by name. */
         private val DURATION_KEYWORDS = listOf(
             "plank", "hold", "wall sit", "l-sit", "l sit", "hollow", "superman",
             "dead hang", "hang", "bridge hold", "isometric", "side bridge",
         )
 
         /**
-         * Hareketi bodyPart + equipment + ada göre sınıflandırır:
+         * Classifies a move by bodyPart + equipment + name:
          *  - bodyPart "cardio" → [CARDIO]
-         *  - ad süre kelimesi içeriyorsa (plank vb.) → [DURATION]
-         *  - ekipman "body weight" / "assisted" → [BODYWEIGHT]
-         *  - aksi halde → [WEIGHTLIFTING]
+         *  - name contains a duration word (plank etc.) → [DURATION]
+         *  - equipment "body weight" / "assisted" → [BODYWEIGHT]
+         *  - otherwise → [WEIGHTLIFTING]
          */
         fun classify(bodyPart: String?, equipment: String?, name: String?): ExerciseType {
             if (bodyPart?.contains("cardio", ignoreCase = true) == true) return CARDIO

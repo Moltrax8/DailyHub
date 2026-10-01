@@ -32,13 +32,13 @@ import com.moltrax.personalnoteapp.ui.i18n.label
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm: WorkoutViewModel = hiltViewModel()) {
-    // LiveWorkoutScreen farklı ViewModel örneği → initSession ile yükle
+    // LiveWorkoutScreen takes a different ViewModel instance → load via initSession
     LaunchedEffect(workoutId) { vm.initSession(workoutId) }
 
     val session by vm.liveSession.collectAsStateWithLifecycle()
-    // Hareketin demo medyası (çevrimdışı indirilmiş lokal yol; yoksa uzak GIF/video URL'si).
+    // Exercise demo media (downloaded offline local path; otherwise the remote GIF/video URL).
     val exercisesById by vm.exercisesById.collectAsStateWithLifecycle()
-    // ExerciseDB anahtarı ViewModel üzerinden (AppPreferences → StateFlow); boşsa demo kapalı.
+    // ExerciseDB key via the ViewModel (AppPreferences → StateFlow); empty means demos are off.
     val exerciseDbKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
 
     var finishedSessionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -72,7 +72,7 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
         }
     }
 
-    // Antrenman bitince özet alt sayfası: tamamlandı bilgisini gösterir ve kapatır.
+    // Once the workout finishes, a summary bottom sheet: shows the completion info and closes.
     finishedSessionId?.let {
         WorkoutSummarySheet(
             onClose = { finishedSessionId = null; nav.popBackStack() },
@@ -87,7 +87,7 @@ private fun ExerciseLogCard(
     exerciseDbKey: String,
     onLog: (LoggedSet) -> Unit,
 ) {
-    // Demo (GIF/video) dialog'unun açık olup olmadığı — "nasıl yapılır" butonuyla tetiklenir.
+    // Whether the demo (GIF/video) dialog is open — triggered by the "how to" button.
     var showDemo by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -95,7 +95,7 @@ private fun ExerciseLogCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f))
-                // Hareketin nasıl yapıldığını gösteren demoyu açar (yalnızca medya varsa görünür).
+                // Opens the demo showing how the exercise is done (only visible when media exists).
                 if (!mediaSource.isNullOrBlank()) {
                     IconButton(onClick = { showDemo = true }) {
                         Icon(
@@ -133,8 +133,8 @@ private fun ExerciseLogCard(
         }
     }
 
-    // Demo GIF/video dialog'u: "nasıl yapılır" butonuna basılınca açılır.
-    // (exerciseDbKey fonksiyon parametresi olduğundan lambda içinde doğrudan görünür.)
+    // Demo GIF/video dialog: opens when the "how to" button is pressed.
+    // (exerciseDbKey is a function parameter so it is directly visible inside the lambda.)
     if (showDemo && !mediaSource.isNullOrBlank()) {
         AlertDialog(
             onDismissRequest = { showDemo = false },
@@ -187,7 +187,7 @@ private fun BodyweightInput(onLog: (LoggedSet) -> Unit) {
         )
         IconButton(onClick = {
             val r = reps.toIntOrNull() ?: return@IconButton
-            // Vücut ağırlığı: ek ağırlık girilmezse null (saf vücut ağırlığı).
+            // Bodyweight: null when no added weight is entered (pure bodyweight).
             onLog(LoggedSet(reps = r, weightKg = addedWeight.replace(',', '.').toDoubleOrNull()))
             reps = ""; addedWeight = ""
         }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }

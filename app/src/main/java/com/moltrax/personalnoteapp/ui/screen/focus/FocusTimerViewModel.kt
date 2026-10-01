@@ -46,8 +46,8 @@ class FocusTimerViewModel @Inject constructor(
     private val _state = MutableStateFlow(FocusState())
     val state: StateFlow<FocusState> = _state.asStateFlow()
 
-    // Spora linkli görevde sayaç bitince tamamlamak yerine Home'daki tamamlama ekranına
-    // yönlendiren Snackbar gösterilir (isCompleted kurulmaz, ekrandan çıkılmaz).
+    // On a workout-linked task, finishing the counter shows a Snackbar routing to the completion
+    // screen on Home instead of completing (isCompleted is not set, the screen is not exited).
     private val _linkedTaskNotice = MutableStateFlow(false)
     val linkedTaskNotice: StateFlow<Boolean> = _linkedTaskNotice.asStateFlow()
 
@@ -72,7 +72,7 @@ class FocusTimerViewModel @Inject constructor(
             }
             if (_state.value.remainingSeconds == 0) {
                 val task = _state.value.task
-                // Linkli görevde tamamlanmış gösterme; Home tamamlama ekranına yönlendir.
+                // On a linked task do not show as completed; route to the Home completion screen.
                 if (task != null && (task.linkedWorkoutId != null || task.linkedProgramId != null)) {
                     _state.update { it.copy(isRunning = false) }
                     _linkedTaskNotice.value = true
@@ -97,13 +97,14 @@ class FocusTimerViewModel @Inject constructor(
 
     private suspend fun markDone() {
         val task = _state.value.task ?: return
-        // Spora/programa linkli görevler odak zamanlayıcısıyla KAPATILMAZ. Doğru tamamlama akışı
-        // (set/tekrar/ağırlık girişi → WorkoutSession kaydı → programlı görevde gün rotasyonu) yalnızca
-        // ana ekrandaki tik ile çalışır. Odak sayacından kapatmak seansı kaydetmeden görevi bitirir ve
-        // program gününü ilerletmezdi (iki tamamlama yolu arasında tutarsızlık). Görev açık bırakılır;
-        // kullanıcı ana ekrandan tikleyip antrenmanı usulünce tamamlar.
+        // Workout/program-linked tasks are NEVER closed by the focus timer. The correct completion flow
+        // (sets/reps/weight entry → WorkoutSession record → day rotation on program tasks) only runs
+        // via the checkbox on the main screen. Closing from the focus counter would finish the task
+        // without saving a session and would not advance the program day (inconsistency between the two
+        // completion paths). The task is left open; the user completes the workout properly by tapping
+        // it on the main screen.
         if (task.linkedWorkoutId != null || task.linkedProgramId != null) return
-        // Tekrarlayan görevi ileri sar, normal görevi kapat (ana listeyle tutarlı)
+        // Roll a recurring task forward, close a normal one (consistent with the main list)
         val result = task.withCompletion()
         taskRepo.upsert(result)
         notifService.cancelReminder(task.id)

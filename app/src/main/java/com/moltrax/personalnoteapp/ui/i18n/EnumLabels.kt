@@ -8,9 +8,9 @@ import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.ExerciseType
 
 /**
- * Domain enum'ları için UI katmanı yerelleştirme yardımcıları. Enum'ların kendisi dilden bağımsız
- * kalır (saf domain); gösterilecek metin burada [stringResource] ile çözülür. Böylece dil değişince
- * etiketler de anında güncellenir.
+ * UI-layer localization helpers for domain enums. The enums themselves stay language-independent
+ * (pure domain); the displayed text is resolved here via [stringResource]. This way labels update
+ * instantly when the language changes.
  */
 
 @StringRes
@@ -23,5 +23,5 @@ fun ExerciseType.labelRes(): Int = when (this) {
 
 @Composable fun ExerciseType.label(): String = stringResource(labelRes())
 
-/** Composable olmayan bağlamlar (servis/prompt) için context tabanlı etiket. */
+/** Context-based label for non-composable contexts (service/prompt). */
 fun ExerciseType.label(context: Context): String = context.getString(labelRes())

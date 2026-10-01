@@ -37,7 +37,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
     val workoutGroups by vm.workoutGroups.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
 
-    // Bitiş tarihi etiketi composition locale'una bağlı; dil değişince yeniden kurulur.
+    // Due-date label depends on the composition locale; recreated when the language changes.
     val locale = LocalConfiguration.current.locales[0]
     val deadlineFmt = remember(locale) { SimpleDateFormat("d MMM yyyy, HH:mm", locale) }
 
@@ -46,8 +46,8 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var deadlineError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Seçilen bitiş zamanını uygular; geçmiş bir an seçildiyse reddedip uyarı gösterir
-    // (1 dk tolerans: "bugün, şu anki dakika" geçerli kabul edilir).
+    // Applies the selected due time; rejects a moment in the past with a warning
+    // (1 min tolerance: "today, current minute" counts as valid).
     fun applyDeadline(candidate: Long) {
         if (candidate + 60_000L < System.currentTimeMillis()) {
             deadlineError = context.getString(R.string.task_past_date_error)
@@ -97,7 +97,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 maxLines = 5,
             )
 
-            // Alt Görevler (Checklist)
+            // Subtasks (Checklist)
             SubtaskSection(
                 subtasks = state.subtasks,
                 onAdd = vm::addSubtask,
@@ -105,7 +105,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 onRemove = vm::removeSubtask,
             )
 
-            // Bitiş Tarihi ve Saati (Deadline) — boşsa hatırlatma/ceza devreye girmez
+            // Due Date & Time (Deadline) — empty means no reminder/penalty kicks in
             Text(stringResource(R.string.task_deadline), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             val deadlineText = state.dueDate?.let { deadlineFmt.format(Date(it)) }
@@ -140,7 +140,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 OutlinedButton(
                     onClick = { showTimePicker = true },
                     modifier = Modifier.weight(1f),
-                    // Saat için önce bir tarih gerekir (yoksa tarihi de aynı anda kurarız).
+                    // A date is needed first for the time (otherwise we set the date at the same time).
                 ) {
                     Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -148,7 +148,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 }
             }
 
-            // Kategori — mevcutlardan seç veya yeni oluştur
+            // Category — pick from existing ones or create a new one
             Text(stringResource(R.string.task_category), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -195,7 +195,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                     style = MaterialTheme.typography.bodyMedium)
             }
 
-            // Öncelik — ViewModel'de taşınan alanın düzenleyicisi (filtreyle birlikte çalışır).
+            // Priority — editor of the field carried in the ViewModel (works together with the filter).
             Text(stringResource(R.string.task_priority), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -212,7 +212,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 }
             }
 
-            // Tekrar (Recurring / Habit)
+            // Recurrence (Recurring / Habit)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.task_recurring), style = MaterialTheme.typography.bodyLarge)
@@ -239,7 +239,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             color = if (state.weeklyError) MaterialTheme.colorScheme.error
                             else MaterialTheme.colorScheme.onSurfaceVariant)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // ISO: 1=Pazartesi .. 7=Pazar
+                            // ISO: 1=Monday .. 7=Sunday
                             listOf(
                                 1 to R.string.weekday_mon, 2 to R.string.weekday_tue, 3 to R.string.weekday_wed,
                                 4 to R.string.weekday_thu, 5 to R.string.weekday_fri, 6 to R.string.weekday_sat,
@@ -253,7 +253,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             }
                         }
                         if (state.weeklyError) {
-                            // res'e dokunmamak için sabit metin (owned-files: ui/** only).
+                                // Fixed text to avoid touching res (owned-files: ui/** only).
                             Text(
                                 "Select at least one day",
                                 style = MaterialTheme.typography.bodySmall,
@@ -277,7 +277,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             isError = state.intervalError,
                             supportingText = if (state.intervalError) {
-                                // res'e dokunmamak için sabit metin (owned-files: ui/** only).
+                            // Fixed text to avoid touching res (owned-files: ui/** only).
                                 { Text("Enter a positive number of days", color = MaterialTheme.colorScheme.error) }
                             } else null,
                         )
@@ -291,8 +291,8 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 )
             }
 
-            // Focus duration (opsiyonel). Kapalıyken focusDurationSeconds = 0 saklanır; bu görevin
-            // listesinde odak (zamanlayıcı) ikonu gizlenir.
+            // Focus duration (optional). When off, focusDurationSeconds = 0 is stored; the focus
+            // (timer) icon is hidden in this task's list.
             val focusEnabled = state.focusDurationSeconds > 0
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
@@ -312,12 +312,12 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 )
             }
 
-            // Antrenman / Program bağı
+            // Workout / Program link
             if (workoutGroups.isNotEmpty()) {
                 Text(stringResource(R.string.task_link_workout), style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                // Bağlantı türü: Yok / Tek antrenman (Day A) / Tüm program (döngü)
+                // Link type: None / Single workout (Day A) / Whole program (cycle)
                 val linkMode = when {
                     state.linkedProgramId != null -> LinkMode.PROGRAM
                     state.linkedWorkoutId != null -> LinkMode.WORKOUT
@@ -332,9 +332,9 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                     FilterChip(
                         selected = linkMode == LinkMode.WORKOUT,
                         onClick = {
-                            // "Tek Antrenman" seçilince, mevcut seçim yoksa ilk antrenmanı ön-seç.
-                            // Aksi halde hiçbir antrenman seçili kalmaz, linkMode NONE'a düşer ve
-                            // "Yok" yanlışlıkla işaretli görünürdü (giderilen hata).
+                            // When "Single Workout" is picked and nothing is selected yet, pre-select the first workout.
+                            // Otherwise no workout would stay selected, linkMode would fall back to NONE and
+                            // "None" would wrongly appear checked (fixed bug).
                             val firstWorkoutId = workoutGroups
                                 .firstOrNull { it.workouts.isNotEmpty() }?.workouts?.first()?.id
                             vm.update {
@@ -383,7 +383,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                                 )
                             }
                         }
-                        // Döngünün hangi günden başlayacağı
+                        // Which day the cycle starts from
                         if (program != null && program.workouts.isNotEmpty()) {
                             val startName = program.workouts.getOrNull(state.programStartIndex)?.name
                                 ?: program.workouts.first().name
@@ -406,9 +406,9 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
             }
         }
 
-        // Tarih seçici (Material3). Seçilen tarih, mevcut saat-bileşeniyle birleştirilir.
+        // Date picker (Material3). The picked date is combined with the current time component.
         if (showDatePicker) {
-            // Bugünün UTC gün-başı: DatePicker geçmiş günleri seçilemez yapar.
+            // Today's UTC start of day: makes past days unselectable in the DatePicker.
             val utcTodayMidnight = remember {
                 Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
                     timeInMillis = System.currentTimeMillis()
@@ -440,7 +440,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
             ) { DatePicker(state = dateState) }
         }
 
-        // Saat seçici. Tarih henüz yoksa bugünün tarihiyle birleştirilir.
+        // Time picker. If no date exists yet, it is combined with today's date.
         if (showTimePicker) {
             val base = Calendar.getInstance().apply { state.dueDate?.let { timeInMillis = it } }
             val timeState = rememberTimePickerState(
@@ -466,9 +466,9 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
 }
 
 /**
- * DatePicker'dan gelen UTC gün-başı millis'i, mevcut saat bileşeniyle birleştirir. Saat henüz
- * seçilmemişse o anki saat-dakika kullanılır (sabit bir varsayılan yüzünden "bugün" seçiminin
- * hemen geçmişte kalmasını önler).
+ * Merges the UTC start-of-day millis from the DatePicker with the current time component. If no
+ * time has been picked yet, the current hour-minute is used (so picking "today" is not immediately
+ * in the past because of a fixed default).
  */
 private fun mergeDate(current: Long?, pickedUtcMillis: Long): Long {
     val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = pickedUtcMillis }
@@ -482,7 +482,7 @@ private fun mergeDate(current: Long?, pickedUtcMillis: Long): Long {
     return cal.timeInMillis
 }
 
-/** Seçilen saat/dakikayı mevcut tarihle (yoksa bugün) birleştirir. */
+/** Merges the picked hour/minute with the current date (today if none). */
 private fun mergeTime(current: Long?, hour: Int, minute: Int): Long {
     val cal = Calendar.getInstance()
     if (current != null) cal.timeInMillis = current
@@ -494,8 +494,8 @@ private fun mergeTime(current: Long?, hour: Int, minute: Int): Long {
 }
 
 /**
- * Alt görev (checklist) düzenleme bölümü: ilerleme çubuğu + sayaç, mevcut maddeler (tik/sil) ve
- * yeni madde ekleme alanı. Madde durumları yalnızca bu state'te tutulur; "Kaydet" ile kalıcılaşır.
+ * Subtask (checklist) editing section: progress bar + counter, existing items (check/delete) and a
+ * new-item input. Item states are kept only in this state; "Save" persists them.
  */
 @Composable
 private fun SubtaskSection(
@@ -557,7 +557,7 @@ private fun SubtaskSection(
 
 private enum class LinkMode { NONE, WORKOUT, PROGRAM }
 
-/** Salt-okunur tetikleyicili basit bir açılır menü; [content] menü öğelerini üretir, dismiss verir. */
+/** Simple dropdown with a read-only trigger; [content] produces the menu items and gives a dismiss. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LabeledDropdown(

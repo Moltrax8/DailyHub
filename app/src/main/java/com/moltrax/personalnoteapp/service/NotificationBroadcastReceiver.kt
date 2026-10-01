@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 class NotificationBroadcastReceiver : BroadcastReceiver() {
     companion object {
-        // Süreç ömrü boyunca paylaşılan kapsam: DataStore okuması ana iş parçacığını bloklamaz (ANR yok).
+        // Shared scope for the process lifetime: DataStore reads never block the main thread (no ANR).
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 
@@ -39,7 +39,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
     }
 
     private suspend fun showNotification(context: Context, taskId: String, title: String, minutes: Int) {
-        // Seçili dile göre yerelleştir (tek seferlik kısa DataStore okuması — arka plan iş parçacığında).
+        // Localize to the selected language (one-shot short DataStore read — on a background thread).
         val lang = runCatching {
             TaskWidget.entryPoint(context).appPreferences().language.first()
         }.getOrDefault("tr")
@@ -59,7 +59,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        // Bitiş saatine kalan süreye göre standart hatırlatma metni.
+        // Standard reminder text based on the time left until the deadline.
         val timeLeft = when {
             minutes <= 0   -> ctx.getString(R.string.notif_time_very_short)
             minutes < 60   -> ctx.getString(R.string.notif_time_minutes, minutes)
@@ -78,8 +78,8 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        // Etiket (tag) tabanlı bildirim: task id çakışmasız anahtardır, int kesilmesi yok.
-        // Eski hashCode tabanlı bildirimi de temizle (geçiş).
+        // Tag-based notification: task id is the collision-free key, no int truncation.
+        // Also clear the legacy hashCode-based notification (migration).
         val nm = ctx.getSystemService(NotificationManager::class.java)
         runCatching { nm.cancel(taskId.hashCode()) }
         nm.notify(taskId, 0, notif)

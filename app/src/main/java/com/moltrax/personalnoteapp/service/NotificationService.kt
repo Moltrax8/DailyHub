@@ -22,9 +22,9 @@ private const val CHANNEL_NAME    = "Task Reminders"
 const val ACTION_TASK_REMINDER = "com.moltrax.personalnoteapp.ACTION_TASK_REMINDER"
 
 /**
- * Task id (UUID string) -> kararlı int istek/bildirim kodu eşlemesi.
- * `String.hashCode()` çakışabilir; bunun yerine ilk kullanımda artımlı bir kimlik verip
- * SharedPreferences'ta kalıcı tutuyoruz — böylece alarmlar ve bildirimler birbirine karışmaz.
+ * Task id (UUID string) -> stable int request/notification code mapping.
+ * `String.hashCode()` can collide; instead we assign an incremental id on first use and
+ * persist it in SharedPreferences — so alarms and notifications never get mixed up.
  */
 object NotificationIds {
     private const val PREFS = "notification_ids"
@@ -35,7 +35,7 @@ object NotificationIds {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.getInt(keyFor(taskId), -1).takeIf { it > 0 }?.let { return it }
         var next = prefs.getInt(KEY_NEXT, 1).coerceAtLeast(1)
-        // Olası elle çakışmaya karşı boş slot ara (pratikte tek geçiş yeter).
+        // Look for a free slot against possible manual collisions (a single pass suffices in practice).
         while (prefs.all.values.any { it == next }) next++
         prefs.edit().putInt(keyFor(taskId), next).putInt(KEY_NEXT, next + 1).apply()
         return next
@@ -61,35 +61,35 @@ class NotificationService @Inject constructor(
             }
             nm.createNotificationChannel(channel)
         } else {
-            // Mevcut kanalda açıklamayı/rozeti tazele (kanal silinmeden güncellenebilir alanlar).
+            // Refresh description/badge on the existing channel (fields updatable without deleting the channel).
             nm.getNotificationChannel(CHANNEL_ID)?.let {
                 it.description = context.getString(R.string.notif_channel_description)
                 it.setShowBadge(true)
                 nm.createNotificationChannel(it)
             }
         }
-        // Oyunlaştırma kaldırıldı: eski "Sistem Mesajları" (Ceza Bölgesi) kanalını temizle.
+        // Gamification removed: clean up the legacy "System Messages" (Penalty Zone) channel.
         nm.deleteNotificationChannel("system_messages")
     }
 
-    /** Android 12+ kesin alarm izni verilmiş mi (alt sürümlerde her zaman true). */
+    /** Whether exact-alarm permission is granted on Android 12+ (always true on older versions). */
     fun canScheduleExactAlarms(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
         return context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
     }
 
-    /** Kullanıcıyı sistemin kesin-alarm izin ekranına yönlendiren intent. */
+    /** Intent directing the user to the system exact-alarm permission screen. */
     fun exactAlarmSettingsIntent(): Intent =
         Intent(
             Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
             Uri.parse("package:${context.packageName}"),
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** Bildirim izni (Android 13+ POST_NOTIFICATIONS dahil) açık mı. */
+    /** Whether notification permission is on (including POST_NOTIFICATIONS on Android 13+). */
     fun areNotificationsEnabled(): Boolean =
         NotificationManagerCompat.from(context).areNotificationsEnabled()
 
-    /** Uygulamanın sistem bildirim ayarları ekranına giden intent. */
+    /** Intent to the app's system notification settings screen. */
     fun appNotificationSettingsIntent(): Intent =
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -102,10 +102,10 @@ class NotificationService @Inject constructor(
         }
 
     /**
-     * Hatırlatma alarmını kurar. Kesin alarm izni varsa [setExactAndAllowWhileIdle], yoksa
-     * inexact [setAndAllowWhileIdle] kullanılır (gecikebilir — arayüz [canScheduleExactAlarms]
-     * üzerinden kullanıcıyı izin ekranına yönlendirmelidir).
-     * @return true = kesin alarm kuruldu, false = inexact yedeğe düşüldü.
+     * Schedules the reminder alarm. Uses [setExactAndAllowWhileIdle] when exact-alarm permission
+     * is granted, otherwise inexact [setAndAllowWhileIdle] (may be delayed — the UI should direct
+     * the user to the permission screen via [canScheduleExactAlarms]).
+     * @return true = exact alarm scheduled, false = fell back to inexact.
      */
     fun scheduleReminder(task: Task, reminderMinutes: Int = 60): Boolean {
         if (task.dueDate == null) return false
@@ -117,9 +117,9 @@ class NotificationService @Inject constructor(
         val fireAt    = if (triggerAt > now) triggerAt else due
         if (fireAt <= now) return false
 
-        // Bildirim metni GERÇEKTEN kalan süreyi göstersin: hatırlatma penceresi zaten geçmişse
-        // (fireAt = due) bu 0 olur ("çok kısa" metni), aksi halde reminderMinutes. Böylece bitişte
-        // tetiklenen bir bildirim yanlışlıkla "1 saat kaldı" demez.
+        // The notification text must show the ACTUAL remaining time: if the reminder window already passed
+        // (fireAt = due) this is 0 ("very short" text), otherwise reminderMinutes. This way a notification
+        // firing at the deadline never wrongly says "1 hour left".
         val minutesLeftAtFire = ((due - fireAt) / 60_000L).toInt()
 
         val notifIntent = alarmIntent(task.id).apply {
@@ -150,7 +150,7 @@ class NotificationService @Inject constructor(
             alarmIntent(taskId),
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
         ) ?: run {
-            // Eski sürümden kalma hashCode tabanlı PendingIntent'i de temizlemeyi dene (geçiş).
+            // Also try clearing the legacy hashCode-based PendingIntent (migration).
             cancelLegacyReminder(taskId)
             return
         }
@@ -158,12 +158,12 @@ class NotificationService @Inject constructor(
         pi.cancel()
     }
 
-    /** Toplu iptal: uyarılar kapatıldığında/yeniden kurulurken sahipsiz alarm bırakmaz. */
+    /** Bulk cancel: leaves no orphaned alarms when alerts are turned off/re-scheduled. */
     fun cancelAll(taskIds: Collection<String>) {
         taskIds.forEach { cancelReminder(it) }
     }
 
-    /** hashCode() döneminden kalma alarmları temizler (tek seferlik geçiş yardımı). */
+    /** Clears alarms left over from the hashCode() era (one-time migration helper). */
     private fun cancelLegacyReminder(taskId: String) {
         runCatching {
             val legacy = PendingIntent.getBroadcast(

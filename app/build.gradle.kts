@@ -148,7 +148,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
 
-    // Media3 ExoPlayer (egzersiz demo videoları)
+    // Media3 ExoPlayer (exercise demo videos)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
 

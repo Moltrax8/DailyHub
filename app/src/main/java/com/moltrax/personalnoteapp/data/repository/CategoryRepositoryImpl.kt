@@ -38,7 +38,7 @@ class CategoryRepositoryImpl @Inject constructor(
         val existing = dao.getByName(n)
         when {
             existing == null -> dao.upsert(CategoryEntity(n, isPermanent))
-            // Mezar taşını dirilt: aynı ad yeniden kullanılıyorsa canlı kayda çevir.
+            // Resurrect the tombstone: if the same name is reused, turn it back into a live record.
             existing.isDeleted -> dao.upsert(
                 existing.copy(isPermanent = existing.isPermanent || isPermanent, isDeleted = false)
             )
@@ -51,24 +51,24 @@ class CategoryRepositoryImpl @Inject constructor(
         val old = oldName.trim()
         val new = newName.trim()
         if (new.isBlank() || new == old) return
-        // Görev taşıma + kategori yazımı tek transaction içinde: yarıda kesilme,
-        // görevlerin silinmiş ada işaret etmesine yol açmasın.
+        // Task move + category write in a single transaction: an interruption must not leave
+        // tasks pointing at the deleted name.
         db.withTransaction {
             val existing = dao.getByName(old) ?: return@withTransaction
 
             val now = System.currentTimeMillis()
-            // Bağlı görevleri yeni ada taşı
+            // Move linked tasks to the new name
             taskDao.reassignCategory(old, new, now)
 
-            // Hedef ad zaten varsa kalıcılığı koru/yükselt, yoksa (veya mezar taşıysa) eskinin
-            // kalıcılığıyla canlı oluştur.
+            // If the target name already exists keep/promote permanence, otherwise create it live
+            // with the old entry's permanence (or if it is a tombstone).
             val target = dao.getByName(new)
             if (target == null || target.isDeleted) {
                 dao.upsert(CategoryEntity(new, existing.isPermanent))
             } else if (existing.isPermanent && !target.isPermanent) {
                 dao.upsert(target.copy(isPermanent = true))
             }
-            // Eski adı mezar taşına çevir (hard-delete değil — silme sync ile yayılsın, dirilmesin).
+            // Turn the old name into a tombstone (not a hard delete — so the deletion propagates via sync and is not resurrected).
             dao.upsert(existing.copy(isDeleted = true))
         }
     }
@@ -77,7 +77,7 @@ class CategoryRepositoryImpl @Inject constructor(
         db.withTransaction {
             val now = System.currentTimeMillis()
             taskDao.clearCategory(name, now)
-            // Mezara taşı: kayıt saklanır, görünür listelerde gizlenir, sync ile yayılır.
+            // Move to trash: the record is kept, hidden from visible lists, propagated via sync.
             dao.getByName(name)?.let { dao.upsert(it.copy(isDeleted = true)) }
         }
     }

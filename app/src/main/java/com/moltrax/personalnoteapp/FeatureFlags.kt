@@ -1,16 +1,16 @@
 package com.moltrax.personalnoteapp
 
 /**
- * Geçici özellik bayrakları.
+ * Temporary feature flags.
  *
- * [DRIVE_SYNC_ENABLED] şimdilik KAPALI: release APK'nın imza SHA-1'i Google Cloud
- * Console'da kayıtlı olmadığından (OAuth istemcisi doğrulanmadığından) Google ile
- * giriş başarısız oluyor ve uygulamaya hiç girilemiyordu. Bu bayrak kapalıyken:
- *  - uygulama giriş ekranını atlayıp doğrudan ana ekrandan açılır,
- *  - Google Drive senkronizasyonu ve ayarlardaki hesap/yedekleme bölümü gizlenir.
+ * [DRIVE_SYNC_ENABLED] is OFF for now: the release APK's signing SHA-1 is not registered in
+ * Google Cloud Console (OAuth client not verified), so Google sign-in failed and the app could
+ * not be entered at all. While this flag is off:
+ *  - the app skips the login screen and opens directly on the home screen,
+ *  - Google Drive sync and the account/backup section in settings are hidden.
  *
- * İlgili kod (LoginScreen, AuthViewModel, Drive servisleri, SyncRepository, SyncWorker)
- * yerinde durur; SHA-1 kaydı yapıldıktan sonra bayrağı `true` yapmak yeniden etkinleştirir.
+ * Related code (LoginScreen, AuthViewModel, Drive services, SyncRepository, SyncWorker)
+ * stays in place; setting the flag back to `true` after the SHA-1 registration re-enables it.
  */
 object FeatureFlags {
     const val DRIVE_SYNC_ENABLED = false

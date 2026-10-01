@@ -14,7 +14,7 @@ interface ExerciseDao {
     @Upsert suspend fun upsert(exercise: ExerciseEntity)
     @Upsert suspend fun upsertAll(exercises: List<ExerciseEntity>)
 
-    /** Önbellekteki tüm hareketler — yetim (artık hiçbir antrenmanda kullanılmayan) medya temizliği için. */
+    /** All cached movements — for cleaning up orphaned media no longer used in any workout. */
     @Query("SELECT * FROM exercises")
     suspend fun getAll(): List<ExerciseEntity>
 

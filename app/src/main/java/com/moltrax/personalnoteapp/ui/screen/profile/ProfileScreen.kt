@@ -44,8 +44,8 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
- * Profil ekranı, uygulamanın genel karanlık/neon (mor) paletini kullanır — tüm ekranlarla tutarlı.
- * Roller (panel, kenar, vurgu, metin) doğrudan paylaşılan [AppColors] üzerinden tanımlanır.
+ * Profile screen uses the app's shared dark/neon (purple) palette — consistent with all screens.
+ * Roles (panel, edge, accent, text) are defined directly via the shared [AppColors].
  */
 private object SoloColors {
     val BgTop      = AppColors.BgDeep
@@ -95,8 +95,8 @@ fun ProfileScreen(
                 onOpenSettings = { nav.navigate(Settings) },
             )
 
-            // Drive sync kapalıyken çıkış gizlenir (SettingsScreen ile tutarlı):
-            // Login'e gidip çıkmaz sokakta kalmayı önler.
+            // Sign-out is hidden while Drive sync is off (consistent with SettingsScreen):
+            // avoids navigating to Login and getting stuck in a dead end.
             if (FeatureFlags.DRIVE_SYNC_ENABLED) {
                 Button(
                     onClick = { vm.signOut { nav.navigate(Login) { popUpTo(0) { inclusive = true } } } },
@@ -181,7 +181,7 @@ private fun NameEditorDialog(
                 singleLine = true,
             )
         },
-        // Boş bırakılırsa override temizlenir → Google hesabı adına geri döner.
+        // Leaving it blank clears the override → falls back to the Google account name.
         confirmButton = { TextButton(onClick = { onSave(name.trim()) }) { Text(stringResource(R.string.action_save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) } },
     )
@@ -189,10 +189,10 @@ private fun NameEditorDialog(
 
 
 // ----------------------------------------------------------------------------
-// Statü Penceresi panelleri
+// Status Window panels
 // ----------------------------------------------------------------------------
 
-/** Neon kenarlı, yarı saydam tematik panel — "system window" estetiği. */
+/** Neon-edged, translucent thematic panel — "system window" aesthetics. */
 @Composable
 private fun StatusPanel(
     title: String?,
@@ -227,7 +227,7 @@ private fun StatusPanel(
 private fun HunterHeaderPanel(status: ProfileUiState, onEditName: () -> Unit) {
     StatusPanel(title = stringResource(R.string.profile_panel_profile)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Parlayan dairesel avatar
+                // Glowing circular avatar
             Box(
                 Modifier
                     .size(72.dp)
@@ -249,7 +249,7 @@ private fun HunterHeaderPanel(status: ProfileUiState, onEditName: () -> Unit) {
                 }
             }
             Spacer(Modifier.width(16.dp))
-            // İsme tıklanabilir; yanındaki kalem ikonu da düzenleme diyaloğunu açar.
+            // Tapping the name opens it too; the pencil icon next to it also opens the edit dialog.
             Row(
                 modifier = Modifier.weight(1f).clip(RoundedCornerShape(6.dp)).clickable(onClick = onEditName),
                 verticalAlignment = Alignment.CenterVertically,
@@ -275,7 +275,7 @@ private fun HunterHeaderPanel(status: ProfileUiState, onEditName: () -> Unit) {
 
 
 // ----------------------------------------------------------------------------
-// Ayar/düzenleme paneli (tematik kabuk içinde mevcut işlevler)
+// Settings/edit panel (existing features inside a thematic shell)
 // ----------------------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -18,7 +18,7 @@ class SyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return when (val r = syncRepo.sync()) {
             is SyncResult.Ok -> Result.success()
-            // Geçici (ağ) hatalarda WorkManager backoff ile yeniden dener; kalıcı hatalarda durur.
+            // On transient (network) errors WorkManager retries with backoff; on permanent errors it stops.
             is SyncResult.Failed -> if (r.retryable) Result.retry() else Result.failure()
         }
     }

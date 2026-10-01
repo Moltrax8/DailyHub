@@ -27,7 +27,7 @@ class PersonalNoteApp : Application(), Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var taskRepository: TaskRepository
 
-    // Süreç ömrü boyunca yaşayan hafif kapsam: görev akışını dinleyip widget'ı tazeler.
+    // Lightweight process-lifetime scope: listens to the task flow and refreshes the widget.
     private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
@@ -40,24 +40,24 @@ class PersonalNoteApp : Application(), Configuration.Provider {
         super.onCreate()
         val wm = WorkManager.getInstance(this)
 
-        // Oyunlaştırma kaldırıldı: eski sürümlerde kurulmuş "Ceza Bölgesi" periyodik işini iptal et
-        // (worker sınıfı artık yok; aksi halde WorkManager onu başlatmaya çalışıp hata üretir).
+        // Gamification removed: cancel the "Penalty Zone" periodic job installed by older versions
+        // (the worker class no longer exists; otherwise WorkManager would try to start it and produce errors).
         wm.cancelUniqueWork("penalty_check_periodic")
 
-        // Uygulama her açıldığında bekleyen görevlerin hatırlatma alarmlarını yeniden kur
-        // (cihaz yeniden başlatıldıysa veya alarmlar düştüyse güvenlik ağı). Tekilleştirilmiş iş
-        // (KEEP): soğuk başlatma fırtınasında yinelenen kuyruklanma olmaz.
+        // Re-install reminder alarms for pending tasks on every app launch
+        // (safety net if the device rebooted or alarms were dropped). Deduplicated job
+        // (KEEP): no duplicate enqueueing during a cold-start storm.
         wm.enqueueUniqueWork(
             RescheduleNotificationsWorker.WORK_NAME,
             ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<RescheduleNotificationsWorker>().build(),
         )
 
-        // Görev verisi (alt görevler dahil) her değiştiğinde widget'ı otomatik tazele — TEK merkez.
-        // Glance widget'ları akışı kendiliğinden dinleyemez; yalnızca updateAll çağrılınca yeniden
-        // çizilir. İmza başlık/tamamlanma/not/sıralama/vade/kategori/bağlantı + alt görev durumunu
-        // kapsar (yalnızca sync bayrağı değişen yazımlar atlanır, not/sortOrder değişimleri kaçmaz).
-        // debounce(500ms): hızlı ardışık yazımlar tek güncellemede birleşir.
+        // Auto-refresh the widget whenever task data (including subtasks) changes — SINGLE source.
+        // Glance widgets cannot listen to the flow on their own; they only redraw when updateAll
+        // is called. The signature covers title/completion/notes/order/due/category/links + subtask state
+        // (writes that only change the sync flag are skipped, note/sortOrder changes are not missed).
+        // debounce(500ms): rapid consecutive writes merge into a single update.
         widgetScope.launch {
             taskRepository.observeAll()
                 .map { tasks ->
@@ -69,7 +69,7 @@ class PersonalNoteApp : Application(), Configuration.Provider {
                 }
                 .debounce(500)
                 .distinctUntilChanged()
-                .drop(1) // ilk emisyon mevcut durumdur; açılışta gereksiz güncelleme yapma
+                .drop(1) // first emission is the current state; do not update needlessly at launch
                 .collect { TaskWidget.requestUpdate(this@PersonalNoteApp) }
         }
     }

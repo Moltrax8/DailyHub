@@ -34,7 +34,7 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun upsert(task: Task) = dao.upsert(task.toEntity())
 
-    // Yumuşak silme (mezar taşı) — sync silinen görevi geri diriltmesin.
+    // Soft delete (tombstone) — so sync does not resurrect the deleted task.
     override suspend fun delete(id: String) = dao.softDelete(id, System.currentTimeMillis())
 
     override suspend fun replaceAll(tasks: List<Task>) {

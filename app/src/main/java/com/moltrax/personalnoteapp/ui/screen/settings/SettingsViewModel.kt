@@ -37,12 +37,12 @@ class SettingsViewModel @Inject constructor(
     val systemAlertsEnabled = prefs.systemAlertsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     val lastSyncAt     = prefs.lastSyncAt.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Kayıtlı doğum tarihi (LocalDate) veya henüz seçilmemişse null. */
+    /** Saved birth date (LocalDate), or null when not picked yet. */
     val birthDate = prefs.birthDate
         .map { BirthdayUtils.parse(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Doğum tarihine göre hesaplanan güncel yaş; tarih yoksa null. */
+    /** Current age computed from the birth date; null when there is no date. */
     val age = birthDate
         .map { date -> date?.let { BirthdayUtils.calculateAge(it) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -51,43 +51,43 @@ class SettingsViewModel @Inject constructor(
         prefs.setBirthDate(BirthdayUtils.format(date))
     }
 
-    // Profil ekranı için oturum açmış Google hesabı bilgileri (statik — gösterim amaçlı)
+    // Signed-in Google account info for the profile screen (static — display only)
     private val account get() = authService.getLastSignedInAccount()
     val accountName: String? get() = account?.displayName
     val accountEmail: String? get() = account?.email
     val accountPhotoUrl: String? get() = account?.photoUrl?.toString()
 
-    /** Kullanıcının görünen adını günceller; boş bırakılırsa Google hesabı adına geri döner. */
+    /** Updates the user's display name; when left blank it falls back to the Google account name. */
     fun setDisplayName(name: String) = viewModelScope.launch { prefs.setDisplayName(name) }
 
     fun setReminderMinutes(m: Int) = viewModelScope.launch {
         prefs.setReminderMinutes(m)
-        // Yeni ön-bildirim süresi mevcut alarmlara yansısın diye tekilleştirilmiş yeniden kurma işi.
+        // Deduplicated reschedule work so the new lead-time applies to existing alarms.
         enqueueReschedule()
     }
 
     fun setSystemAlertsEnabled(v: Boolean) = viewModelScope.launch {
         prefs.setSystemAlertsEnabled(v)
         if (!v) {
-            // Kapatınca sahnelenmiş alarmları hemen iptal et (DataStore yazımı tek başına yetmez).
+            // When turning off, cancel staged alarms immediately (a DataStore write alone is not enough).
             notifService.cancelAll(taskRepo.getAll().map { it.id })
         } else {
             enqueueReschedule()
         }
     }
 
-    /** Kesin alarm izni verildi mi (verilmediyse hatırlatmalar inexact yedeğe düşer). */
+    /** Whether the exact-alarm permission is granted (otherwise reminders fall back to inexact). */
     fun canScheduleExactAlarms(): Boolean = notifService.canScheduleExactAlarms()
 
-    /** Bildirim izni açık mı (POST_NOTIFICATIONS dahil). */
+    /** Whether notifications are enabled (including POST_NOTIFICATIONS). */
     fun areNotificationsEnabled(): Boolean = notifService.areNotificationsEnabled()
 
-    /** Sistemin kesin-alarm izin ekranını açar. */
+    /** Opens the system's exact-alarm permission screen. */
     fun openExactAlarmSettings() {
         runCatching { appContext.startActivity(notifService.exactAlarmSettingsIntent()) }
     }
 
-    /** Uygulamanın sistem bildirim ayarları ekranını açar. */
+    /** Opens the app's system notification settings screen. */
     fun openNotificationSettings() {
         runCatching { appContext.startActivity(notifService.appNotificationSettingsIntent()) }
     }
@@ -99,11 +99,11 @@ class SettingsViewModel @Inject constructor(
             OneTimeWorkRequestBuilder<RescheduleNotificationsWorker>().build(),
         )
     }
-    /** Kullanıcının kendi ExerciseDB (RapidAPI) anahtarı; null/boşsa demo videoları kapalıdır. */
+    /** The user's own ExerciseDB (RapidAPI) key; null/blank means demo videos are off. */
     val exerciseDbKey = prefs.exerciseDbKey
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** ExerciseDB anahtarını kaydeder; boş/null ise temizler (videolar kapanır). */
+    /** Saves the ExerciseDB key; blank/null clears it (videos turn off). */
     fun setExerciseDbKey(key: String?) = viewModelScope.launch { prefs.setExerciseDbKey(key) }
 
     fun syncNow() = viewModelScope.launch { syncRepo.sync(manual = true) }

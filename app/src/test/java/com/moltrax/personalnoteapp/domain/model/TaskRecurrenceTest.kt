@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * [Task.withCompletion] davranış testleri — tekrarlayan görevlerin gerçekten yinelendiğini doğrular.
+ * [Task.withCompletion] behavior tests — verify that recurring tasks really repeat.
  */
 class TaskRecurrenceTest {
 
@@ -101,7 +101,7 @@ class TaskRecurrenceTest {
 
     @Test
     fun `haftalik tekrar secili sonraki gune tasinir`() {
-        // 25 Haziran 2026 = Perşembe (ISO 4). Seçili günler: Pazartesi(1) ve Cuma(5) → sonraki Cuma.
+        // June 25, 2026 = Thursday (ISO 4). Selected days: Monday (1) and Friday (5) → next Friday.
         val due = LocalDateTime.of(2026, 6, 25, 9, 0)
         val result = Task(
             title = "Weekly", dueDate = millis(due),
@@ -110,12 +110,12 @@ class TaskRecurrenceTest {
         ).withCompletion(millis(due))
 
         assertFalse(result.isDone)
-        assertEquals(millis(LocalDateTime.of(2026, 6, 26, 9, 0)), result.dueDate) // ertesi gün Cuma
+        assertEquals(millis(LocalDateTime.of(2026, 6, 26, 9, 0)), result.dueDate) // next day, Friday
     }
 
     @Test
     fun `haftalik gun secilmezse bir hafta sonraya tasinir`() {
-        val due = LocalDateTime.of(2026, 6, 25, 9, 0) // Perşembe
+        val due = LocalDateTime.of(2026, 6, 25, 9, 0) // Thursday
         val result = Task(
             title = "Weekly", dueDate = millis(due),
             isRecurring = true, recurrenceType = RecurrenceType.WEEKLY,

@@ -9,19 +9,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoryDao {
-    // Görünür sorgular mezar taşlarını (isDeleted = 1) hariç tutar; sync ham listeyi kullanır.
+    // Visible queries exclude tombstones (isDeleted = 1); sync uses the raw list.
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY name COLLATE NOCASE ASC")
     fun observeAll(): Flow<List<CategoryEntity>>
 
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY name COLLATE NOCASE ASC")
     suspend fun getAll(): List<CategoryEntity>
 
-    /** Senkronizasyon için TÜM kategoriler — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL categories for sync — including deleted (tombstone) records. */
     @Query("SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC")
     suspend fun getAllRaw(): List<CategoryEntity>
 
-    // NOCASE: "Work"/"work" yazım farkları aynı kategori sayılır (PK BINARY'dir, tüm erişim
-    // yolları NOCASE karşılaştırır; böylece çift kayıt oluşmaz, görünür adın yazımı korunur).
+    // NOCASE: "Work"/"work" spelling differences count as the same category (PK is BINARY, all access
+    // paths compare NOCASE; this avoids duplicate records and preserves the visible name's spelling).
     @Query("SELECT * FROM categories WHERE name = :name COLLATE NOCASE")
     suspend fun getByName(name: String): CategoryEntity?
 
@@ -35,7 +35,7 @@ interface CategoryDao {
     suspend fun deleteAll()
 
     /**
-     * Atomik değiştirme: sil + toplu yaz tek transaction içinde (bkz. TaskDao.replaceAllAtomic).
+     * Atomic replacement: delete + batch write in a single transaction (see TaskDao.replaceAllAtomic).
      */
     @Transaction
     suspend fun replaceAllAtomic(categories: List<CategoryEntity>) {
@@ -44,9 +44,9 @@ interface CategoryDao {
     }
 
     /**
-     * Geçici (isPermanent = 0) olup görünür göreve bağlı olmayan kategorileri mezar taşına
-     * çevirir (hard-delete DEĞİL — silme bilgisi sync ile yayılsın, uzaktan dirilmesin).
-     * Görev silindiğinde / kategorisi değiştiğinde çağrılır.
+     * Converts temporary (isPermanent = 0) categories with no visible linked task into tombstones
+     * (NOT a hard-delete — so the deletion propagates via sync and is not resurrected from remote).
+     * Called when a task is deleted / its category changes.
      */
     @Query(
         """

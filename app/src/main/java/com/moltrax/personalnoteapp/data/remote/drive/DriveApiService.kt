@@ -30,7 +30,7 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
 
     private fun auth(token: String) = "Bearer $token"
 
-    // Drive v3 hata gövdesinden anlamlı mesaj çıkarır (yoksa HTTP kodunu kullanır).
+    // Extracts a meaningful message from the Drive v3 error body (falls back to the HTTP code).
     private fun Response.errorMessage(): String {
         val raw = runCatching { body?.string() }.getOrNull().orEmpty()
         val apiMsg = runCatching {
@@ -39,21 +39,21 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
         return "HTTP $code ${apiMsg.orEmpty().ifBlank { message }}".trim()
     }
 
-    // Tüm ağ çağrıları Dispatchers.IO üzerinde çalışır: OkHttp execute() bloklayıcıdır,
-    // Main thread'den çağrılsa bile NetworkOnMainThreadException oluşmaz.
+    // All network calls run on Dispatchers.IO: OkHttp execute() is blocking, so no
+    // NetworkOnMainThreadException even when called from the main thread.
     suspend fun findOrNull(token: String): DriveFile? = withContext(Dispatchers.IO) {
-        // Drive API v3 yalnızca "appDataFolder", "drive" veya "photos" spaces değerlerini kabul eder.
+        // Drive API v3 only accepts "appDataFolder", "drive" or "photos" as spaces values.
         val primary = if (BuildConfig.DRIVE_SCOPE.contains("appdata")) "appDataFolder" else "drive"
         findIn(token, primary) ?: run {
-            // Kapsam (scope) değişmiş olabilir: dosya diğer alanda duruyordur.
+            // The scope may have changed: the file might live in the other space.
             val fallback = if (primary == "appDataFolder") "drive" else "appDataFolder"
             findIn(token, fallback)
         }
     }
 
     private fun findIn(token: String, spaces: String): DriveFile? {
-        // NOT: v3'te "etag" diye bir alan yoktur; istemek 400 döndürür. Yalnızca id istiyoruz.
-        // trashed=false: çöpteki aynı adlı eski yedek bulunmasın.
+        // NOTE: there is no "etag" field in v3; requesting it returns 400. We only ask for id.
+        // trashed=false: do not find an old trashed backup with the same name.
         val url = "$DRIVE_BASE/drive/v3/files?spaces=$spaces&q=name='$FILE_NAME' and trashed=false&fields=files(id)"
         val req = Request.Builder().url(url).header("Authorization", auth(token)).get().build()
         return http.newCall(req).execute().use { resp ->
@@ -69,11 +69,11 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
         val url = "$DRIVE_BASE/drive/v3/files/$fileId?alt=media"
         val req = Request.Builder().url(url).header("Authorization", auth(token)).get().build()
         http.newCall(req).execute().use { resp ->
-            // 404: dosya silinmiş — yeniden oluşturulacak, hata değil.
+            // 404: file deleted — will be recreated, not an error.
             if (resp.code == 404) return@use null
             if (!resp.isSuccessful) throw IOException(resp.errorMessage())
-            // Boş 200 gövdesi "yedek yok" DEĞİLDİR (geçici ağ kesilmesi olabilir): null dönüp
-            // uzaktaki veriyi ezmek yerine hata fırlat ki çağıran push yapmasın.
+            // An empty 200 body is NOT "no backup" (it may be a transient network cut): return null
+            // is wrong here — throw so the caller does not overwrite remote data with a push.
             val body = resp.body?.string().takeUnless { it.isNullOrEmpty() }
                 ?: throw IOException("Boş Drive yedek gövdesi")
             json.decodeFromString<SyncMetadata>(body)
@@ -83,11 +83,11 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
     data class UploadResult(val fileId: String)
 
     /**
-     * Yedek dosyasını Drive'a yazar. [existingFileId] null ise yeni dosya oluşturur,
-     * doluysa içeriğini günceller. Hata durumunda istisna fırlatır (sessizce yutmaz).
+     * Writes the backup file to Drive. Creates a new file when [existingFileId] is null,
+     * otherwise updates its content. Throws on error (never swallows silently).
      *
-     * Eşzamanlılık için ETag/If-Match KULLANILMAZ — Drive v3'te etag yoktur. Çoklu cihaz
-     * çakışması, senkronizasyondan önce yapılan çek-birleştir (last-write-wins) adımıyla çözülür.
+     * No ETag/If-Match is USED for concurrency — Drive v3 has no etag. Multi-device
+     * conflicts are resolved via the pull-merge (last-write-wins) step before sync.
      */
     suspend fun upload(
         token: String,
@@ -98,7 +98,7 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
         val mediaType = MIME.toMediaType()
 
         if (existingFileId == null) {
-            // appDataFolder'a yeni dosya — multipart (metadata + içerik)
+            // New file in appDataFolder — multipart (metadata + content)
             val metaJson = """{"name":"$FILE_NAME","parents":["appDataFolder"]}"""
             val boundary = "===boundary==="
             val body = "--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n$metaJson\r\n" +
@@ -115,7 +115,7 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
                 UploadResult(obj.getString("id"))
             }
         } else {
-            // Var olan dosyayı güncelle
+            // Update the existing file
             val req = Request.Builder()
                 .url("$UPLOAD_BASE/files/$existingFileId?uploadType=media&fields=id")
                 .header("Authorization", auth(token))
@@ -123,7 +123,7 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
                 .patch(content.toRequestBody(mediaType))
                 .build()
             http.newCall(req).execute().use { resp ->
-                // 404: dosya silinmiş — yeni dosya oluşturmak için tekrar dener.
+                // 404: file deleted — retry by creating a new file.
                 if (resp.code == 404) return@use upload(token, metadata, null)
                 if (!resp.isSuccessful) throw IOException(resp.errorMessage())
                 val obj = JSONObject(resp.body?.string() ?: throw IOException("Boş Drive yanıtı"))

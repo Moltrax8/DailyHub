@@ -40,17 +40,17 @@ import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewModel = hiltViewModel()) {
     val groups by vm.groups.collectAsStateWithLifecycle()
     val group = groups.find { it.id == groupId }
-    // ExerciseDB anahtarı ViewModel üzerinden (AppPreferences → StateFlow); boşsa demo kapalı.
+    // ExerciseDB key via the ViewModel (AppPreferences → StateFlow); empty means demos are off.
     val exerciseDbKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
 
     var showAddWorkoutDialog by remember { mutableStateOf(false) }
     var newWorkoutName by remember { mutableStateOf("") }
 
     var showAddExerciseForWorkoutId by remember { mutableStateOf<String?>(null) }
-    // Düzenlenen hareket: (workoutId, hareket). Null = düzenleme açık değil.
+    // Edited exercise: (workoutId, exercise). Null = edit dialog is not open.
     var editExercise by remember { mutableStateOf<Pair<String, WorkoutExercise>?>(null) }
 
-    // Antrenman ekleme dialogu
+    // Add-workout dialog
     if (showAddWorkoutDialog) {
         AlertDialog(
             onDismissRequest = { showAddWorkoutDialog = false; newWorkoutName = "" },
@@ -79,7 +79,7 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
         )
     }
 
-    // Hareket ekleme dialogu — egzersiz seçilince hedef (set/tekrar/kg veya süre/adım) değerleri sorulur
+    // Add-exercise dialog — once an exercise is picked, target (sets/reps/kg or duration/steps) values are asked
     val addForWorkoutId = showAddExerciseForWorkoutId
     if (addForWorkoutId != null && group != null) {
         val exerciseResults by vm.exerciseResults.collectAsStateWithLifecycle()
@@ -100,12 +100,12 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
         )
     }
 
-    // Eklenmiş bir hareketi düzenleme diyaloğu (hedef set/tekrar/ağırlık/süre güncelleme)
+    // Dialog for editing an added exercise (updating target sets/reps/weight/duration)
     val editing = editExercise
     if (editing != null && group != null) {
         val (editWorkoutId, ex) = editing
         val exercisesById by vm.exercisesById.collectAsStateWithLifecycle()
-        // Çevrimdışı indirilmiş lokal demo; yoksa uzak URL'ye düş.
+        // Downloaded offline local demo; otherwise fall back to the remote URL.
         val cached = exercisesById[ex.exerciseId]
         EditExerciseDialog(
             exercise = ex,
@@ -143,8 +143,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
         bottomBar = { BottomNavBar(nav) },
     ) { padding ->
         if (group == null) {
-            // Geçersiz/silinmiş groupId'de sonsuz spinner yerine bulunamadı + geri dönüş.
-            // (res'e dokunmamak için metin sabit; owned-files: ui/** only.)
+            // Show a not-found + back affordance instead of an endless spinner for an invalid/deleted groupId.
+            // (Fixed text to avoid touching res; owned-files: ui/** only.)
             Column(
                 Modifier.fillMaxSize().padding(padding).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -201,7 +201,7 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                             workout.exercises.forEach { ex ->
                                 Row(
                                     Modifier.fillMaxWidth().padding(top = 4.dp)
-                                        // Hareketin üzerine tıklayınca düzenleme açılır.
+                                        // Tapping the exercise opens the editor.
                                         .clickable { editExercise = workout.id to ex },
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
@@ -250,11 +250,11 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
 }
 
 /**
- * Hareket ekleme diyaloğu. Önce tip + arama/manuel ad ile egzersiz seçilir; egzersiz seçilir
- * seçilmez hedef (başlangıç/hedef) değerleri sorulur: ağırlıkta set/tekrar/kg, kardiyoda süre +
- * adım/mesafe. Boş alanlarla kayıt yapılamaz; en azından bir hedef girilmelidir.
+ * Add-exercise dialog. First an exercise is picked via type + search/manual name; once picked,
+ * target (start/goal) values are asked: sets/reps/kg for weights, duration + steps/distance for
+ * cardio. Cannot save with empty fields; at least one target must be entered.
  *
- * onConfirm: (seçilen egzersiz veya null, ad, tip, setSayısı, tekrar, kg, süreDk, adım)
+ * onConfirm: (picked exercise or null, name, type, set count, reps, kg, minutes, steps)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -270,12 +270,12 @@ private fun AddExerciseDialog(
 ) {
     var query by remember { mutableStateOf("") }
     var manualType by remember { mutableStateOf(ExerciseType.WEIGHTLIFTING) }
-    // Seçilen egzersiz: aramadan gelen gerçek kayıt ya da manuel (id = null). Seçilince hedef alanı açılır.
+    // Picked exercise: real record from search or manual (id = null). The target form opens once picked.
     var picked by remember { mutableStateOf<Exercise?>(null) }
     var selectedName by remember { mutableStateOf<String?>(null) }
     var selectedType by remember { mutableStateOf(ExerciseType.WEIGHTLIFTING) }
 
-    // Hedef alanları
+    // Target fields
     var sets by remember { mutableStateOf("3") }
     var reps by remember { mutableStateOf("10") }
     var weight by remember { mutableStateOf("") }
@@ -295,15 +295,15 @@ private fun AddExerciseDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (hasSelection) R.string.workout_plan_values else R.string.workout_add_exercise_title)) },
         text = {
-            // Uzun egzersiz açıklaması + 180dp önizleme, diyalogun yüksekliğini aşınca set/tekrar/kg
-            // alanları alta itilip erişilemez hale geliyordu. İçeriği dikey kaydırılabilir yaparak
-            // her boyda tüm alanlara ulaşılmasını sağlıyoruz.
+            // Long exercise description + 180dp preview used to push the set/reps/kg fields below the
+            // fold once the dialog height was exceeded. Making the content vertically scrollable keeps
+            // all fields reachable at any size.
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (!hasSelection) {
-                    // 1. Aşama: tip + arama / manuel ad
+                    // Stage 1: type + search / manual name
                     Text(stringResource(R.string.workout_type_manual), style = MaterialTheme.typography.labelMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ExerciseType.entries.forEach { type ->
@@ -332,12 +332,12 @@ if (exerciseResults.isNotEmpty()) {
                                     .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                // Aramada henüz indirme olmadığından demo uzak GIF URL'sinden gösterilir.
+                                // No download has happened yet in search, so the demo is shown from the remote GIF URL.
                                 ExerciseThumb(ex.localMediaPath ?: ex.mediaUrl, sizeDp = 44, exerciseDbKey = exerciseDbKey)
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(ex.name, style = MaterialTheme.typography.bodyMedium)
-                                    // Hareketin ek detayları: bölge · ekipman (varsa) — sadece isim değil.
+                                    // Extra exercise details: body part · equipment (if any) — not just the name.
                                     val detail = listOfNotNull(
                                         ex.bodyPart.takeIf { it.isNotBlank() },
                                         ex.equipment?.takeIf { it.isNotBlank() },
@@ -357,11 +357,11 @@ if (exerciseResults.isNotEmpty()) {
                         ) { Text(stringResource(R.string.workout_add_manual, query.trim())) }
                     }
                 } else {
-                    // 2. Aşama: plan değer girişi (seçilen egzersiz + tip)
+                    // Stage 2: plan value entry (picked exercise + type)
                     Text(selectedName!!, style = MaterialTheme.typography.titleSmall)
                     AssistChip(onClick = {}, enabled = false,
                         label = { Text(selectedType.label()) })
-                    // Aramadan gelen hareketin demo medyası (önizleme — henüz uzak URL'den oynatılır).
+                    // Demo media of the search-picked exercise (preview — still played from the remote URL).
                     picked?.let { ex ->
                         val source = ex.localMediaPath ?: ex.mediaUrl
                         if (!source.isNullOrBlank()) {
@@ -376,7 +376,7 @@ if (exerciseResults.isNotEmpty()) {
                             Text(detail, style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary)
                         }
-                        // Nasıl yapılır adımları (ExerciseDB instructions → açıklama).
+                        // How-to steps (ExerciseDB instructions → description).
                         ex.description?.takeIf { it.isNotBlank() }?.let { steps ->
                             Text(steps, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -452,8 +452,8 @@ if (exerciseResults.isNotEmpty()) {
 }
 
 /**
- * Eklenmiş bir hareketin hedef değerlerini düzenleme diyaloğu. Mevcut plan setlerinden ön-doldurulur;
- * tip değiştirilebilir, set/tekrar/ağırlık veya süre/adım güncellenebilir. "Sil" ile hareket kaldırılır.
+ * Dialog for editing an added exercise's target values. Pre-filled from the current planned sets;
+ * the type can be changed, sets/reps/weight or duration/steps updated. "Delete" removes the exercise.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -487,13 +487,13 @@ private fun EditExerciseDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.workout_edit_exercise_title)) },
         text = {
-            // 180dp önizleme + alanlar diyalog yüksekliğini aşabildiğinden içerik kaydırılabilir.
+            // Content is scrollable since the 180dp preview + fields can exceed the dialog height.
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(exercise.exerciseName, style = MaterialTheme.typography.titleSmall)
-                // Çevrimdışı demo videosu/GIF'i (indirilmişse lokal dosyadan, yoksa uzak URL'den).
+                // Offline demo video/GIF (from the downloaded local file if present, else the remote URL).
                 if (!mediaSource.isNullOrBlank()) {
                     ExerciseMediaPlayer(source = mediaSource, heightDp = 180, exerciseDbKey = exerciseDbKey)
                 }
@@ -583,7 +583,7 @@ private fun NumField(
     )
 }
 
-/** Hareket listesinde gösterilecek kısa plan özeti (kullanıcının girdiği set/tekrar). Plan yoksa null. */
+/** Short plan summary shown in the exercise list (the user's entered sets/reps). Null when there is no plan. */
 private fun plannedSummary(ctx: Context, type: ExerciseType, planned: List<PlannedSet>): String? {
     if (planned.isEmpty()) return null
     val first = planned.first()

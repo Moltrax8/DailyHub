@@ -11,5 +11,5 @@ import kotlinx.serialization.Serializable
 @Serializable object WorkoutList
 @Serializable data class WorkoutDetail(val groupId: String)
 @Serializable data class LiveWorkout(val workoutId: String, val groupId: String)
-// Tamamlanan bir antrenman seansının özet/sonuç sayfası (set/tekrar/ağırlık detayları).
+// Summary/result page of a completed workout session (set/rep/weight details).
 @Serializable data class WorkoutSummary(val sessionId: String)

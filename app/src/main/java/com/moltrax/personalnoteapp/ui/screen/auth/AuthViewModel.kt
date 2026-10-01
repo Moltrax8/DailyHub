@@ -32,9 +32,9 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
-     * Sign-in sonrası Drive (drive.appdata) iznini doğrular. İzin eksikse onay ekranı
-     * Intent'ini [onConsentRequired] ile döndürür (UI başlatır); jeton alınırken başka bir
-     * hata olursa [onError] gerçek mesajla çağrılır.
+     * Verifies the Drive (drive.appdata) permission after sign-in. When the permission is missing, it
+     * returns the consent-screen Intent via [onConsentRequired] (the UI launches it); when some other
+     * error occurs while fetching the token, [onError] is called with the actual message.
      */
     fun ensureDriveConsent(onConsentRequired: (Intent) -> Unit, onError: (String) -> Unit = {}) {
         viewModelScope.launch {

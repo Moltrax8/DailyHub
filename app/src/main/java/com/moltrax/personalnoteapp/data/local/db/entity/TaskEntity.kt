@@ -33,10 +33,10 @@ data class TaskEntity(
     val linkedProgramId: String? = null,
     val programStartIndex: Int = 0,
     val sortOrder: Long = 0L,
-    // Kullanımdan kaldırıldı (oyunlaştırma/"Ceza Bölgesi" silindi). Sütun geriye dönük uyumluluk
-    // için şemada bırakıldı; her zaman false yazılır.
+    // Deprecated (gamification/"Penalty Zone" removed). Column kept in the schema for backward
+    // compatibility; always written as false.
     val isPenalty: Boolean = false,
-    // Mezar taşı (v18): silinen görev saklanır, görünür sorgular filtreler, sync dahil eder.
+    // Tombstone (v18): deleted tasks are kept, visible queries filter them, sync includes them.
     val isDeleted: Boolean = false,
 )
 

@@ -9,8 +9,8 @@ import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
 
 /**
- * Geri al şeridindeki "Geri Al" butonuna basılınca çalışır: bu widget örneğinde saklı anlık
- * görüntüden son tamamlanan görevi eski hâline döndürür, geri al bilgisini temizler ve yeniler.
+ * Runs when the "Undo" button in the undo strip is pressed: restores the last completed task
+ * to its previous state from the snapshot stored in this widget instance, clears the undo info and refreshes.
  */
 class UndoTaskAction : ActionCallback {
 
@@ -22,7 +22,7 @@ class UndoTaskAction : ActionCallback {
         val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
         val taskJson = prefs[TaskWidget.UNDO_TASK_JSON]
         if (taskJson != null) TaskWidget.restoreTask(context, taskJson)
-        // Geri al bilgisini temizle (şerit kaybolur).
+        // Clear the undo info (the strip disappears).
         updateAppWidgetState(context, glanceId) { p ->
             p.remove(TaskWidget.UNDO_TASK_TITLE)
             p.remove(TaskWidget.UNDO_TASK_JSON)

@@ -4,9 +4,9 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
 /**
- * Veri yükleme artık [TaskWidget.provideGlance] içinde yapılıyor; bu yüzden receiver'ın yapması
- * gereken tek şey widget'ı bağlamak. Sistemin gönderdiği APPWIDGET_UPDATE yayını taban sınıf
- * tarafından otomatik olarak composition'a (ve dolayısıyla veri yüklemeye) dönüştürülür.
+ * Data loading now happens inside [TaskWidget.provideGlance]; so the only thing the receiver
+ * has to do is bind the widget. The APPWIDGET_UPDATE broadcast sent by the system is
+ * automatically turned into composition (and thus data loading) by the base class.
  */
 class TaskWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = TaskWidget()

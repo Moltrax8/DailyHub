@@ -37,8 +37,8 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
         LaunchedEffect(Unit) { nav.popBackStack() }
     }
 
-    // Linkli görevde sayaç bitince Home'daki tamamlama ekranına yönlendiren bilgi.
-    // (res'e dokunmamak için sabit metin; owned-files: ui/** only.)
+    // On a linked task, finishing the counter routes to the completion screen on Home.
+    // (Fixed text to avoid touching res; owned-files: ui/** only.)
     LaunchedEffect(linkedNotice) {
         if (linkedNotice) {
             snackbarHostState.showSnackbar(

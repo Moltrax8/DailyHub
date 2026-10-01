@@ -21,24 +21,24 @@ class CalendarViewModel @Inject constructor(
     taskRepo: TaskRepository,
 ) : ViewModel() {
 
-    // Takvimde gösterilecek görevler: tamamlanmamış olanlar (tekrarlayanlar zaten hep açık kalır).
+    // Tasks shown on the calendar: incomplete ones (recurring ones always stay open anyway).
     val tasks: StateFlow<List<Task>> = taskRepo.observeAll()
         .map { list -> list.filter { !it.isDone } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
 
 /**
- * Bir görevin belirli bir [date] gününde takvimde görünüp görünmeyeceğini hesaplar. Tekrarlayan
- * görevler için yineleme biçimine göre (her gün / haftanın günleri / aylık / gün aralığı) o günde
- * bir tekrar düşüp düşmediğine bakılır. Tek seferlik görevler yalnızca kendi bitiş gününde görünür.
- * Görevin ilk gününden (anchor) önceki günlerde tekrar gösterilmez.
+ * Computes whether a task appears on the calendar on a given [date]. For recurring tasks, checks
+ * whether a repetition falls on that day per the repetition type (daily / weekdays / monthly / day
+ * interval). One-shot tasks only appear on their own due day.
+ * No repetition is shown on days before the task's first day (anchor).
  */
 fun Task.occursOn(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Boolean {
     val anchorMillis = dueDate ?: createdAt
     val anchor = Instant.ofEpochMilli(anchorMillis).atZone(zone).toLocalDate()
 
     if (!isRecurring) {
-        // Bitiş tarihi olmayan tek seferlik görev takvimde yer almaz.
+        // A one-shot task without a due date has no place on the calendar.
         return dueDate != null && anchor == date
     }
     if (date.isBefore(anchor)) return false
@@ -49,9 +49,9 @@ fun Task.occursOn(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Boole
             date.dayOfWeek.value in days
         }
         RecurrenceType.MONTHLY -> {
-            // Ayın son gününe kırp: 29/30/31'ine ayarlı bir görev, o günü olmayan aylarda (Şubat,
-            // 30 günlük aylar) ayın SON gününde görünür — böylece kısa aylarda kaybolmaz. Bu,
-            // tamamlama tarafındaki plusMonths kırpmasıyla (Task.nextRecurrenceDue) tutarlıdır.
+            // Clamp to the last day of the month: a task set to the 29th/30th/31st appears on the LAST
+            // day of months lacking that day (February, 30-day months) — so it never disappears in short
+            // months. This matches the plusMonths clamping on the completion side (Task.nextRecurrenceDue).
             val targetDay = minOf(anchor.dayOfMonth, date.lengthOfMonth())
             date.dayOfMonth == targetDay
         }

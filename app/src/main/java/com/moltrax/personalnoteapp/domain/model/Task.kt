@@ -13,54 +13,54 @@ data class Task(
     val isDone: Boolean = false,
     val isRecurring: Boolean = false,
     val intervalDays: Int? = null,
-    // Zengin tekrar biçimi. NULL = eski "gün aralığı" davranışı (intervalDays kullanılır).
+    // Rich recurrence format. NULL = legacy "day interval" behavior (intervalDays is used).
     val recurrenceType: RecurrenceType? = null,
-    // WEEKLY için seçili haftanın günleri (ISO: 1=Pazartesi .. 7=Pazar). Boşsa görevin kendi
-    // gününe göre haftalık (her 7 günde bir) yinelenir.
+    // For WEEKLY, the selected days of week (ISO: 1=Monday .. 7=Sunday). When empty the task
+    // repeats weekly on its own day (every 7 days).
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
     val focusDurationSeconds: Int = 1500,
     val category: String? = null,
-    // Ana görevin altındaki kontrol-listesi (checklist) maddeleri. Görevle birlikte gömülü saklanır.
+    // Checklist items under the parent task. Stored embedded with the task.
     val subtasks: List<SubTask> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val completedAt: Long? = null,
-    // Tek bir antrenmana (Day A vb.) bağ. linkedProgramId ile aynı anda kullanılmaz.
+    // Link to a single workout (Day A etc.). Never used together with linkedProgramId.
     val linkedWorkoutId: String? = null,
-    // Tüm bir antrenman programına (WorkoutGroup) bağ; döngü hangi günden başlayacağını
-    // [programStartIndex] belirler. Bağlıysa görev tamamlanırken o günkü antrenman çözümlenir.
+    // Link to a whole workout program (WorkoutGroup); [programStartIndex] determines which day
+    // of the cycle to start from. When linked, completing the task resolves that day's workout.
     val linkedProgramId: String? = null,
     val programStartIndex: Int = 0,
-    // Manuel sıralama anahtarı: liste sortOrder ARTAN sırada gösterilir (küçük = üstte).
-    // Migration eski görevlere -createdAt atar (en yeni üstte kalır). Yeni görevler için
-    // mevcut en küçük değerden bir eksiği verilerek listenin başına eklenir.
+    // Manual ordering key: the list is shown in sortOrder ASCENDING (small = on top).
+    // Migration assigns -createdAt to old tasks (newest stays on top). New tasks get one less
+    // than the current minimum, so they are prepended to the list.
     val sortOrder: Long = 0L,
-    // Mezar taşı: silinen görev kaydı saklanır ki Drive senkronizasyonu silinmiş görevi
-    // uzaktan geri diriltmesin. Görünür listeler DAO katmanında filtrelenir (isDeleted = 0).
+    // Tombstone: the deleted task record is kept so Drive sync does not resurrect the deleted
+    // task from remote. Visible lists are filtered at the DAO layer (isDeleted = 0).
     val isDeleted: Boolean = false,
-    // Bilinmeyen (gelecek sürümdeki) priority adlarının ham karşılığı. null ise [priority]
-    // geçerlidir; doluysa okuma/yazma yolunda aynen korunur (ileriye uyumluluk).
+    // Raw form of unknown (future-version) priority names. When null, [priority] is valid;
+    // when set it is preserved as-is on the read/write path (forward compatibility).
     val priorityRaw: String? = null,
 ) {
-    /** Tamamlanan alt görev sayısı. */
+    /** Number of completed subtasks. */
     val doneSubtaskCount: Int get() = subtasks.count { it.isDone }
 
-    /** Toplam alt görev sayısı. */
+    /** Total number of subtasks. */
     val subtaskCount: Int get() = subtasks.size
 
-    /** Tamamlanması beklenen alt görev kaldı mı (en az bir alt görev var ve hepsi bitmemiş). */
+    /** Whether there are still pending subtasks (at least one exists and not all are done). */
     val hasIncompleteSubtasks: Boolean get() = subtasks.any { !it.isDone }
 
-    /** 0f..1f arası alt görev ilerlemesi (alt görev yoksa 0). */
+    /** Subtask progress between 0f..1f (0 when there are no subtasks). */
     val subtaskProgress: Float
         get() = if (subtasks.isEmpty()) 0f else doneSubtaskCount.toFloat() / subtasks.size
 }
 
 /**
- * Tekrarlayan bir görev tamamlandığında taşınacağı BİR SONRAKİ bitiş zamanını hesaplar; görev
- * tekrarlamıyorsa veya geçerli bir biçim yoksa null döner. Daima en az bir döngü ileri gider ve
- * gerekirse [now]'ı geçene kadar ilerler (gecikmiş görevlerde zinciri tazeler). [withCompletion]
- * aynı mantığı paylaşır.
+ * Computes the NEXT due time a recurring task moves to when completed; returns null when the
+ * task does not repeat or has no valid format. Always advances at least one cycle and keeps
+ * advancing past [now] if needed (refreshes the chain for overdue tasks). [withCompletion]
+ * shares the same logic.
  */
 fun Task.nextRecurrenceDue(now: Long = System.currentTimeMillis()): Long? {
     if (!isRecurring) return null
@@ -72,14 +72,14 @@ fun Task.nextRecurrenceDue(now: Long = System.currentTimeMillis()): Long? {
         RecurrenceType.INTERVAL, null -> {
             val step = intervalDays ?: 0
             if (step <= 0) return null
-            // Takvim günü olarak ilerlet (sabit 24s katı DEĞİL): DST geçişlerinde bitiş saati
-            // kaymaz; DAILY/MONTHLY/WEEKLY ile aynı LocalDateTime tabanlı davranışı paylaşır.
+            // Advance by calendar day (NOT a fixed 24s multiple): the due time does not drift
+            // across DST transitions; shares the same LocalDateTime-based behavior as DAILY/MONTHLY/WEEKLY.
             advance(base, now) { it.plusDays(step.toLong()) }
         }
     }
 }
 
-/** Verilen [step] (gün/ay ekleme) ile en az bir kez, ardından [now]'ı geçene kadar ilerler. */
+/** Advances with the given [step] (day/month addition) at least once, then until past [now]. */
 private inline fun advance(base: Long, now: Long, step: (java.time.LocalDateTime) -> java.time.LocalDateTime): Long {
     val zone = ZoneId.systemDefault()
     var dt = Instant.ofEpochMilli(base).atZone(zone).toLocalDateTime()
@@ -87,13 +87,13 @@ private inline fun advance(base: Long, now: Long, step: (java.time.LocalDateTime
     return dt.atZone(zone).toInstant().toEpochMilli()
 }
 
-/** Haftalık yinelemede [recurrenceDaysOfWeek] (boşsa görevin kendi günü) için sıradaki gün. */
+/** Next day for weekly repetition for [recurrenceDaysOfWeek] (the task's own day when empty). */
 private fun Task.nextWeekly(base: Long, now: Long): Long {
     val zone = ZoneId.systemDefault()
     val baseDt = Instant.ofEpochMilli(base).atZone(zone).toLocalDateTime()
     val days = recurrenceDaysOfWeek.takeIf { it.isNotEmpty() }?.toSet()
         ?: setOf(baseDt.dayOfWeek.value)
-    var dt = baseDt.plusDays(1) // bugünkü tamamlamadan sonra en erken yarın
+    var dt = baseDt.plusDays(1) // after today's completion, tomorrow at the earliest
     while (dt.dayOfWeek.value !in days || dt.atZone(zone).toInstant().toEpochMilli() <= now) {
         dt = dt.plusDays(1)
     }
@@ -101,9 +101,9 @@ private fun Task.nextWeekly(base: Long, now: Long): Long {
 }
 
 /**
- * Bir görevi "tamamlandı" olarak işaretler. Tekrarlayan görevlerde (isRecurring + geçerli yineleme)
- * görev kapatılmaz; bunun yerine bir sonraki döngüye taşınır ve açık kalır. Böylece tekrarlayan
- * görevler gerçekten yinelenir. Hem ana liste hem odak zamanlayıcısı kullanır.
+ * Marks a task as "completed". For recurring tasks (isRecurring + valid recurrence) the task
+ * is not closed; instead it moves to the next cycle and stays open. This way recurring tasks
+ * truly repeat. Used by both the main list and the focus timer.
  */
 fun Task.withCompletion(now: Long = System.currentTimeMillis()): Task {
     val next = nextRecurrenceDue(now)

@@ -39,9 +39,9 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val appVm: AppViewModel by viewModels()
 
-    // Widget'tan gelen yönlendirme isteği (örn. '+' butonu → yeni görev ekranı).
+    // Routing request from the widget (e.g. '+' button → new task screen).
     private val pendingWidgetAction = mutableStateOf<String?>(null)
-    // Spor görevi tamamlama isteğinde hangi görev için ekran açılacağını taşıyan id.
+    // Id carrying which task to open the screen for on a sport-task completion request.
     private val pendingWidgetTaskId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,16 +53,16 @@ class MainActivity : ComponentActivity() {
             val language by appVm.language.collectAsStateWithLifecycle()
             val isSwitchingLanguage by appVm.isSwitchingLanguage.collectAsStateWithLifecycle()
 
-            // Seçili dile göre yerelleştirilmiş context + configuration sağla. Dil değişince bu
-            // sağlayıcı yeniden hesaplanır; LocalContext/LocalConfiguration yeni değere geçer ve tüm
-            // stringResource çağrıları ANINDA (uygulama yeniden başlamadan) yeni dile döner.
+            // Provide localized context + configuration for the selected language. When the language
+            // changes this provider recomputes; LocalContext/LocalConfiguration pick up the new value and all
+            // stringResource calls switch to the new language INSTANTLY (without an app restart).
             val baseContext = LocalContext.current
             val baseConfig = LocalConfiguration.current
             val localizedContext = remember(language, baseContext) { baseContext.localizedFor(language) }
             val localizedConfig = remember(language, baseConfig) { localizedConfiguration(baseConfig, language) }
 
-            // Yeni dil uygulanıp (yeni kaynaklarla) compose edildikten sonra kısa bir görsel gecikmenin
-            // ardından "Yükleniyor" göstergesini kapat. Açılışta isSwitchingLanguage zaten false'tur.
+            // Hide the "Loading" indicator after a short visual delay once the new language has
+            // been applied (composed with fresh resources). At launch isSwitchingLanguage is already false.
             LaunchedEffect(language) {
                 if (appVm.isSwitchingLanguage.value) {
                     kotlinx.coroutines.delay(300)
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Activity zaten açıkken (singleTop) widget'tan yeni bir intent gelirse yakala.
+    // Catch a new intent from the widget while the Activity is already open (singleTop).
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_WIDGET_ACTION = "extra_widget_action"
         const val EXTRA_WIDGET_TASK_ID = "extra_widget_task_id"
         const val ACTION_NEW_TASK = "new_task"
-        // Spora linkli görevi widget'tan tamamlama: uygulamada set/ağırlık giriş ekranını açar.
+        // Completing a sport-linked task from the widget: opens the set/weight entry screen in the app.
         const val ACTION_COMPLETE_WORKOUT = "complete_workout"
     }
 }

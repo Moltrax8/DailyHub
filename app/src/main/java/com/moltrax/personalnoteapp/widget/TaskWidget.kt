@@ -72,13 +72,13 @@ class TaskWidget : GlanceAppWidget() {
 
     override val stateDefinition = PreferencesGlanceStateDefinition
 
-    // Sabit boyut ızgaraları yerine SizeMode.Exact: launcher widget'ın GERÇEK boyutunu verir,
-    // böylece 3x3'ten 4x4/4x5'e kadar her boyuta sürekli (adaptive) uyum sağlarız.
+    // Instead of fixed-size grids, SizeMode.Exact: gives the launcher widget's ACTUAL size,
+    // so we adapt continuously (adaptive) to every size from 3x3 up to 4x4/4x5.
     override val sizeMode = SizeMode.Exact
 
     /**
-     * Glance widget'ı bir Hilt bileşeni olmadığı için bağımlılıkları application context üzerinden
-     * EntryPoint ile alıyoruz.
+     * Since the Glance widget is not a Hilt component, we obtain dependencies via
+     * EntryPoint through the application context.
      */
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -89,20 +89,20 @@ class TaskWidget : GlanceAppWidget() {
         fun appPreferences(): AppPreferences
     }
 
-    /** Widget'taki tek bir alt görev (checklist) satırı; tıklanınca tamamlanma durumu değişir. */
+    /** A single subtask (checklist) row in the widget; tapping toggles its completion state. */
     private data class SubItem(val id: String, val title: String, val isDone: Boolean)
 
     private data class TaskItem(
         val id: String,
         val title: String,
         val notes: String?,
-        // Spora/programa linkliyse true: tik atınca direkt tamamlanmaz, uygulamada set/ağırlık ekranı açılır.
+        // True if linked to a workout/program: checking does not complete directly, it opens the set/weight screen in the app.
         val isWorkout: Boolean,
-        // Görevin altındaki kontrol-listesi maddeleri (gömülü), widget'ta da listelenir.
+        // Checklist items under the task (embedded), also listed in the widget.
         val subtasks: List<SubItem>,
     )
 
-    /** Widget'ta gösterilecek, seçili dile göre çözülmüş sabit metinler (widget Compose değil). */
+    /** Fixed strings shown in the widget, resolved for the selected language (widget is not Compose). */
     private data class WidgetStrings(val title: String, val error: String, val empty: String, val undo: String)
 
     private sealed interface UiState {
@@ -111,13 +111,12 @@ class TaskWidget : GlanceAppWidget() {
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // Veriyi composition'dan önce, hata yakalayarak yüklüyoruz; böylece widget asla sonsuz
-        // loading'de kalmaz, en kötü ihtimalle "Hata oluştu" gösterir.
+        // Load data before composition, catching errors; so the widget never gets stuck in infinite
+        // loading — at worst it shows an error message.
         val state = loadState(context)
-        // 'Ayarlar' butonunun bu spesifik widget için yapılandırma ekranını açabilmesi adına
-        // glanceId'den appWidgetId'yi çözüyoruz.
+        // Resolve appWidgetId from glanceId so the 'Settings' button can open the config screen for this specific widget.
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        // Seçili dile göre metinleri çöz (widget LocalContext sağlayıcısını kullanamaz).
+        // Resolve strings for the selected language (the widget cannot use the LocalContext provider).
         val lang = runCatching { entryPoint(context).appPreferences().language.first() }.getOrDefault("tr")
         val lc = context.localizedFor(lang)
         val strings = WidgetStrings(
@@ -150,15 +149,15 @@ class TaskWidget : GlanceAppWidget() {
     @Composable
     private fun WidgetRoot(context: Context, state: UiState, appWidgetId: Int, strings: WidgetStrings) {
         val size = LocalSize.current
-        // Yalnızca gerçekten küçük yerleşimlerde tek görev göster; bunun dışındaki her boyut
-        // (orta, büyük, 4x4, 4x5...) tam, kaydırılabilir listeye uyum sağlar.
+        // Show a single task only in really small placements; every other size
+        // (medium, large, 4x4, 4x5...) fits the full scrollable list.
         val compact = size.width < COMPACT_WIDTH || size.height < COMPACT_HEIGHT
         val prefs = currentState<Preferences>()
         val selectedIds = prefs[SELECTED_TASK_IDS]
-        // Son tamamlanan görevin başlığı (geri al şeridi için); yoksa şerit gösterilmez.
+        // Title of the last completed task (for the undo strip); without it the strip is hidden.
         val undoTitle = prefs[UNDO_TASK_TITLE]
 
-        // Dış kapsül: koyu zemin + yumuşak köşeler (modern, kart hissi veren karanlık/neon tema).
+        // Outer container: dark background + soft corners (modern dark/neon card-feel theme).
         Column(
             modifier = GlanceModifier.fillMaxSize()
                 .background(ColorProvider(WidgetColors.Bg))
@@ -169,27 +168,27 @@ class TaskWidget : GlanceAppWidget() {
             Header(context, appWidgetId, strings.title)
             Spacer(GlanceModifier.height(10.dp))
 
-            // İçerik kalan alanı kaplar; geri al şeridi varsa altta sabit kalır (liste kaymaz).
+            // Content fills the remaining space; if the undo strip exists it stays pinned at the bottom (the list does not shift).
             Box(modifier = GlanceModifier.defaultWeight().fillMaxWidth()) {
                 when (state) {
                     is UiState.Error -> Message(strings.error, AppColors.Error)
                     is UiState.Content -> {
-                        // Bu widget için seçilmiş görev id'leri varsa SADECE onları göster; yoksa
-                        // (varsayılan davranış) tüm görevleri göster. Filtre tüm boyutlarda uygulanır.
+                        // If task IDs are selected for this widget, show ONLY those; otherwise
+                        // (default behavior) show all tasks. The filter applies at all sizes.
                         val visible =
                             if (selectedIds.isNullOrEmpty()) state.tasks
                             else state.tasks.filter { it.id in selectedIds }
                         when {
                             visible.isEmpty() -> Message(strings.empty, AppColors.TextSecondary)
                             compact -> CompactList(context, visible, strings.empty)
-                            else -> FullList(context, visible)   // büyük/ekstra büyük: tümü, kaydırılabilir
+                            else -> FullList(context, visible)   // large/extra-large: all, scrollable
                         }
                     }
                 }
             }
 
-            // Geri al şeridi: son tamamlanan görevi tek dokunuşla geri yükler. Tamamlama yapıldığında
-            // belirir, "Geri Al"/"✕" ile ya da yenilemede kaybolur.
+            // Undo strip: restores the last completed task with a single tap. It appears on completion
+            // and disappears via "Undo"/"✕" or on refresh.
             if (!undoTitle.isNullOrBlank()) {
                 Spacer(GlanceModifier.height(8.dp))
                 UndoBar(undoTitle, strings.undo)
@@ -198,8 +197,8 @@ class TaskWidget : GlanceAppWidget() {
     }
 
     /**
-     * Alt geri al (undo) şeridi: solda "✓ <başlık>", sağda neon "Geri Al" butonu ve sade "✕" kapat
-     * çipi. Geri Al [UndoTaskAction]'ı, ✕ ise [DismissUndoAction]'ı çalıştırır.
+     * Bottom undo strip: "✓ <title>" on the left, neon "Undo" button and plain "✕" close
+     * chip on the right. Undo runs [UndoTaskAction], ✕ runs [DismissUndoAction].
      */
     @Composable
     private fun UndoBar(title: String, undoLabel: String) {
@@ -249,9 +248,9 @@ class TaskWidget : GlanceAppWidget() {
     }
 
     /**
-     * Başlık şeridi: solda "Görevlerim", sağda eşit boyutlu üç ikon butonu. Tüm öğeler sabit
-     * yükseklikteki ([HEADER_HEIGHT]) Row içinde dikey ortalanır; başlık [defaultWeight] ile kalan
-     * alanı kaplar, böylece butonlar her widget genişliğinde sağ kenara hizalı ve eşit aralıklı kalır.
+     * Header bar: title on the left, three equal-size icon buttons on the right. All items are
+     * vertically centered in a fixed-height ([HEADER_HEIGHT]) Row; the title fills the remaining
+     * space via [defaultWeight], so buttons stay right-aligned and evenly spaced at every widget width.
      */
     @Composable
     private fun Header(context: Context, appWidgetId: Int, title: String) {
@@ -269,7 +268,7 @@ class TaskWidget : GlanceAppWidget() {
                 maxLines = 1,
                 modifier = GlanceModifier.defaultWeight(),
             )
-            // Buton grubu: Ayarlar (çark), Yenile (döngüsel ok), Ekle (+). Aralarında eşit boşluk.
+            // Button group: Settings (gear), Refresh (circular arrow), Add (+). Equal spacing between them.
             IconButton("⚙", actionStartActivity(configIntent(context, appWidgetId)))
             Spacer(GlanceModifier.width(BTN_GAP))
             IconButton("↻", actionRunCallback<RefreshTaskWidgetAction>())
@@ -279,9 +278,9 @@ class TaskWidget : GlanceAppWidget() {
     }
 
     /**
-     * Başlıktaki ikon butonu — eşkenar, yuvarlatılmış kare çip. [filled] true ise neon dolgulu
-     * (vurgu) buton ('+' için); diğerleri sade çip zeminli neon sembol. Hepsi aynı [BTN_SIZE]
-     * olduğundan başlıkta kusursuz hizalanır.
+     * Icon button in the header — square, rounded-corner chip. If [filled] is true, a neon-filled
+     * (accent) button (for '+'); the others are a plain chip background with a neon symbol. Since all share the same [BTN_SIZE]
+     * they align perfectly in the header.
      */
     @Composable
     private fun IconButton(glyph: String, onClick: androidx.glance.action.Action, filled: Boolean = false) {
@@ -313,22 +312,22 @@ class TaskWidget : GlanceAppWidget() {
 
     @Composable
     private fun CompactList(context: Context, tasks: List<TaskItem>, emptyText: String) {
-        // Çok küçük yerleşimde yalnızca (filtrelenmiş listenin) ilk görevini göster.
+        // In very small placements, show only the first task (of the filtered list).
         val item = tasks.firstOrNull()
         if (item == null) Message(emptyText, AppColors.TextSecondary)
         else TaskRow(context, item)
     }
 
     /**
-     * Kart tarzı görev satırı: tıklanabilir checkbox + kalın başlık + altında soluk not. Tüm öğeler
-     * tek bir Row içinde dikey ortalanır; checkbox solda sabit, metin sütunu kalan alanı [defaultWeight]
-     * ile kaplar. Böylece başlık ve checkbox her zaman aynı eksende hizalı kalır (sabit yükseklikli
-     * dekoratif çubuk kaldırıldı — asıl hizasızlık kaynağıydı). Koyu kart zemini + yumuşak köşeler.
+     * Card-style task row: clickable checkbox + bold title + faded note below. All items
+     * are vertically centered in a single Row; checkbox fixed on the left, text column fills the remaining space via [defaultWeight].
+     * This keeps the title and checkbox always aligned on the same axis (the fixed-height
+     * decorative bar was removed — it was the actual source of misalignment). Dark card background + soft corners.
      */
     @Composable
     private fun TaskRow(context: Context, item: TaskItem) {
-        // Spora linkli görevde tik direkt tamamlamaz: uygulamada set/tekrar/ağırlık ekranını açar.
-        // Diğer görevlerde her zamanki gibi widget'tan anında tamamlanır.
+        // For workout-linked tasks, checking does not complete directly: it opens the set/rep/weight screen in the app.
+        // Other tasks complete instantly from the widget as usual.
         val checkAction: androidx.glance.action.Action =
             if (item.isWorkout) actionStartActivity(workoutCompleteIntent(context, item.id))
             else actionRunCallback<CompleteTaskAction>(
@@ -368,17 +367,17 @@ class TaskWidget : GlanceAppWidget() {
                         modifier = GlanceModifier.padding(top = 3.dp),
                     )
                 }
-                // Alt görevler (checklist): başlığın/notun altında soluk, küçük satırlar halinde
-                // listelenir. Tamamlanmış olanlar üstü çizili. Her satır tıklanabilir: uygulamayı
-                // açmadan o alt görevi anında tamamlar/geri alır.
+                // Subtasks (checklist): listed as faded, small lines below the title/note.
+                // Completed ones are struck through. Each row is clickable: instantly
+                // completes/uncompletes that subtask without opening the app.
                 item.subtasks.forEach { sub -> SubtaskRow(item.id, sub) }
             }
         }
     }
 
     /**
-     * Tek bir alt görev satırı: durum işareti (✓/○) + başlık (tamamlıysa üstü çizili). Tüm satır
-     * tıklanabilir; [ToggleSubtaskAction] ile uygulamayı açmadan alt görevi anında tamamlar/geri alır.
+     * A single subtask row: status mark (✓/○) + title (struck through if done). The whole row
+     * is clickable; via [ToggleSubtaskAction] it instantly completes/uncompletes the subtask without opening the app.
      */
     @Composable
     private fun SubtaskRow(taskId: String, sub: SubItem) {
@@ -426,29 +425,29 @@ class TaskWidget : GlanceAppWidget() {
         )
     }
 
-    /** Widget'a özel ek tonlar (genel [AppColors] paletinin koyu/neon tamamlayıcıları). */
+    /** Extra tones specific to the widget (dark/neon complements of the general [AppColors] palette). */
     private object WidgetColors {
-        val Bg   = androidx.compose.ui.graphics.Color(0xFF0B0B12) // dış kapsül zemini
-        val Card = androidx.compose.ui.graphics.Color(0xFF1B1B26) // görev kartı zemini
-        val Chip = androidx.compose.ui.graphics.Color(0xFF22222E) // sade ikon buton zemini
+        val Bg   = androidx.compose.ui.graphics.Color(0xFF0B0B12) // outer container background
+        val Card = androidx.compose.ui.graphics.Color(0xFF1B1B26) // task card background
+        val Chip = androidx.compose.ui.graphics.Color(0xFF22222E) // plain icon button background
     }
 
     companion object {
-        // Bu widget örneğinde gösterilecek görevlerin id kümesi (çoklu seçim). Boş/yoksa = tümü.
+        // Set of task IDs to show in this widget instance (multi-select). Empty/absent = all.
         val SELECTED_TASK_IDS = stringSetPreferencesKey("selected_task_ids")
 
-        // Son tamamlanan görevin geri al (undo) anlık görüntüsü — yalnızca tıklanan widget örneğinde
-        // tutulur. JSON tamamlamadan ÖNCEKİ görevi taşır; başlık geri al şeridinde gösterilir.
+        // Undo snapshot of the last completed task — kept only in the tapped widget instance.
+        // The JSON carries the task from BEFORE completion; the title is shown in the undo strip.
         val UNDO_TASK_TITLE = stringPreferencesKey("undo_task_title")
         val UNDO_TASK_JSON = stringPreferencesKey("undo_task_json")
 
         private val json = Json { ignoreUnknownKeys = true }
 
-        // Tek-görev (kompakt) görünümün altına inilen eşikler; bunun üstü tam listeye geçer.
+        // Thresholds below which the single-task (compact) view applies; above switches to the full list.
         private val COMPACT_WIDTH = 200.dp
         private val COMPACT_HEIGHT = 140.dp
 
-        // Başlık şeridi ölçüleri — butonlar ve başlık bu sabit yükseklikte dikey ortalanır.
+        // Header bar metrics — buttons and title are vertically centered at this fixed height.
         private val HEADER_HEIGHT = 40.dp
         private val BTN_SIZE = 38.dp
         private val BTN_GAP = 6.dp
@@ -470,26 +469,26 @@ class TaskWidget : GlanceAppWidget() {
             }
 
         /**
-         * 'Ayarlar' (çark) butonu: bu widget'ın görev seçme ekranını açar. Ana uygulamayı
-         * (MainActivity) DEĞİL, kendi task'ında açılan saydam [TaskWidgetConfigActivity]'yi başlatır.
+         * 'Settings' (gear) button: opens this widget's task-selection screen. It launches the transparent
+         * [TaskWidgetConfigActivity] in its own task, NOT the main app (MainActivity).
          */
         private fun configIntent(context: Context, appWidgetId: Int): Intent =
             Intent(context, TaskWidgetConfigActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
-                // Her widget için benzersiz data → PendingIntent'lerin birbirine karışmaması için.
+                // Unique data per widget → so PendingIntents don't get mixed up.
                 data = Uri.parse("personalnoteapp://configure/$appWidgetId")
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
 
         /**
-         * Spora/programa linkli bir görevin tikine basılınca: görevi widget'tan tamamlamak yerine
-         * uygulamayı açıp o görev için set/tekrar/ağırlık giriş ekranını (akordeon) açtırır.
+         * When the check of a workout/program-linked task is tapped: instead of completing the task from the widget,
+         * it opens the app to the set/rep/weight entry screen (accordion) for that task.
          */
         private fun workoutCompleteIntent(context: Context, taskId: String): Intent =
             Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
-                // Her görev için benzersiz data → PendingIntent'ler karışmasın.
+                // Unique data per task → so PendingIntents don't get mixed up.
                 data = Uri.parse("personalnoteapp://complete_workout/$taskId")
                 putExtra(MainActivity.EXTRA_WIDGET_ACTION, MainActivity.ACTION_COMPLETE_WORKOUT)
                 putExtra(MainActivity.EXTRA_WIDGET_TASK_ID, taskId)
@@ -503,16 +502,15 @@ class TaskWidget : GlanceAppWidget() {
         }
 
         /**
-         * Widget üzerinden bir görevi tamamlar; uygulamadaki davranışı birebir yansıtır. Ağ
-         * senkronizasyonunu BURADA yapmaz (arayüzü bekletmemek için) — çağıran önce [requestUpdate]
-         * ile anında yeniler, ardından [pushSync] ile gönderir. Geri al için tamamlamadan ÖNCEKİ
-         * görevi döndürür (null = görev bulunamadı).
+         * Completes a task via the widget; mirrors the in-app behavior exactly. Does NOT perform network
+         * synchronization HERE (to avoid blocking the UI) — the caller first refreshes instantly via [requestUpdate],
+         * then pushes via [pushSync]. Returns the task from BEFORE completion for undo (null = task not found).
          */
         suspend fun completeTask(context: Context, taskId: String): Task? {
             val ep = entryPoint(context)
             val task = ep.taskRepository().getById(taskId) ?: return null
             val now = System.currentTimeMillis()
-            // Tekrarlayan görev ileri sarılır (açık kalır), normal görev kapanır.
+            // Recurring tasks advance (stay open), normal tasks close.
             val result = task.withCompletion(now)
             ep.taskRepository().upsert(result)
             ep.notificationService().cancelReminder(task.id)
@@ -523,10 +521,10 @@ class TaskWidget : GlanceAppWidget() {
         }
 
         /**
-         * Widget üzerinden bir alt görevin (checklist maddesi) tamamlanma durumunu değiştirir.
-         * Uygulamayı açmadan, gömülü alt görev listesindeki ilgili maddeyi ters çevirir; aynı satıra
-         * tekrar dokununca geri alınır. Ana görevi tamamlamaz (uygulama içi davranışla birebir).
-         * Ağ senkronizasyonunu burada yapmaz — çağıran önce [requestUpdate] sonra [pushSync] çağırır.
+         * Toggles the completion state of a subtask (checklist item) via the widget.
+         * Without opening the app, flips the matching item in the embedded subtask list; tapping the
+         * same row again reverts it. Does not complete the parent task (matches in-app behavior exactly).
+         * Does not sync over the network here — the caller calls [requestUpdate] first, then [pushSync].
          */
         suspend fun toggleSubtask(context: Context, taskId: String, subtaskId: String) {
             val ep = entryPoint(context)
@@ -541,10 +539,10 @@ class TaskWidget : GlanceAppWidget() {
             ep.taskRepository().upsert(updated)
         }
 
-        /** Geri al şeridi için tamamlanan görevi serileştirir (tamamlamadan önceki hâli). */
+        /** Serializes the completed task for the undo strip (its pre-completion state). */
         fun encodeUndo(task: Task): String = json.encodeToString(task.toJson())
 
-        /** Geri al: [encodeUndo] ile saklanan görevi eski hâline (tamamlanmadan önce) geri yükler. */
+        /** Undo: restores the task stored via [encodeUndo] to its previous (pre-completion) state. */
         suspend fun restoreTask(context: Context, taskJson: String) {
             val ep = entryPoint(context)
             val task = runCatching { json.decodeFromString<TaskJson>(taskJson).toDomain() }.getOrNull() ?: return
@@ -555,8 +553,8 @@ class TaskWidget : GlanceAppWidget() {
         }
 
         /**
-         * Drive senkronizasyonunu çalıştırır (çevrimdışıyken sessizce yutar). Arayüz güncellendikten
-         * SONRA çağrılır; böylece tik atınca widget anında tepki verir, ağ işi arkada sürer.
+         * Runs Drive synchronization (silently swallowed when offline). Called AFTER the UI is updated;
+         * so checking responds instantly in the widget while network work continues in the background.
          */
         suspend fun pushSync(context: Context) {
             runCatching { entryPoint(context).syncRepository().pushToDrive() }

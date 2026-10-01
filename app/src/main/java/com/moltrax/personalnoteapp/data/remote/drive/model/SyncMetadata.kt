@@ -13,13 +13,13 @@ import kotlinx.serialization.Serializable
 data class SyncMetadata(
     val version: Int = 4,
     val lastModifiedUtc: String,
-    // Tüm alanların varsayılanı boş liste: eski (v1/v2/v3) yedek dosyaları da sorunsuz çözülür
+    // All fields default to empty lists: old (v1/v2/v3) backup files still decode cleanly
     val tasks: List<TaskJson> = emptyList(),
     val categories: List<CategoryJson> = emptyList(),
     val workoutGroups: List<WorkoutGroup> = emptyList(),
     val workoutSessions: List<WorkoutSession> = emptyList(),
-    // Liste sırası vektörü (görev id'leri, sortOrder ARTAN sırada) + LWW saati. v3 yedeklerde
-    // boş/0 gelir → yerel sıra korunur. Eşzamanlı yeniden sıralamalarda büyük saat kazanır.
+    // List-order vector (task ids, sortOrder ASCENDING) + LWW clock. In v3 backups it arrives
+    // empty/0 → local order is kept. On concurrent reorderings the larger clock wins.
     val taskOrder: List<String> = emptyList(),
     val taskOrderUpdatedAt: Long = 0L,
 )
@@ -28,7 +28,7 @@ data class SyncMetadata(
 data class CategoryJson(
     val name: String,
     val isPermanent: Boolean = false,
-    // Mezar taşı (v18): true ise bu kategori silinmiştir — birleşmede mezar taşı kazanır.
+    // Tombstone (v18): when true this category is deleted — the tombstone wins the merge.
     val isDeleted: Boolean = false,
 )
 
@@ -46,25 +46,25 @@ data class TaskJson(
     val isDone: Boolean = false,
     val isRecurring: Boolean = false,
     val intervalDays: Int? = null,
-    // Zengin tekrar (eski yedeklerde alan yoksa: null / boş → intervalDays davranışı korunur)
+    // Rich recurrence (in old backups the field is missing: null / empty → intervalDays behavior is kept)
     val recurrenceType: String? = null,
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
     val focusDurationSeconds: Int = 1500,
     val category: String? = null,
-    // Alt görevler (checklist) — senkronizasyonda görevle birlikte taşınır (eski yedeklerde boş)
+    // Subtasks (checklist) — travel with the task during sync (empty in old backups)
     val subtasks: List<SubTask> = emptyList(),
     val createdAt: Long,
     val updatedAt: Long,
     val completedAt: Long? = null,
-    // Varsayılan 0: eski yedeklerde alan yoksa sorunsuz çözülür (geriye dönük uyumlu)
+    // Default 0: decodes cleanly when the field is missing in old backups (backward compatible)
     val sortOrder: Long = 0L,
-    // Antrenman/program bağları — senkronizasyonda korunur (eski yedeklerde null/0)
+    // Workout/program links — preserved across sync (null/0 in old backups)
     val linkedWorkoutId: String? = null,
     val linkedProgramId: String? = null,
     val programStartIndex: Int = 0,
-    // Kullanımdan kaldırıldı: eski yedeklerle uyum için alan korunur, artık okunmaz.
+    // Deprecated: field is kept for compatibility with old backups, no longer read.
     val isPenalty: Boolean = false,
-    // Mezar taşı (v18): true ise bu görev silinmiştir — LWW birleşmede newer updatedAt kazanır.
+    // Tombstone (v18): when true this task is deleted — newer updatedAt wins the LWW merge.
     val isDeleted: Boolean = false,
 )
 

@@ -54,17 +54,17 @@ data class TaskFilter(
 data class HomeUiState(
     val allTasks: List<Task> = emptyList(),
     val filteredTasks: List<Task> = emptyList(),
-    // Filtre çubuğunda gösterilecek kategori adları (kalıcılar + aktif görevli geçiciler)
+    // Category names shown in the filter bar (permanent ones + temporary ones with active tasks)
     val categories: List<String> = emptyList(),
-    // Yönetim arayüzü için tüm kategoriler (kalıcılık bilgisiyle)
+    // All categories for the management UI (with persistence info)
     val allCategories: List<Category> = emptyList(),
     val filter: TaskFilter = TaskFilter(),
 )
 
 /**
- * Spora linkli bir görev tamamlanırken açılan ekranda tek bir hareketin gösterimi. [plannedSets]
- * kullanıcının antrenmanı kurarken girdiği plandır; tamamlama ekranındaki set alanlarını ön-doldurmak
- * için kullanılır. Artık önceki seanstan türetilen bir "hedef" yoktur.
+ * Display of a single exercise on the screen opened while completing a workout-linked task. [plannedSets]
+ * is the plan the user entered when setting up the workout; it pre-fills the set fields on the
+ * completion screen. There is no longer a "target" derived from the previous session.
  */
 data class WorkoutCompletionItem(
     val exerciseId: String,
@@ -73,20 +73,20 @@ data class WorkoutCompletionItem(
     val plannedSets: List<PlannedSet>,
 )
 
-/** Spora linkli görevi tamamlama isteği: o günkü antrenmanın hareketleri ve planı. */
+/** Request to complete a workout-linked task: that day's workout exercises and plan. */
 data class WorkoutCompletionRequest(
     val task: Task,
     val workoutId: String,
     val workoutName: String,
     val items: List<WorkoutCompletionItem>,
-    // Daha önce girilmiş ama henüz onaylanmamış taslak (exerciseId → set satırları). Ekran kapanıp
-    // tekrar açıldığında ya da uygulama yeniden başladığında kullanıcı kaldığı yerden devam etsin diye.
+    // Previously entered but not yet confirmed draft (exerciseId → set rows). So the user resumes
+    // where they left off when the screen is closed and reopened or the app is restarted.
     val draft: Map<String, List<WorkoutDraftSet>> = emptyMap(),
 )
 
 /**
- * Tamamlama ekranındaki tek bir set satırının taslağı. Alanlar metin olarak saklanır (kullanıcının
- * yarım/biçimsiz girişi dahil korunur). Tipe göre yalnızca ilgili alanlar doldurulur.
+ * Draft of a single set row on the completion screen. Fields are stored as text (preserving the
+ * user's partial/malformed input). Only the relevant fields are filled per type.
  */
 @kotlinx.serialization.Serializable
 data class WorkoutDraftSet(
@@ -98,9 +98,9 @@ data class WorkoutDraftSet(
 )
 
 /**
- * Bir tamamlamayı "Geri Al" için gereken anlık görüntü. [task] tamamlamadan ÖNCEKİ görev durumudur
- * (geri yüklenir). Spora linkli tamamlamalarda ayrıca kaydedilen seans ([sessionId]) ve programlı
- * görevde döngü indeksini geri almak için orijinal grup ([programGroup]) tutulur.
+ * Snapshot needed to "Undo" a completion. [task] is the task state BEFORE completion
+ * (it is restored). For workout-linked completions the saved session ([sessionId]) is also kept, plus
+ * the original group ([programGroup]) to roll back the cycle index on a program task.
  */
 data class UndoableCompletion(
     val token: Long,
@@ -111,8 +111,8 @@ data class UndoableCompletion(
 )
 
 /**
- * Tamamlama ekranında kullanıcının bir hareket için girdiği GERÇEKLEŞEN setler. Her set ayrı ayrı
- * (tekrar + ağırlık veya süre/adım) girilir; akordeon arayüzü bu listeyi doldurur.
+ * The ACTUAL sets the user entered for an exercise on the completion screen. Each set is entered
+ * separately (reps + weight or duration/steps); the accordion UI fills this list.
  */
 data class ActualEntry(
     val exerciseId: String,
@@ -131,7 +131,7 @@ class HomeViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    // Home filtresi process-death'e dayanıklı: SavedStateHandle'dan geri yüklenir, her değişimde yazılır.
+    // Home filter survives process death: restored from SavedStateHandle, written on every change.
     private val _filter = MutableStateFlow(
         TaskFilter(
             status = runCatching {
@@ -161,61 +161,61 @@ class HomeViewModel @Inject constructor(
             (filter.category == null || task.category == filter.category) &&
             (filter.search.isBlank() || task.title.contains(filter.search, ignoreCase = true))
         }.let { list ->
-            // "Tamamlananlar" filtresinde görevler tamamlanma tarihine göre (en yeni üstte) sıralanır;
-            // diğer durumlarda manuel sıralama (sortOrder) korunur.
+            // In the "Completed" filter tasks are sorted by completion date (newest on top);
+            // otherwise the manual order (sortOrder) is preserved.
             if (filter.status == TaskStatus.DONE)
                 list.sortedByDescending { it.completedAt ?: it.updatedAt }
             else list
         }
-        // Filtre çipleri: tüm kalıcı kategoriler (boş olsalar bile) + en az bir tamamlanmamış
-        // görevi olan geçici kategoriler. İkincisi görevlerden türetilir; böylece sync'le gelen
-        // (yerel kategori kaydı olmayan) kategoriler de görünür.
+        // Filter chips: all permanent categories (even when empty) + temporary categories with at
+        // least one incomplete task. The latter is derived from tasks, so categories arriving via
+        // sync (with no local category record) are visible too.
         val permanentNames = categories.filter { it.isPermanent }.map { it.name }
         val activeNames = tasks.filter { !it.isDone }.mapNotNull { it.category?.takeIf(String::isNotBlank) }
         val chipNames = (permanentNames + activeNames).distinct().sortedBy { it.lowercase() }
         HomeUiState(tasks, filtered, chipNames, categories, filter)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
-    // Doğum günü kutlaması: bugün kullanıcının doğum günüyse ve bugün henüz gösterilmediyse true olur.
+    // Birthday celebration: true when today is the user's birthday and it has not been shown yet today.
     private val _showBirthday = MutableStateFlow(false)
     val showBirthday: StateFlow<Boolean> = _showBirthday.asStateFlow()
 
-    /** Kutlamada gösterilecek yaş (bu yıl dolan yaş); doğum günü değilse null. */
+    /** Age shown in the celebration (the age turned this year); null when it is not a birthday. */
     val birthdayAge = MutableStateFlow<Int?>(null)
 
-    /** Açık olan spor görevi tamamlama isteği (BottomSheet bunu gösterir); yoksa null. */
+    /** Open workout-task completion request (the BottomSheet shows it); null when none. */
     private val _workoutCompletion = MutableStateFlow<WorkoutCompletionRequest?>(null)
     val workoutCompletion: StateFlow<WorkoutCompletionRequest?> = _workoutCompletion.asStateFlow()
 
-    /** Son tamamlamayı geri almak için anlık görüntü; Snackbar "Geri Al" bunu kullanır. */
+    /** Snapshot for undoing the last completion; the "Undo" Snackbar uses it. */
     private val _undo = MutableStateFlow<UndoableCompletion?>(null)
     val undo: StateFlow<UndoableCompletion?> = _undo.asStateFlow()
 
-    /** Geri-al jetonları için monoton sayaç (millis çakışmasını önler). */
+    /** Monotonic counter for undo tokens (avoids millis collisions). */
     private val undoTokenSeq = AtomicLong(0L)
 
-    /** Bilinmeyen/silinmiş görev id'siyle widget'tan gelindiğinde Snackbar tetikler (0 = yok). */
+    /** Triggers a Snackbar when arriving from the widget with an unknown/deleted task id (0 = none). */
     private val taskNotFoundSeq = AtomicLong(0L)
     private val _taskNotFoundTick = MutableStateFlow(0L)
     val taskNotFoundTick: StateFlow<Long> = _taskNotFoundTick.asStateFlow()
 
-    /** Açılması gereken antrenman özet/sonuç sayfasının seans id'si; ekran tüketince temizlenir.
-     *  SavedStateHandle destekli → process death'te kaybolmaz, sonuç ekranı korunur. */
+    /** Session id of the workout summary/result page to open; cleared once consumed by the screen.
+     *  Backed by SavedStateHandle → survives process death, the result screen is preserved. */
     val openSummarySessionId: StateFlow<String?> =
         savedStateHandle.getStateFlow(KEY_PENDING_SUMMARY, null)
 
-    // Taslak önbelleği (görev id → exerciseId → set satırları). DataStore'a da yazılır (uygulama
-    // yeniden başlasa bile kalıcı). Bellek içi kopya hızlı erişim ve ekran kapanmasına dayanıklılık sağlar.
+    // Draft cache (task id → exerciseId → set rows). Also written to DataStore (persisted across
+    // app restarts). The in-memory copy allows fast access and survives the screen closing.
     private val draftJson = kotlinx.coroutines.flow.MutableStateFlow<Map<String, Map<String, List<WorkoutDraftSet>>>>(emptyMap())
     private val draftSerializer = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     fun consumeSummary() { savedStateHandle.remove<String>(KEY_PENDING_SUMMARY) }
 
     init {
-        // Açılışta önce çek-birleştir-gönder: yerel boşken uzaktaki yedeği ezmeyi önler
+        // On launch first pull-merge-push: avoids overwriting the remote backup while local is empty
         viewModelScope.launch { syncRepo.sync() }
         checkBirthday()
-        // Kalıcı taslakları (varsa) belleğe yükle; tamamlama ekranı kaldığı yerden açılabilsin.
+        // Load persisted drafts (if any) into memory; the completion screen can reopen where it left off.
         viewModelScope.launch {
             val raw = prefs.workoutDrafts.first()
             if (!raw.isNullOrBlank()) {
@@ -227,8 +227,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Tamamlama ekranındaki taslağı (görev için girilen tüm set satırları) kaydeder. Bellekte tutar
-     * ve DataStore'a yazar; böylece ekran kapansa veya uygulama yeniden başlasa bile veri korunur.
+     * Saves the draft on the completion screen (all set rows entered for the task). Keeps it in memory
+     * and writes it to DataStore, so the data survives even if the screen is closed or the app restarts.
      */
     fun saveWorkoutDraft(taskId: String, rows: Map<String, List<WorkoutDraftSet>>) {
         val next = draftJson.value.toMutableMap().apply { put(taskId, rows) }
@@ -236,7 +236,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { prefs.setWorkoutDrafts(draftSerializer.encodeToString(next)) }
     }
 
-    /** Bir görevin taslağını siler (tamamlama onaylandığında veya görev silindiğinde). */
+    /** Deletes a task's draft (when the completion is confirmed or the task is deleted). */
     private fun clearWorkoutDraft(taskId: String) {
         if (taskId !in draftJson.value) return
         val next = draftJson.value.toMutableMap().apply { remove(taskId) }
@@ -247,8 +247,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Bugün doğum günü mü kontrol eder. Kutlamayı günde yalnızca bir kez göstermek için
-     * en son gösterilen günü DataStore'da saklar; bugün zaten gösterildiyse tekrar açmaz.
+     * Checks whether today is a birthday. To show the celebration only once a day, the last shown
+     * day is stored in DataStore; if already shown today, it is not opened again.
      */
     private fun checkBirthday() {
         viewModelScope.launch {
@@ -259,7 +259,7 @@ class HomeViewModel @Inject constructor(
 
             birthdayAge.value = BirthdayUtils.calculateAge(birthDate, today)
             _showBirthday.value = true
-            // Hemen "gösterildi" olarak işaretle → uygulama yeniden açılsa bile bugün tekrar çıkmaz
+            // Mark as "shown" immediately → not shown again today even if the app is reopened
             prefs.setBirthdayShownOn(today.toString())
         }
     }
@@ -278,7 +278,7 @@ class HomeViewModel @Inject constructor(
         savedStateHandle[KEY_FILTER_SEARCH] = f.search
     }
 
-    // --- Kalıcı kategori yönetimi (Kategorileri Yönet arayüzü) ---
+    // --- Permanent category management (Manage Categories UI) ---
 
     fun addPermanentCategory(name: String) {
         val n = name.trim()
@@ -305,22 +305,21 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Kullanıcı listeyi sürükle-bırakla yeniden sıraladığında çağrılır. [displayedIds] o an
-     * ekranda görünen (filtrelenmiş) görevlerin YENİ sırasıdır. Filtre nedeniyle gizli olan
-     * görevlerin global konumları korunur: ana sıralı liste üzerinde yürünür ve görünür
-     * öğelerin işgal ettiği yuvalar yeni sıraya göre yeniden doldurulur. Ardından tüm görevlere
-     * 0..n aralığında yeni sortOrder atanır ve yalnızca değişenler veritabanına yazılır.
+     * Called when the user reorders the list via drag & drop. [displayedIds] is the NEW order of the
+     * currently visible (filtered) tasks. Global positions of hidden tasks are preserved: walk the
+     * master ordered list and refill the slots occupied by visible items with the new order. Then new
+     * sortOrder values 0..n are assigned to all tasks and only changed ones are written to the database.
      */
     fun reorderTasks(displayedIds: List<String>) {
         viewModelScope.launch {
-            val master = taskRepo.getAll()              // sortOrder ASC sıralı (DAO)
+            val master = taskRepo.getAll()              // sorted by sortOrder ASC (DAO)
             val byId = master.associateBy { it.id }
             val displayedSet = displayedIds.toSet()
             val iter = displayedIds.iterator()
-            // Ana sırayı yeniden kur: görünür yuvalara yeni sırayı, gizlilere kendi id'sini koy.
-            // iter.hasNext() koruması: sürükleme sırasında bir görev eşzamanlı silinip/eklenip master
-            // ile displayedIds arasındaki eşleşme bozulursa (ör. widget'tan tamamlama) NoSuchElement
-            // fırlatmak yerine öğe kendi id'sinde kalır.
+            // Rebuild the master order: put the new order into visible slots, keep their own id for hidden ones.
+            // iter.hasNext() guard: if a task is concurrently deleted/added during the drag so master
+            // and displayedIds no longer match (e.g. completion from the widget), stay on its own id
+            // instead of throwing NoSuchElement.
             val newOrderIds = master.map { if (it.id in displayedSet && iter.hasNext()) iter.next() else it.id }
 
             val now = System.currentTimeMillis()
@@ -331,7 +330,7 @@ class HomeViewModel @Inject constructor(
             }
             if (changed.isEmpty()) return@launch
             changed.forEach { taskRepo.upsert(it) }
-            // Sıra vektörü saatini tazele ki bu sıralama sync birleştirmesinde yayımlansın.
+            // Refresh the order-vector clock so this ordering is published in the sync merge.
             taskRepo.setTaskOrderTimestamp(now)
             syncRepo.pushToDrive()
             TaskWidget.requestUpdate(context)
@@ -339,9 +338,9 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Görev tikine basıldığında çağrılır. Görev henüz tamamlanmamış VE bir antrenmana/programa
-     * linkliyse direkt kapatmak yerine "gerçekleşen değer" giriş (akordeon) ekranını açar.
-     * Aksi halde (linksiz görev ya da tekrar açma) doğrudan durum değiştirir.
+     * Called when a task checkbox is tapped. If the task is not yet completed AND linked to a
+     * workout/program, open the "actual values" entry (accordion) screen instead of closing it directly.
+     * Otherwise (unlinked task or reopening) toggle the state directly.
      */
     fun toggleDone(task: Task) {
         if (!task.isDone && (task.linkedWorkoutId != null || task.linkedProgramId != null)) {
@@ -354,23 +353,23 @@ class HomeViewModel @Inject constructor(
     private suspend fun applyToggle(task: Task, registerUndo: Boolean = true) {
         val now = System.currentTimeMillis()
         if (!task.isDone) {
-            // Tamamlanıyor: tekrarlayan görev ileri sarılır (açık kalır), normal görev kapanır
+            // Completing: recurring tasks roll forward (stay open), normal tasks close
             val result = task.withCompletion(now)
             taskRepo.upsert(result)
             notifService.cancelReminder(task.id)
             if (!result.isDone && prefs.systemAlertsEnabled.first()) {
                 notifService.scheduleReminder(result, prefs.reminderMinutes.first())
             }
-            // Yanlışlıkla tamamlamaya karşı geri al imkânı (linksiz/normal görev akışı).
+            // Undo opportunity against accidental completion (unlinked/normal task flow).
             if (registerUndo) {
                 _undo.value = UndoableCompletion(
                     token = undoTokenSeq.incrementAndGet(),
                     messageRes = R.string.task_completed,
-                    task = task, // tamamlamadan önceki hâl
+                    task = task, // pre-completion state
                 )
             }
         } else {
-            // Tekrar açılıyor
+            // Reopening
             taskRepo.upsert(task.copy(isDone = false, completedAt = null, updatedAt = now))
         }
         syncRepo.pushToDrive()
@@ -378,8 +377,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Son tamamlamayı geri alır: görevi eski hâline döndürür; spora linkli tamamlamada ayrıca
-     * kaydedilen seansı siler ve programlı görevde döngü indeksini eski konumuna alır.
+     * Undoes the last completion: restores the task to its old state; for a workout-linked completion
+     * it also deletes the saved session and moves the cycle index back on a program task.
      */
     fun undoLastCompletion() {
         val u = _undo.value ?: return
@@ -399,9 +398,9 @@ class HomeViewModel @Inject constructor(
 
     fun clearUndo() { _undo.value = null }
 
-    // --- Spora linkli görev tamamlama (gerçekleşen veri + EXP) ---
+    // --- Workout-linked task completion (actual data + EXP) ---
 
-    /** Göreve linkli antrenman/programdan o günkü antrenmanı ve grubunu çözer. */
+    /** Resolves that day's workout and group from the workout/program linked to the task. */
     private fun resolveWorkout(task: Task, groups: List<WorkoutGroup>): Pair<WorkoutGroup, Workout>? {
         task.linkedWorkoutId?.let { wid ->
             groups.forEach { g -> g.workouts.find { it.id == wid }?.let { return g to it } }
@@ -416,9 +415,9 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Widget'tan gelen spor görevi tamamlama isteği: id'den görevi çözer ve (tamamlanmamışsa)
-     * set/tekrar/ağırlık giriş ekranını açar. Görev bulunamazsa "bulunamadı" olayı yayınlanır
-     * (arayüz Snackbar gösterir); zaten tamamlanmışsa sessizce geçilir.
+     * Workout-task completion request coming from the widget: resolves the task from the id and (if not
+     * completed) opens the set/reps/weight entry screen. If the task is not found, a "not found" event
+     * is published (the UI shows a Snackbar); if already completed, it is silently skipped.
      */
     fun openWorkoutCompletion(taskId: String) {
         viewModelScope.launch {
@@ -432,13 +431,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Tamamlama ekranını hedef değerlerle doldurup açar. Antrenman çözülemezse normal tamamlar. */
+    /** Opens the completion screen pre-filled with target values. Falls back to a normal completion if the workout cannot be resolved. */
     private fun requestWorkoutCompletion(task: Task) {
         viewModelScope.launch {
             val groups = workoutRepo.getGroups()
             val resolved = resolveWorkout(task, groups)
             if (resolved == null) {
-                applyToggle(task) // link bozuk/silinmiş → normal tamamla
+                applyToggle(task) // broken/deleted link → complete normally
                 return@launch
             }
             val (_, workout) = resolved
@@ -450,7 +449,7 @@ class HomeViewModel @Inject constructor(
                     items = workout.exercises.map { ex ->
                         WorkoutCompletionItem(ex.exerciseId, ex.exerciseName, ex.type, ex.plannedSets)
                     },
-                    // Önceden girilmiş taslak varsa onunla aç (kullanıcı kaldığı yerden devam etsin).
+                    // Open with a previously entered draft if any (so the user resumes where they left off).
                     draft = draftJson.value[task.id].orEmpty(),
                 )
             }
@@ -458,8 +457,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Tamamlanmış bir spor görevine ait en son antrenman seansının özet sayfasını açar. Görev
-     * linkliyse ve kayıtlı bir seans varsa [openSummarySessionId] güncellenir; aksi halde no-op.
+     * Opens the summary page of the latest workout session for a completed workout task. If the task
+     * is linked and has a saved session, [openSummarySessionId] is updated; otherwise no-op.
      */
     fun requestSummaryForTask(taskId: String) {
         viewModelScope.launch {
@@ -470,9 +469,9 @@ class HomeViewModel @Inject constructor(
     fun cancelWorkoutCompletion() = _workoutCompletion.update { null }
 
     /**
-     * Kullanıcı gerçekleşen setleri (akordeon ekranında) girip onayladığında: seanstan bir
-     * WorkoutSession üretir ve kalıcılaştırır, programlı görevde döngüyü bir gün ilerletir ve
-     * görevi tamamlanmış sayar. Yanlış tamamlamaya karşı Snackbar üzerinden geri alma sunulur.
+     * When the user enters the actual sets (on the accordion screen) and confirms: builds a
+     * WorkoutSession from the session and persists it, advances the cycle by one day on a program
+     * task, and marks the task completed. Offers undo via Snackbar against accidental completion.
      */
     fun submitWorkoutCompletion(actuals: List<ActualEntry>) {
         val request = _workoutCompletion.value ?: return
@@ -483,8 +482,8 @@ class HomeViewModel @Inject constructor(
             val workout = resolved?.second
 
             val loggedExercises = request.items.map { item ->
-                // Akordeon ekranı her hareketin setlerini doğrudan LoggedSet olarak üretir;
-                // anlamlı veri taşımayan boş setler ayıklanır.
+                // The accordion screen produces each exercise's sets directly as LoggedSet;
+                // empty sets carrying no meaningful data are filtered out.
                 val sets = (byId[item.exerciseId]?.loggedSets ?: emptyList()).filter { it.isMeaningful() }
                 LoggedExercise(item.exerciseId, item.exerciseName, sets, item.type)
             }
@@ -500,7 +499,7 @@ class HomeViewModel @Inject constructor(
             )
             workoutRepo.saveSession(session)
 
-            // Programlı görevde döngüyü bir gün ilerlet (rotasyon). Geri al için orijinal grubu sakla.
+            // Advance the cycle by one day on a program task (rotation). Keep the original group for undo.
             var originalGroup: WorkoutGroup? = null
             if (request.task.linkedProgramId != null && resolved != null && workout != null) {
                 val group = resolved.first
@@ -511,7 +510,7 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
-            // Görevi tamamla; geri alma anlık görüntüsünü seans/grup bilgisiyle birlikte burada kur.
+            // Complete the task; build the undo snapshot here with session/group info.
             applyToggle(request.task, registerUndo = false)
             _undo.value = UndoableCompletion(
                 token = undoTokenSeq.incrementAndGet(),
@@ -520,7 +519,7 @@ class HomeViewModel @Inject constructor(
                 sessionId = session.id,
                 programGroup = originalGroup,
             )
-            // Onaylandı: taslağı temizle ve tamamlanan antrenmanın özet/sonuç sayfasını aç.
+            // Confirmed: clear the draft and open the summary/result page of the completed workout.
             clearWorkoutDraft(request.task.id)
             _workoutCompletion.update { null }
             savedStateHandle[KEY_PENDING_SUMMARY] = session.id
@@ -532,7 +531,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             notifService.cancelReminder(id)
             taskRepo.delete(id)
-            // Görev silinince boşa çıkan geçici kategorileri otomatik temizle
+            // Automatically clean up temporary categories left orphaned when the task is deleted
             categoryRepo.cleanupTemporary()
             syncRepo.pushToDrive()
             TaskWidget.requestUpdate(context)

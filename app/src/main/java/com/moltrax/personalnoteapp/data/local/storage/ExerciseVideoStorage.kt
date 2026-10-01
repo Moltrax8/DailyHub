@@ -14,12 +14,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Egzersiz demo medyasını (ExerciseDB GIF'i veya gerçek .mp4 videosu) uygulamanın iç
- * depolamasına indirir; böylece hareket çevrimdışıyken de oynatılabilir.
+ * Downloads exercise demo media (ExerciseDB GIF or real .mp4 video) into the app's internal
+ * storage so a movement can still play offline.
  *
- * Dosyalar [filesDir]/exercise_media altında, kaynak egzersiz id'si ile adlandırılır
- * (örn. `0001.gif`). Aynı dosya tekrar indirilmez. İlgili egzersiz/program silindiğinde
- * [delete] ile fiziksel dosya da temizlenir (Repository katmanı çağırır).
+ * Files live under [filesDir]/exercise_media, named by the source exercise id
+ * (e.g. `0001.gif`). The same file is never downloaded twice. When the related
+ * exercise/program is deleted, the physical file is also cleaned up via [delete]
+ * (called by the Repository layer).
  */
 @Singleton
 class ExerciseVideoStorage @Inject constructor(
@@ -32,31 +33,32 @@ class ExerciseVideoStorage @Inject constructor(
     }
 
     /**
-     * [url] adresindeki medyayı indirip mutlak yolunu döner. Dosya zaten varsa yeniden
-     * indirmeden mevcut yolu döner. Hata olursa null (UI yine de uzak URL'den oynatabilir).
+     * Downloads the media at [url] and returns its absolute path. Returns the existing path
+     * without re-downloading if the file already exists. Returns null on error (the UI can
+     * still play from the remote URL).
      */
     suspend fun download(exerciseId: String, url: String): String? = withContext(Dispatchers.IO) {
         runCatching {
-            // ExerciseDB resim ucu (".../image?...") her zaman GIF döndürür; uzantı buradan çıkarılamaz.
-            // Diğer (eski/doğrudan) URL'lerde uzantı adresten alınır.
+            // The ExerciseDB image endpoint (".../image?...") always returns GIF; the extension cannot be inferred from it.
+            // For other (legacy/direct) URLs, the extension is taken from the address.
             val ext = if (url.contains("/image", ignoreCase = true)) "gif"
                 else url.substringBefore('?').substringAfterLast('.', "mp4")
                     .takeIf { it.length in 1..5 } ?: "mp4"
             val file = File(dir, "$exerciseId.$ext")
             if (file.exists() && file.length() > 0) return@withContext file.absolutePath
-            // Aynı egzersizin farklı uzantılı eski artıkları (gif↔mp4 geçişi) temizlenir.
+            // Clean up stale leftovers of the same exercise with a different extension (gif↔mp4 transitions).
             dir.listFiles { f -> f.name.startsWith("$exerciseId.") && f.name != file.name }
                 ?.forEach { runCatching { it.delete() } }
 
-            // ExerciseDB demo'su yalnızca X-RapidAPI-Key header'ı ile indirilebilir (aksi halde 401).
+            // The ExerciseDB demo can only be downloaded with the X-RapidAPI-Key header (401 otherwise).
             val key = prefs.exerciseDbKey.first() ?: ""
             val request = Request.Builder().url(url).apply {
                 if (url.contains("rapidapi.com", ignoreCase = true) && key.isNotBlank()) {
                     header("X-RapidAPI-Key", key)
                 }
             }.build()
-            // Yarım indirme önbelleğe girmesin: önce tmp dosyaya yaz, bitince atomik taşı.
-            // Crash anında kalan tmp bir sonraki indirmede ezilir; bozuk dosya asla dönülmez.
+            // Never let a partial download enter the cache: write to a tmp file first, then move atomically when done.
+            // A tmp left behind by a crash is overwritten on the next download; a corrupt file is never returned.
             val tmp = File(dir, "$exerciseId.$ext.tmp")
             http.newCall(request).execute().use { resp ->
                 if (!resp.isSuccessful) return@withContext null
@@ -70,13 +72,13 @@ class ExerciseVideoStorage @Inject constructor(
         }.getOrNull()
     }
 
-    /** Egzersiz/program silindiğinde lokal medya dosyasını temizler. */
+    /** Cleans up the local media file when its exercise/program is deleted. */
     fun delete(path: String?) {
         if (path.isNullOrBlank()) return
         runCatching { File(path).takeIf { it.exists() }?.delete() }
     }
 
-    /** Egzersize ait TÜM önbellek varyantlarını siler (uzantı değişmiş artıklar dahil). */
+    /** Deletes ALL cached variants of an exercise (including leftovers with a changed extension). */
     fun deleteVariants(exerciseId: String) {
         runCatching {
             dir.listFiles { f -> f.name.startsWith("$exerciseId.") }?.forEach { it.delete() }

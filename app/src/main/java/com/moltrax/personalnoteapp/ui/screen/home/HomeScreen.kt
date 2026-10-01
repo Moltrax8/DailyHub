@@ -62,7 +62,7 @@ import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.text.SimpleDateFormat
-// java.util.* yerine açık import: java.util.Calendar, navigasyon rotası Calendar ile çakışıyordu.
+// Explicit import instead of java.util.*: java.util.Calendar conflicted with the navigation route Calendar.
 import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,12 +71,12 @@ fun HomeScreen(
     nav: NavController,
     vm: HomeViewModel = hiltViewModel(),
     syncVm: SyncViewModel = hiltViewModel(),
-    // Widget'tan gelen "spor görevini tamamla" yönlendirmesi (Home'a ulaşınca tüketilir).
+    // Redirection for "complete workout task" coming from the widget (consumed once it reaches Home).
     pendingWidgetAction: String? = null,
     pendingWidgetTaskId: String? = null,
     onWidgetActionConsumed: () -> Unit = {},
 ) {
-    // Spora linkli görev widget'tan işaretlenince: burada set/tekrar/ağırlık giriş ekranını aç.
+    // When a workout-linked task is checked from the widget: open the set/reps/weight entry screen here.
     LaunchedEffect(pendingWidgetAction, pendingWidgetTaskId) {
         if (pendingWidgetAction == com.moltrax.personalnoteapp.MainActivity.ACTION_COMPLETE_WORKOUT &&
             !pendingWidgetTaskId.isNullOrBlank()
@@ -96,7 +96,7 @@ fun HomeScreen(
     val summarySessionId by vm.openSummarySessionId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Widget'tan gelen id silinmiş/bilinmiyorsa sessizce yutmak yerine Snackbar göster.
+    // If the id coming from the widget was deleted/unknown, show a Snackbar instead of silently swallowing it.
     val taskNotFoundMsg = stringResource(R.string.task_not_found)
     LaunchedEffect(taskNotFoundTick) {
         if (taskNotFoundTick > 0) {
@@ -104,7 +104,7 @@ fun HomeScreen(
         }
     }
 
-    // Spor görevi tamamlanınca (ya da tamamlanmış göreve tıklanınca) antrenman sonuç sayfasını aç.
+    // When a workout task is completed (or a completed task is tapped), open the workout result page.
     LaunchedEffect(summarySessionId) {
         summarySessionId?.let {
             nav.navigate(WorkoutSummary(it))
@@ -112,8 +112,8 @@ fun HomeScreen(
         }
     }
 
-    // Geri al Snackbar'ı: hem normal görev hem de spora linkli antrenman tamamlamalarında gösterilir.
-    // Metin dile göre composition'da çözülür; böylece dil değişimine de uyumludur.
+    // Undo Snackbar: shown for both normal tasks and workout-linked completions.
+    // Text is resolved in composition per locale, so it also adapts to language changes.
     val undoMessage = undo?.messageRes?.let { stringResource(it) }
     val undoActionLabel = stringResource(R.string.undo)
     LaunchedEffect(undo?.token) {
@@ -127,18 +127,18 @@ fun HomeScreen(
             if (res == SnackbarResult.ActionPerformed) vm.undoLastCompletion() else vm.clearUndo()
         }
     }
-    // Yenileme animasyonu yalnızca kullanıcı tetikli (manuel) sync sırasında görünür; sessiz
-    // arka plan senkronizasyonu durumu Syncing yapmaz, bu yüzden spinner çıkmaz.
+    // Refresh animation is only visible during user-triggered (manual) sync; silent
+    // background sync never sets the state to Syncing, so no spinner appears.
     val isRefreshing = syncStatus is SyncStatus.Syncing
     var showManageCategories by rememberSaveable { mutableStateOf(false) }
-    // Tüm alt görevler bitmeden ana görev tamamlanmak istenirse onay sorulur.
-    // (Task Parcelable değil; geçici onay diyaloğu process-death'te kaybolur — kabul edilen davranış.)
+    // If the parent task is about to be completed before all subtasks are done, ask for confirmation.
+    // (Task is not Parcelable; the transient confirmation dialog is lost on process death — accepted behavior.)
     var confirmComplete by remember { mutableStateOf<Task?>(null) }
-    // 0 = Görevler listesi, 1 = Takvim (eski ayrı sekme artık burada).
+    // 0 = Tasks list, 1 = Calendar (the old separate tab now lives here).
     var homeTab by rememberSaveable { mutableStateOf(0) }
 
-    // Android 13+ bildirim iznini bir kez iste (hatırlatıcılar için gerekli). Reddedilirse
-    // gerekçeyi Snackbar ile gösterip sistem ayarlarına yönlendirir.
+    // Request the Android 13+ notification permission once (needed for reminders). If denied,
+    // show the rationale in a Snackbar and route to the system settings.
     val context = LocalContext.current
     val notifScope = rememberCoroutineScope()
     val notifRationale = stringResource(R.string.notif_permission_rationale)
@@ -177,7 +177,7 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // FAB yalnızca Görevler sekmesinde (yeni görev ekleme); Takvim sekmesinde gizli.
+            // FAB only on the Tasks tab (add new task); hidden on the Calendar tab.
             if (homeTab == 0) {
                 FloatingActionButton(onClick = { nav.navigate(TaskDetail("new")) },
                     containerColor = AppColors.Accent) {
@@ -188,10 +188,10 @@ fun HomeScreen(
         bottomBar = { BottomNavBar(nav) }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            // Sync banner'ı artık global (AppNavHost'ta, tüm sekmelerin üstünde) gösteriliyor.
+            // The sync banner is now global (in AppNavHost, above all tabs).
 
-            // Başlık + bekleyen rozeti (artık liste dışında, böylece sürüklenebilir öğeler
-            // LazyColumn indekslerine birebir eşlenir).
+            // Title + pending badge (now outside the list, so draggable items
+            // map one-to-one to LazyColumn indices).
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -209,7 +209,7 @@ fun HomeScreen(
                 }
             }
 
-            // Görevler / Takvim alt sekmeleri (eski Takvim sekmesi buraya taşındı).
+            // Tasks / Calendar sub-tabs (the old Calendar tab was moved here).
             TabRow(selectedTabIndex = homeTab, containerColor = MaterialTheme.colorScheme.background) {
                 Tab(selected = homeTab == 0, onClick = { homeTab = 0 },
                     text = { Text(stringResource(R.string.tab_tasks)) })
@@ -224,7 +224,7 @@ fun HomeScreen(
                     onFilterChange = vm::updateFilter,
                 )
 
-                // Aşağı çekerek yenileme: jest manuel sync'i tetikler, durum Syncing iken spinner döner.
+                // Pull to refresh: the gesture triggers a manual sync, the spinner runs while the state is Syncing.
                 PullToRefreshBox(
                     isRefreshing = isRefreshing,
                     onRefresh = { syncVm.sync() },
@@ -234,13 +234,13 @@ fun HomeScreen(
                         tasks = state.filteredTasks,
                         onReorder = vm::reorderTasks,
                         onToggle = { task ->
-                            // Tamamlanıyor + bitmemiş alt görev varsa önce onay; aksi halde direkt.
+                            // If completing + there are unfinished subtasks, confirm first; otherwise proceed directly.
                             if (!task.isDone && task.hasIncompleteSubtasks) confirmComplete = task
                             else vm.toggleDone(task)
                         },
                         onTap = { task ->
-                            // Tamamlanmış, spora linkli görev → antrenman sonuç/özet sayfasını aç.
-                            // Diğer her durumda görev düzenleme ekranına git.
+                            // Completed, workout-linked task → open the workout result/summary page.
+                            // In every other case go to the task edit screen.
                             if (task.isDone && (task.linkedWorkoutId != null || task.linkedProgramId != null))
                                 vm.requestSummaryForTask(task.id)
                             else nav.navigate(TaskDetail(task.id))
@@ -255,7 +255,7 @@ fun HomeScreen(
                     )
                 }
             } else {
-                // Takvim alt görünümü
+                // Calendar sub-view
                 com.moltrax.personalnoteapp.ui.screen.calendar.CalendarContent(
                     nav = nav,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -311,7 +311,7 @@ fun HomeScreen(
             )
         }
 
-        // Spora linkli görev tamamlanırken: her hareket için akordeon kart, set bazlı veri girişi
+        // While completing a workout-linked task: accordion card per exercise, set-based data entry
         workoutCompletion?.let { req ->
             WorkoutCompletionSheet(
                 request = req,
@@ -424,7 +424,7 @@ private fun TaskFilterBar(
     onFilterChange: (TaskFilter) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-        // Durum filtresi: Tümü / Aktif / Tamamlananlar
+        // Status filter: All / Active / Completed
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -442,7 +442,7 @@ private fun TaskFilterBar(
             }
         }
 
-        // Kategori filtresi (yalnızca kategorili görev varsa görünür)
+        // Category filter (only visible when tasks with a category exist)
         if (categories.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Row(
@@ -477,8 +477,8 @@ private fun TaskList(
     emptyText: String,
 ) {
     if (tasks.isEmpty()) {
-        // LazyColumn (Box değil): boş listede de aşağı çekerek yenileme jesti algılansın diye
-        // kaydırılabilir bir kapsayıcı gerekir. Tek öğe ekranı doldurur, metin ortalanır.
+        // LazyColumn (not Box): a scrollable container is needed so the pull-to-refresh gesture
+        // is still detected on an empty list. The single item fills the screen, the text is centered.
         LazyColumn(Modifier.fillMaxSize()) {
             item {
                 Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
@@ -489,8 +489,8 @@ private fun TaskList(
         return
     }
 
-    // Sürükleme sırasında akıcı animasyon için yerel sıralı kopya; veri kaynağı değişince eşitlenir.
-    // Kalıcı yazma + sync yalnızca sürükleme BİTİNCE (onDragStopped) yapılır; her adımda değil.
+    // Local ordered copy for smooth animation while dragging; synced when the data source changes.
+    // Persistent write + sync happen only when the drag ENDS (onDragStopped), not on every step.
     var ordered by remember { mutableStateOf(tasks) }
     LaunchedEffect(tasks) { ordered = tasks }
 
@@ -541,7 +541,7 @@ fun TaskItem(
     elevation: Dp = 0.dp,
     dragHandle: (@Composable () -> Unit)? = null,
 ) {
-    // Bitiş tarihi biçimlendiricisi composition locale'una bağlı; dil değişince yeniden kurulur.
+    // Due-date formatter depends on the composition locale; recreated when the language changes.
     val locale = LocalConfiguration.current.locales[0]
     val taskDueFmt = remember(locale) { SimpleDateFormat("d MMM HH:mm", locale) }
     Card(
@@ -567,8 +567,8 @@ fun TaskItem(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Tamamlanan görevlerde belirgin "Tamamlandı" rozeti (özellikle spor görevlerinde
-                    // tamamlandığının net görünmesi için).
+                    // Prominent "Done" badge on completed tasks (so completion is clearly visible,
+                    // especially for workout tasks).
                     if (task.isDone) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -595,7 +595,7 @@ fun TaskItem(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                // Alt görev ilerlemesi: dolan çubuk + "x/y" sayacı
+                // Subtask progress: filling bar + "x/y" counter
                 if (task.subtaskCount > 0) {
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -613,7 +613,7 @@ fun TaskItem(
                 }
             }
             Checkbox(checked = task.isDone, onCheckedChange = { onToggle() })
-            // Odak süresi opsiyonel: yalnızca bir süre belirlenmişse odak (zamanlayıcı) ikonu görünür.
+            // Focus duration is optional: the focus (timer) icon is only visible when a duration is set.
             if (task.focusDurationSeconds > 0) {
                 IconButton(onClick = onFocus, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Timer, contentDescription = stringResource(R.string.cd_focus), modifier = Modifier.size(18.dp),
@@ -628,7 +628,7 @@ fun TaskItem(
     }
 }
 
-/** Tamamlama akordeonunda tek bir setin düzenlenebilir (metin) alanları. */
+/** Editable (text) fields of a single set in the completion accordion. */
 private data class SetRow(
     val reps: String = "",
     val weight: String = "",
@@ -637,11 +637,11 @@ private data class SetRow(
     val steps: String = "",
 )
 
-/** Düzenlenebilir set satırını kalıcı taslak modeline (ve tersi) dönüştürür. */
+/** Converts an editable set row to the persistent draft model (and vice versa). */
 private fun SetRow.toDraftSet() = WorkoutDraftSet(reps, weight, durationSec, durationMin, steps)
 private fun WorkoutDraftSet.toSetRow() = SetRow(reps, weight, durationSec, durationMin, steps)
 
-/** Kullanıcının antrenman planından (girdiği set/tekrar/ağırlık) başlangıç set satırlarını üretir. */
+/** Builds initial set rows from the user's workout plan (entered sets/reps/weight). */
 private fun initialRowsFor(item: WorkoutCompletionItem): List<SetRow> {
     val planned = item.plannedSets
     val first = planned.firstOrNull()
@@ -664,7 +664,7 @@ private fun initialRowsFor(item: WorkoutCompletionItem): List<SetRow> {
     }
 }
 
-/** Bir set satırını tipe göre [LoggedSet]'e dönüştürür. */
+/** Converts a set row to a [LoggedSet] by type. */
 private fun SetRow.toLoggedSet(type: ExerciseType): LoggedSet = when (type) {
     ExerciseType.WEIGHTLIFTING, ExerciseType.BODYWEIGHT ->
         LoggedSet(reps = reps.toIntOrNull() ?: 0, weightKg = weight.replace(',', '.').toDoubleOrNull())
@@ -675,9 +675,9 @@ private fun SetRow.toLoggedSet(type: ExerciseType): LoggedSet = when (type) {
 }
 
 /**
- * Spora linkli görev tamamlanırken açılan ekran: her hareket bir açılır/kapanır (akordeon) karttır.
- * Kart açıldığında o hareketin her seti için ayrı "Tekrar/Ağırlık" (veya süre/adım) alanları gelir;
- * set eklenip çıkarılabilir. Onaylanınca [HomeViewModel.submitWorkoutCompletion] görevi tamamlar.
+ * Screen shown while completing a workout-linked task: each exercise is an expandable (accordion) card.
+ * When a card is expanded, each set of that exercise gets its own "Reps/Weight" (or duration/steps) fields;
+ * sets can be added or removed. On confirm, [HomeViewModel.submitWorkoutCompletion] completes the task.
  */
 @OptIn(ExperimentalMaterial3Api::class, kotlinx.coroutines.FlowPreview::class)
 @Composable
@@ -688,8 +688,8 @@ private fun WorkoutCompletionSheet(
     onAutosave: (Map<String, List<WorkoutDraftSet>>) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    // Hareket başına düzenlenebilir set satırları. Önce kayıtlı taslak (varsa) ile, yoksa plandan
-    // ön-doldurulur — böylece ekran kapanıp tekrar açıldığında kullanıcı kaldığı yerden devam eder.
+    // Editable set rows per exercise. Pre-filled from the saved draft first (if any), otherwise from the plan
+    // — so the user resumes where they left off when the screen is closed and reopened.
     val rowsByExercise = remember(request) {
         mutableStateMapOf<String, SnapshotStateList<SetRow>>().apply {
             request.items.forEach { item ->
@@ -701,8 +701,8 @@ private fun WorkoutCompletionSheet(
             }
         }
     }
-    // Otomatik taslak kaydı: her değişiklikte (kısa gecikmeyle) kalıcılaştırılır. Kullanıcı yanlışlıkla
-    // sayfayı kapatsa ya da uygulama kapansa bile girilen set/ağırlık verileri kaybolmaz.
+    // Automatic draft saving: persisted on every change (with a short delay). Even if the user accidentally
+    // closes the page or the app is killed, the entered set/weight data is not lost.
     LaunchedEffect(request) {
         snapshotFlow {
             request.items.associate { item ->
@@ -710,7 +710,7 @@ private fun WorkoutCompletionSheet(
             }
         }.debounce(400).collect { onAutosave(it) }
     }
-    // Aynı anda hangi kart açık (akordeon). Varsayılan: ilk hareket açık.
+    // Which card is open at a time (accordion). Default: first exercise open.
     var expandedId by remember(request) { mutableStateOf(request.items.firstOrNull()?.exerciseId) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -762,7 +762,7 @@ private fun WorkoutCompletionSheet(
     }
 }
 
-/** Tek bir hareketin açılır/kapanır kartı: başlık (özet) + açıkken set satırları. */
+/** Expandable/collapsible card of a single exercise: header (summary) + set rows when open. */
 @Composable
 private fun ExerciseAccordion(
     item: WorkoutCompletionItem,
@@ -776,7 +776,7 @@ private fun ExerciseAccordion(
         shape = RoundedCornerShape(12.dp),
     ) {
         Column(Modifier.animateContentSize().padding(14.dp)) {
-            // Başlık satırı — her zaman görünür, tıklayınca açılıp kapanır.
+            // Header row — always visible, expands/collapses on tap.
             Row(
                 Modifier.fillMaxWidth().clickable(onClick = onToggleExpand),
                 verticalAlignment = Alignment.CenterVertically,
@@ -809,7 +809,7 @@ private fun ExerciseAccordion(
                     )
                     if (index < rows.lastIndex) Spacer(Modifier.height(8.dp))
                 }
-                // Kardiyo tek kayıt olduğundan ek set göstermez; diğer tiplerde set eklenebilir.
+                // Cardio is a single record so it shows no extra set; other types can add sets.
                 if (item.type != ExerciseType.CARDIO) {
                     Spacer(Modifier.height(10.dp))
                     TextButton(onClick = { rows.add(SetRow()) }) {
@@ -823,7 +823,7 @@ private fun ExerciseAccordion(
     }
 }
 
-/** Açık kartta tek bir setin giriş alanları (tipe göre). */
+/** Input fields of a single set in an open card (by type). */
 @Composable
 private fun SetEntryRow(
     index: Int,
@@ -896,8 +896,8 @@ fun BottomNavBar(nav: NavController) {
     val dest = backStackEntry?.destination
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        // Sadeleştirilmiş alt bar (4 sekme). Takvim → Görevler içinde sekme; Gelişim → Profil içinde sekme.
-        // Tüm sekmelerde sekme istifini önlemek için launchSingleTop + popUpTo(Home){saveState} + restoreState.
+        // Simplified bottom bar (4 tabs). Calendar → tab inside Tasks; Progress → tab inside Profile.
+        // To avoid stacking tabs on all tabs: launchSingleTop + popUpTo(Home){saveState} + restoreState.
         NavigationBarItem(
             selected = dest?.hasRoute<Home>() == true,
             onClick = { nav.navigate(Home) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },

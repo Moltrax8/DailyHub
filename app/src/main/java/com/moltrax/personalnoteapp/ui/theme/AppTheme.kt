@@ -20,7 +20,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 /**
- * Uygulama TEK bir tutarlı karanlık/neon tema kullanır (açık tema yoktur).
+ * The app uses a SINGLE consistent dark/neon theme (there is no light theme).
  */
 @Composable
 fun AppTheme(

@@ -1,18 +1,18 @@
 package com.moltrax.personalnoteapp.domain.model
 
 /**
- * Görev kategorisi. [name] aynı zamanda birincil anahtardır (görevler kategoriyi ada göre
- * referanslar — bkz. [Task.category]).
+ * Task category. [name] is also the primary key (tasks reference the category by name —
+ * see [Task.category]).
  *
- * - [isPermanent] = true: kullanıcı tarafından kalıcı tanımlanmış kategori. İçinde görev olmasa
- *   bile filtre menüsünde her zaman görünür ve otomatik temizliğe takılmaz.
- * - [isPermanent] = false: geçici kategori. Bir göreve kategori yazıldığında otomatik oluşur;
- *   bağlı görevi kalmadığında otomatik silinir.
+ * - [isPermanent] = true: user-defined permanent category. Always visible in the filter menu
+ *   even with no tasks inside, and never caught by automatic cleanup.
+ * - [isPermanent] = false: temporary category. Created automatically when a category is written
+ *   to a task; deleted automatically once no linked tasks remain.
  */
 data class Category(
     val name: String,
     val isPermanent: Boolean = false,
-    // Mezar taşı: silinen kategori kaydı saklanır ki Drive senkronizasyonu silinmiş
-    // kategoriyi uzaktan geri diriltmesin. Görünür listeler DAO katmanında filtrelenir.
+    // Tombstone: the deleted category record is kept so Drive sync does not resurrect the
+    // deleted category from remote. Visible lists are filtered at the DAO layer.
     val isDeleted: Boolean = false,
 )

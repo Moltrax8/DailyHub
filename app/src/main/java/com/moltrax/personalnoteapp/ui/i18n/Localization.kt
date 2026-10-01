@@ -7,8 +7,8 @@ import android.content.res.Resources
 import java.util.Locale
 
 /**
- * Uygulamanın desteklediği diller. [code] hem DataStore'da saklanan değer hem de Android kaynak
- * niteleyicisidir (values/ = tr varsayılan, values-en/ = en).
+ * Languages supported by the app. [code] is both the value stored in DataStore and the Android
+ * resource qualifier (values/ = tr default, values-en/ = en).
  */
 enum class AppLanguage(val code: String, val nativeName: String) {
     TURKISH("tr", "Türkçe"),
@@ -16,10 +16,10 @@ enum class AppLanguage(val code: String, val nativeName: String) {
 }
 
 /**
- * Bu context'i verilen [code] diline göre yerelleştirilmiş kaynaklarla saran bir [ContextWrapper]
- * döndürür. ÖNEMLİ: taban context (genellikle Activity) korunur — yalnızca [getResources] override
- * edilir. Böylece `hiltViewModel()` gibi Activity zincirini yürüyen mekanizmalar bozulmaz, ama
- * `stringResource` / `context.getString` yerelleştirilmiş metni döndürür.
+ * Returns a [ContextWrapper] wrapping this context with resources localized for the given [code]
+ * language. IMPORTANT: the base context (usually the Activity) is preserved — only [getResources]
+ * is overridden. This way mechanisms walking the Activity chain like `hiltViewModel()` keep working,
+ * while `stringResource` / `context.getString` returns the localized text.
  */
 fun Context.localizedFor(code: String): Context {
     val config = Configuration(resources.configuration)
@@ -30,6 +30,6 @@ fun Context.localizedFor(code: String): Context {
     }
 }
 
-/** [stringResource]'un yeniden derlenmesini (recomposition) tetiklemek için yerelleştirilmiş config. */
+/** Localized config to trigger [stringResource] recomposition. */
 fun localizedConfiguration(base: Configuration, code: String): Configuration =
     Configuration(base).apply { setLocale(Locale(code)) }

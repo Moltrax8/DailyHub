@@ -10,11 +10,11 @@ data class WorkoutGroup(
     val workouts: List<Workout> = emptyList(),
     val currentIndex: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
-    // Senkronizasyon çakışma çözümü (LWW) için son değişiklik zamanı. Grup eklendiğinde,
-    // düzenlendiğinde, içine antrenman eklenip silindiğinde veya grup silindiğinde güncellenir.
+    // Last-change time for sync conflict resolution (LWW). Updated when the group is added,
+    // edited, when a workout is added/removed inside it, or when the group is deleted.
     val updatedAt: Long = System.currentTimeMillis(),
-    // Mezar taşı: grup silindiğinde true olur (kayıt saklanır). Böylece Drive senkronizasyonu
-    // silinen grubu/antrenmanı uzaktan geri DİRİLTMEZ. Görünür listelerde gizlenir.
+    // Tombstone: true when the group is deleted (record is kept). This way Drive sync does NOT
+    // resurrect the deleted group/workout from remote. Hidden from visible lists.
     val isDeleted: Boolean = false,
 )
 
@@ -34,15 +34,15 @@ data class WorkoutExercise(
     val exerciseName: String,
     val plannedSets: List<PlannedSet> = emptyList(),
     val orderIndex: Int = 0,
-    /** Hareketin giriş tipi (ağırlık/kardiyo); canlı ekrandaki alanları belirler. */
+    /** The move's input type (weight/cardio); determines the fields on the live screen. */
     val type: ExerciseType = ExerciseType.WEIGHTLIFTING,
-    /** Bilinmeyen (gelecek sürümdeki) tip adlarının ham karşılığı; yazma yolunda korunur. */
+    /** Raw form of unknown (future-version) type names; preserved on the write path. */
     val typeRaw: String? = null,
 )
 
 /**
- * Planlanan (hedef) set. Ağırlık hareketlerinde [reps]/[weightKg]; kardiyo hareketlerinde
- * [durationSeconds] + [steps]/[distanceMeters] anlamlıdır.
+ * Planned (target) set. For weight moves [reps]/[weightKg] are meaningful; for cardio moves
+ * [durationSeconds] + [steps]/[distanceMeters] are meaningful.
  */
 @Serializable
 data class PlannedSet(

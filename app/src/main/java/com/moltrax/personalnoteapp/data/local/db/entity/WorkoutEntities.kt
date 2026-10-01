@@ -19,7 +19,7 @@ data class WorkoutGroupEntity(
     val name: String,
     val currentIndex: Int,
     val createdAt: Long,
-    // Senkronizasyon LWW zaman damgası + silme mezar taşı (migration v14→v15 ile eklendi).
+    // Sync LWW timestamp + deletion tombstone (added via migration v14→v15).
     val updatedAt: Long = 0L,
     val isDeleted: Boolean = false,
 )
@@ -60,7 +60,7 @@ data class WorkoutExerciseEntity(
     val exerciseName: String,
     val plannedSetsJson: String,
     val orderIndex: Int,
-    /** ExerciseType.name; eski kayıtlarda migration ile "WEIGHTLIFTING" varsayılır. */
+    /** ExerciseType.name; old records default to "WEIGHTLIFTING" via migration. */
     val type: String = ExerciseType.WEIGHTLIFTING.name,
 )
 
@@ -79,7 +79,7 @@ fun WorkoutExerciseEntity.toDomain() = WorkoutExercise(
     id = id,
     exerciseId = exerciseId,
     exerciseName = exerciseName,
-    // Bozuk plan JSON'u tüm grup akışını öldürmesin: çözülemezse boş plan.
+    // A corrupt plan JSON must not kill the whole group stream: fall back to an empty plan if unparseable.
     plannedSets = runCatching { json.decodeFromString<List<PlannedSetJson>>(plannedSetsJson) }
         .getOrDefault(emptyList())
         .map { PlannedSet(it.reps, it.weightKg, it.durationSeconds, it.steps, it.distanceMeters) },
@@ -106,7 +106,7 @@ fun WorkoutGroupEntity.toDomain(workouts: List<Workout>) = WorkoutGroup(
     workouts = workouts,
     currentIndex = currentIndex,
     createdAt = createdAt,
-    // Eski kayıtlarda updatedAt 0 olabilir; createdAt'a düşerek geçerli bir LWW tabanı sağla.
+    // Old records may have updatedAt 0; fall back to createdAt to provide a valid LWW base.
     updatedAt = if (updatedAt > 0L) updatedAt else createdAt,
     isDeleted = isDeleted,
 )

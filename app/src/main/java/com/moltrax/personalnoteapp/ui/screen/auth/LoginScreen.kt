@@ -33,7 +33,7 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
     val isSignedIn by vm.isSignedIn.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { vm.checkExistingSignIn() }
-    // Giriş yapıldıysa doğrudan ana ekrana git (onboarding/fiziksel bilgi adımı kaldırıldı).
+    // Go straight to the main screen once signed in (the onboarding/physical-info step was removed).
     LaunchedEffect(isSignedIn) {
         if (isSignedIn) {
             nav.navigate(Home) { popUpTo<Login> { inclusive = true } }
@@ -60,14 +60,14 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
         }
     }
 
-    // Drive onay ekranından dönüş; reddedilirse Snackbar + tekrar dene sunulur.
+    // Returning from the Drive consent screen; when denied, offer a Snackbar + retry.
     val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) {
             showSnackbarWithRetry(consentDeniedMsg)
         }
     }
 
-    // Retry isteği: taze bir onay Intent'i alıp yeniden başlat (eski Intent tek kullanımlık olabilir).
+    // Retry request: fetch a fresh consent Intent and relaunch it (the old Intent may be single-use).
     LaunchedEffect(consentRetryTick) {
         if (consentRetryTick > 0) {
             vm.ensureDriveConsent(
@@ -87,8 +87,8 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             vm.handleSignInResult(result.data)
-            // Hassas drive.appdata izni sign-in ile gelmemiş olabilir; sign-in başarısının
-            // hemen ardından onay akışını zincirle (gerekirse onay ekranını aç).
+            // The sensitive drive.appdata permission may not have come with sign-in; chain the consent
+            // flow right after a sign-in success (open the consent screen if needed).
             requestDriveConsent()
         }
     }

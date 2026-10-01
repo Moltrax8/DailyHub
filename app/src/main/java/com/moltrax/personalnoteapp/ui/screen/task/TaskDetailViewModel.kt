@@ -51,7 +51,7 @@ data class TaskDetailState(
     val programStartIndex: Int = 0,
     val isNew: Boolean = true,
     val isSaving: Boolean = false,
-    // Tekrar doğrulama hataları (kaydetmeden önce, satır içi gösterilir).
+    // Recurrence validation errors (before saving, shown inline).
     val intervalError: Boolean = false,
     val weeklyError: Boolean = false,
 )
@@ -71,7 +71,7 @@ class TaskDetailViewModel @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun restoreFromHandle(): TaskDetailState? {
-        // Kayıtlı düzenleme yoksa null (taze açılış) → repo'dan yüklenir.
+        // No saved edit → null (fresh open) → loaded from the repo.
         if (!savedStateHandle.contains(KEY_TITLE) && !savedStateHandle.contains(KEY_ID)) return null
         return TaskDetailState(
             id = savedStateHandle.get<String>(KEY_ID) ?: return null,
@@ -127,13 +127,13 @@ class TaskDetailViewModel @Inject constructor(
     val categories: StateFlow<List<Category>> = categoryRepo.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Mevcut bir kategoriyi seçer ya da seçimi kaldırır (null). */
+    /** Selects an existing category or clears the selection (null). */
     fun selectCategory(name: String?) {
         _state.update { it.copy(category = name?.trim().orEmpty()) }
         persist(_state.value)
     }
 
-    /** Yeni kategori oluşturur (kalıcı olabilir) ve görevde seçili hale getirir. */
+    /** Creates a new category (may be permanent) and selects it on the task. */
     fun createCategory(name: String, isPermanent: Boolean) {
         val n = name.trim()
         if (n.isBlank()) return
@@ -145,7 +145,7 @@ class TaskDetailViewModel @Inject constructor(
     }
 
     fun load(taskId: String) {
-        // Process-death sonrası geri yüklenen düzenleme varsa repo ile ezme.
+        // Do not overwrite a restored edit after process death with the repo.
         if (savedStateHandle.contains(KEY_ID) || savedStateHandle.contains(KEY_TITLE)) return
         if (taskId == "new") return
         viewModelScope.launch {
@@ -155,7 +155,7 @@ class TaskDetailViewModel @Inject constructor(
                         id = t.id, title = t.title, notes = t.notes ?: "",
                         dueDate = t.dueDate, priority = t.priority,
                         isRecurring = t.isRecurring, intervalDays = t.intervalDays,
-                        // Eski (recurrenceType=null) ama intervalDays'li görevler INTERVAL kabul edilir.
+                        // Old tasks with (recurrenceType=null) but intervalDays count as INTERVAL.
                         recurrenceType = t.recurrenceType
                             ?: if (t.intervalDays != null) RecurrenceType.INTERVAL else RecurrenceType.DAILY,
                         recurrenceDaysOfWeek = t.recurrenceDaysOfWeek,
@@ -175,15 +175,15 @@ class TaskDetailViewModel @Inject constructor(
 
     fun update(block: TaskDetailState.() -> TaskDetailState) {
         _state.update {
-            // Düzenlemede eski satır-içi tekrar hatalarını temizle; save() yeniden doğrular.
+            // Clear stale inline recurrence errors while editing; save() revalidates.
             block(it).copy(intervalError = false, weeklyError = false)
         }
         persist(_state.value.copy(intervalError = false, weeklyError = false))
     }
 
-    // --- Alt görev (checklist) düzenleme ---
+    // --- Subtask (checklist) editing ---
 
-    /** Yeni bir alt görev ekler (başlık boşsa yok sayılır). */
+    /** Adds a new subtask (ignored when the title is blank). */
     fun addSubtask(title: String) {
         val t = title.trim()
         if (t.isBlank()) return
@@ -191,7 +191,7 @@ class TaskDetailViewModel @Inject constructor(
         persist(_state.value)
     }
 
-    /** Bir alt görevin tamamlanma durumunu değiştirir. */
+    /** Toggles a subtask's completion state. */
     fun toggleSubtask(id: String) {
         _state.update { s ->
             s.copy(subtasks = s.subtasks.map { if (it.id == id) it.copy(isDone = !it.isDone) else it })
@@ -199,7 +199,7 @@ class TaskDetailViewModel @Inject constructor(
         persist(_state.value)
     }
 
-    /** Bir alt görevi siler. */
+    /** Deletes a subtask. */
     fun removeSubtask(id: String) {
         _state.update { s ->
             s.copy(subtasks = s.subtasks.filterNot { it.id == id })
@@ -207,7 +207,7 @@ class TaskDetailViewModel @Inject constructor(
         persist(_state.value)
     }
 
-    /** Haftalık tekrarda bir günü (ISO 1..7) ekler/çıkarır. */
+    /** Adds/removes a day (ISO 1..7) in weekly recurrence. */
     fun toggleRecurrenceDay(dayIso: Int) {
         _state.update { s ->
             val days = if (dayIso in s.recurrenceDaysOfWeek) s.recurrenceDaysOfWeek - dayIso
@@ -217,7 +217,7 @@ class TaskDetailViewModel @Inject constructor(
         persist(_state.value)
     }
 
-    /** Kaydetmeden önce tekrar biçimini doğrular; geçersizse satır-içi hata bayrağı kurup false döner. */
+    /** Validates the recurrence format before saving; sets inline error flags and returns false when invalid. */
     private fun validateRecurrence(s: TaskDetailState): Boolean {
         if (!s.isRecurring) return true
         var ok = true
@@ -235,28 +235,28 @@ class TaskDetailViewModel @Inject constructor(
     }
 
     fun save(onDone: () -> Unit) {
-        // INTERVAL boş/0/negatif ya da WEEKLY günsüz ise kaydetme (nextRecurrenceDue kalıcı kapatırdı).
+        // Do not save when INTERVAL is empty/0/negative or WEEKLY has no days (nextRecurrenceDue would permanently close it).
         if (!validateRecurrence(_state.value)) return
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
             val s = _state.value
             val now = System.currentTimeMillis()
             val existing = if (s.isNew) null else taskRepo.getById(s.id)
-            // Yeni görev listenin başına gelsin: mevcut en küçük sortOrder'dan bir eksiği.
-            // Düzenlemede mevcut sıralama korunur.
+            // New tasks go to the top of the list: one less than the current minimum sortOrder.
+            // The existing order is preserved when editing.
             val sortOrder = existing?.sortOrder
                 ?: ((taskRepo.getAll().minOfOrNull { it.sortOrder } ?: 0L) - 1L)
             val task = Task(
                 id = s.id, title = s.title.trim(), notes = s.notes.takeIf { it.isNotBlank() },
                 dueDate = s.dueDate, priority = s.priority, isRecurring = s.isRecurring,
-                // Tekrar kapalıysa biçim/aralık/gün bilgisini sıfırla; INTERVAL'da gün aralığı şart.
+                // Reset format/interval/day info when recurrence is off; day interval is required for INTERVAL.
                 intervalDays = if (s.isRecurring && s.recurrenceType == RecurrenceType.INTERVAL) s.intervalDays else null,
                 recurrenceType = if (s.isRecurring) s.recurrenceType else null,
                 recurrenceDaysOfWeek = if (s.isRecurring && s.recurrenceType == RecurrenceType.WEEKLY) s.recurrenceDaysOfWeek else emptyList(),
                 focusDurationSeconds = s.focusDurationSeconds,
                 category = s.category.takeIf { it.isNotBlank() },
                 subtasks = s.subtasks,
-                // Tek antrenman ile tüm program bağı birbirini dışlar.
+                // Single-workout and whole-program links are mutually exclusive.
                 linkedWorkoutId = if (s.linkedProgramId != null) null else s.linkedWorkoutId,
                 linkedProgramId = s.linkedProgramId,
                 programStartIndex = s.programStartIndex,
@@ -265,15 +265,15 @@ class TaskDetailViewModel @Inject constructor(
                 sortOrder = sortOrder,
             )
             taskRepo.upsert(task)
-            // Program bağında döngü, seçilen başlangıç gününden başlasın: grubun currentIndex'ini ayarla.
+            // On a program link, start the cycle from the picked start day: set the group's currentIndex.
             task.linkedProgramId?.let { pid ->
                 workoutRepo.getGroups().find { it.id == pid }?.let { group ->
                     val start = task.programStartIndex.coerceIn(0, group.workouts.lastIndex.coerceAtLeast(0))
                     if (group.currentIndex != start) workoutRepo.upsertGroup(group.copy(currentIndex = start))
                 }
             }
-            // Kategori yaşam döngüsü: seçili kategoriyi kayıt altına al (yoksa geçici oluşur),
-            // ardından kategori değişmişse boşa çıkan eski geçici kategorileri temizle.
+            // Category lifecycle: record the selected category (a temporary one is created if missing),
+            // then clean up old temporary categories left orphaned by a category change.
             task.category?.let { categoryRepo.ensureExists(it) }
             categoryRepo.cleanupTemporary()
             notifService.cancelReminder(task.id)

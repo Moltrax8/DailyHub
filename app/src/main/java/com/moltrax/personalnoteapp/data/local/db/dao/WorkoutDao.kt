@@ -13,29 +13,29 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface WorkoutDao {
 
-    // Groups — görünür sorgular mezar taşlarını (isDeleted = 1) hariç tutar.
+    // Groups — visible queries exclude tombstones (isDeleted = 1).
     @Query("SELECT * FROM workout_groups WHERE isDeleted = 0 ORDER BY createdAt DESC")
     fun observeGroups(): Flow<List<WorkoutGroupEntity>>
 
     @Query("SELECT * FROM workout_groups WHERE isDeleted = 0 ORDER BY createdAt DESC")
     suspend fun getAllGroups(): List<WorkoutGroupEntity>
 
-    /** Senkronizasyon için TÜM gruplar — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL groups for sync — including deleted (tombstone) records. */
     @Query("SELECT * FROM workout_groups ORDER BY createdAt DESC")
     suspend fun getAllGroupsRaw(): List<WorkoutGroupEntity>
 
     @Upsert suspend fun upsertGroup(group: WorkoutGroupEntity)
 
     /**
-     * Yumuşak silme (mezar taşı): grup kaydı saklanır ama isDeleted=1 + updatedAt güncellenir.
-     * Alt antrenman/hareket kayıtları ayrıca temizlenir (silinen grubun çocuğu kalmaz).
+     * Soft delete (tombstone): the group record is kept but marked isDeleted=1 + updatedAt is refreshed.
+     * Child workout/exercise records are also cleaned up (no children of the deleted group remain).
      */
     @Transaction
     suspend fun softDeleteGroup(id: String, now: Long) {
         markGroupDeleted(id, now)
-        // Gruba bağlı görevlerin spor bağlarını kopar (sarkan linkedWorkoutId/ProgramId kalmasın);
-        // updatedAt tazelenir ki kopuş sync ile yayılsın. Çocuklar silinmeden ÖNCE çalışmalıdır
-        // (alt sorgu grubun workout'larını kullanır).
+        // Detach sport links of tasks bound to the group (no dangling linkedWorkoutId/ProgramId left);
+        // updatedAt is refreshed so the detachment propagates via sync. Must run BEFORE children are deleted
+        // (the subquery uses the group's workouts).
         unlinkTasksFromGroup(id, now)
         unlinkTasksFromProgram(id, now)
         deleteWorkoutsForGroup(id)
@@ -54,9 +54,9 @@ interface WorkoutDao {
     suspend fun deleteAllGroups()
 
     /**
-     * Atomik grup değiştirme: tüm grupları sil + birleşmiş listeyi tek transaction içinde yaz.
-     * Yarıda kesilme eski veriyi korur; aksi halde sonraki sync boş listeyi yedeğe basardı.
-     * CASCADE sayesinde deleteAllGroups alt workout/exercise kayıtlarını da temizler.
+     * Atomic group replacement: delete all groups + write the merged list in a single transaction.
+     * An interruption preserves the old data; otherwise the next sync would push the empty list to the backup.
+     * Thanks to CASCADE, deleteAllGroups also clears child workout/exercise records.
      */
     @Transaction
     suspend fun replaceGroupsAtomic(
@@ -71,9 +71,9 @@ interface WorkoutDao {
     }
 
     /**
-     * Grubu ve tüm alt kayıtlarını (workout + exercise) tek bir transaction içinde değiştirir.
-     * Atomik olduğu için reaktif Flow yalnızca son tutarlı durumu yayar (titreme/ara durum olmaz).
-     * Eski workout'lar silindiğinde CASCADE ile ilgili workout_exercises kayıtları da temizlenir.
+     * Replaces a group and all its child records (workout + exercise) in a single transaction.
+     * Being atomic, the reactive Flow only emits the final consistent state (no flicker/intermediate state).
+     * When old workouts are deleted, related workout_exercises records are also cleared via CASCADE.
      */
     @Transaction
     suspend fun upsertGroupWithChildren(
@@ -106,7 +106,7 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_exercises ORDER BY orderIndex")
     fun observeAllWorkoutExercises(): Flow<List<WorkoutExerciseEntity>>
 
-    /** Halen herhangi bir antrenmanda kullanılan benzersiz hareket id'leri (yetim medya temizliği için). */
+    /** Distinct movement ids still used in any workout (for orphaned-media cleanup). */
     @Query("SELECT DISTINCT exerciseId FROM workout_exercises")
     suspend fun getReferencedExerciseIds(): List<String>
 
@@ -116,24 +116,24 @@ interface WorkoutDao {
     // Sessions
     @Upsert suspend fun upsertSession(session: WorkoutSessionEntity)
     @Upsert suspend fun upsertSessions(sessions: List<WorkoutSessionEntity>)
-    // Görünür sorgular mezar taşlarını (isDeleted = 1) hariç tutar; sync ham listeyi kullanır.
+    // Visible queries exclude tombstones (isDeleted = 1); sync uses the raw list.
     @Query("SELECT * FROM workout_sessions WHERE isDeleted = 0 ORDER BY startedAt DESC")
     suspend fun getSessions(): List<WorkoutSessionEntity>
 
-    /** Senkronizasyon için TÜM seanslar — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL sessions for sync — including deleted (tombstone) records. */
     @Query("SELECT * FROM workout_sessions ORDER BY startedAt DESC")
     suspend fun getSessionsRaw(): List<WorkoutSessionEntity>
 
     @Query("SELECT * FROM workout_sessions WHERE id = :id AND isDeleted = 0")
     suspend fun getSessionById(id: String): WorkoutSessionEntity?
 
-    /** Bir spor görevine bağlı en son tamamlanmış seans (tamamlanan görevin özetini açmak için). */
+    /** The latest completed session linked to a sport task (to open the completed task's summary). */
     @Query("SELECT * FROM workout_sessions WHERE taskId = :taskId AND isDeleted = 0 ORDER BY startedAt DESC LIMIT 1")
     suspend fun getLatestSessionForTask(taskId: String): WorkoutSessionEntity?
 
     /**
-     * Yumuşak silme (mezar taşı): seans kaydı saklanır ama isDeleted=1 olur, böylece silme
-     * Drive senkronizasyonuyla yayılır ve uzaktan geri diriltilmez.
+     * Soft delete (tombstone): the session record is kept but marked isDeleted=1, so the deletion
+     * propagates via Drive sync and is not resurrected from remote.
      */
     @Query("UPDATE workout_sessions SET isDeleted = 1 WHERE id = :id")
     suspend fun softDeleteSession(id: String)
@@ -141,7 +141,7 @@ interface WorkoutDao {
     suspend fun deleteAllSessions()
 
     /**
-     * Atomik seans değiştirme: sil + toplu yaz tek transaction içinde (gerekçe yukarıda).
+     * Atomic session replacement: delete + batch write in a single transaction (rationale above).
      */
     @Transaction
     suspend fun replaceSessionsAtomic(sessions: List<WorkoutSessionEntity>) {

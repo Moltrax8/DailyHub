@@ -6,13 +6,13 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 
 /**
- * Widget'taki bir alt göreve (checklist maddesi) dokununca çalışır: o alt görevin tamamlanma
- * durumunu ters çevirir ve widget'ı yeniler. Böylece uygulamayı açmadan, doğrudan widget üzerinde
- * alt görevler işaretlenip geri alınabilir. Aynı satıra tekrar dokunmak işlemi geri alır.
+ * Runs when a subtask (checklist item) in the widget is tapped: flips that subtask's completion
+ * state and refreshes the widget. Subtasks can thus be checked/unchecked directly on the widget
+ * without opening the app. Tapping the same row again reverts the action.
  *
- * [CompleteTaskAction] ile aynı "anında tepki" sırasını izler: önce hızlı yerel DB yazısı, ardından
- * [TaskWidget.requestUpdate] ile ANINDA görsel yenileme, ağ senkronizasyonu ([TaskWidget.pushSync])
- * en sona bırakılır — böylece tik gecikmesiz görünür, sync arkada sürer.
+ * Follows the same "instant response" order as [CompleteTaskAction]: first a fast local DB write, then
+ * INSTANT visual refresh via [TaskWidget.requestUpdate], with network sync ([TaskWidget.pushSync])
+ * left to the end — so the check appears without delay while sync continues in the background.
  */
 class ToggleSubtaskAction : ActionCallback {
 
@@ -23,11 +23,11 @@ class ToggleSubtaskAction : ActionCallback {
     ) {
         val taskId = parameters[taskIdKey] ?: return
         val subtaskId = parameters[subtaskIdKey] ?: return
-        // 1) Yerel toggle (hızlı DB yazısı).
+        // 1) Local toggle (fast DB write).
         TaskWidget.toggleSubtask(context, taskId, subtaskId)
-        // 2) Anında görsel yenileme (aynı görev birden çok widget'ta olabilir → tümü).
+        // 2) Instant visual refresh (the same task may be in multiple widgets → all).
         TaskWidget.requestUpdate(context)
-        // 3) Ağ senkronizasyonu en sonda; arayüz zaten güncellendi.
+        // 3) Network sync last; the UI is already updated.
         TaskWidget.pushSync(context)
     }
 

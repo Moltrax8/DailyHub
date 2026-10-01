@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Tamamlanan bir antrenman seansının özet/sonuç sayfasının veri katmanı. Seans id'sinden tek bir
- * [WorkoutSession]'ı (o gün yapılan hareketler + girilen set/tekrar/ağırlık) yükler.
+ * Data layer of the summary/result page of a completed workout session. Loads a single
+ * [WorkoutSession] (that day's exercises + entered sets/reps/weight) from the session id.
  */
 @HiltViewModel
 class WorkoutSummaryViewModel @Inject constructor(
@@ -27,7 +27,7 @@ class WorkoutSummaryViewModel @Inject constructor(
     private val _session = MutableStateFlow<WorkoutSession?>(null)
     val session: StateFlow<WorkoutSession?> = _session.asStateFlow()
 
-    // İlk yükleme tamamlandı mı (yoksa "yükleniyor" göstergesi; bittiğinde "bulunamadı" olabilir).
+    // Whether the initial load finished (a "loading" indicator until then; may be "not found" after).
     private val _loaded = MutableStateFlow(false)
     val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
 
@@ -40,8 +40,8 @@ class WorkoutSummaryViewModel @Inject constructor(
     }
 
     /**
-     * Görüntülenen seansın BİREBİR aynını JSON olarak kullanıcının seçtiği belgeye yazar.
-     * Salt okunur: yeni seans oluşturmaz, mevcut seansı değiştirmez. Sonucu [onDone] ile bildirir.
+     * Writes an EXACT copy of the displayed session as JSON to the user-picked document.
+     * Read-only: creates no new session, modifies no existing session. Reports the result via [onDone].
      */
     fun exportResultToUri(session: WorkoutSession, uri: Uri, onDone: (Boolean) -> Unit) {
         viewModelScope.launch {

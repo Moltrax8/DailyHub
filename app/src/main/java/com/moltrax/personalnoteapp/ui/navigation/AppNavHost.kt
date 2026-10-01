@@ -36,7 +36,7 @@ import com.moltrax.personalnoteapp.ui.screen.workout.WorkoutSummaryScreen
 
 @Composable
 fun AppNavHost(
-    // Drive sync kapalıyken giriş ekranını atla, doğrudan ana ekrandan başla.
+    // Skip the login screen when Drive sync is off, start directly from the home screen.
     startDestination: Any = if (FeatureFlags.DRIVE_SYNC_ENABLED) Login else Home,
     pendingWidgetAction: String? = null,
     pendingWidgetTaskId: String? = null,
@@ -44,11 +44,11 @@ fun AppNavHost(
 ) {
     val nav = rememberNavController()
 
-    // Ön plana gelince (arka plandan dönüş) sessiz otomatik senkronizasyon. Böylece ikinci bir
-    // cihazda yapılan değişiklikler, uygulamaya geri dönüldüğünde otomatik çekilir. İlk ON_START
-    // soğuk başlangıçtır; açılış senkronizasyonunu HomeViewModel.init zaten yapar, bu yüzden
-    // yalnızca SONRAKİ ön plana gelişlerde tetikleriz (çift sync'i önler). Giriş yapılmamışsa
-    // repository sessizce no-op döner.
+    // Silent auto-sync when coming to the foreground (returning from background). Changes made on a second
+    // device are thus pulled automatically when returning to the app. The first ON_START
+    // is a cold start; the launch sync is already done by HomeViewModel.init, so
+    // we only trigger on LATER foreground arrivals (avoids double sync). If not signed in,
+    // the repository silently returns a no-op.
     if (FeatureFlags.DRIVE_SYNC_ENABLED) {
         val syncVm: SyncViewModel = hiltViewModel()
         val lifecycleOwner = LocalLifecycleOwner.current
@@ -64,8 +64,8 @@ fun AppNavHost(
         }
     }
 
-    // Widget'ın '+' butonu yeni görev ekranını açmak ister. Tek seferlik (single-shot):
-    // beklemeden launchSingleTop ile açılır; böylece yinelenen girişlerde üst üste yığılmaz.
+    // The widget's '+' button wants to open the new-task screen. Single-shot:
+    // opened without delay via launchSingleTop; so repeated entries don't pile up.
     LaunchedEffect(pendingWidgetAction) {
         if (pendingWidgetAction == MainActivity.ACTION_NEW_TASK) {
             nav.navigate(TaskDetail("new")) { launchSingleTop = true }
@@ -73,9 +73,9 @@ fun AppNavHost(
         }
     }
 
-    // Üst inset'i Scaffolds'lar sahiplenir (her ekran kendi topBar/windowInsets'ini uygular);
-    // burada dıştan statusBarsPadding eklemiyoruz — çift üst boşluğu önler.
-    // Global sync banner'ı tüm sekmelerin üstünde: görünürken yer kaplar, Idle'da hiç yer kaplamaz.
+    // Scaffolds own the top inset (each screen applies its own topBar/windowInsets);
+    // we don't add statusBarsPadding from outside here — avoids double top spacing.
+    // Global sync banner above all tabs: takes space when visible, no space at all when Idle.
     Column(
         Modifier
             .fillMaxSize()
@@ -85,8 +85,8 @@ fun AppNavHost(
             SyncBanner()
         }
 
-        // Ekran geçişleri: varsayılan ~300 ms kaydır+solma yerine çok kısa (90 ms) bir solma.
-        // Böylece sekme/ekran değişimi gözle anlık algılanır, gezinme "gecikmesiz" hissettirir.
+        // Screen transitions: a very short (90 ms) fade instead of the default ~300 ms slide+fade.
+        // Tab/screen changes thus feel instant, navigation feels "lag-free".
         val fast = tween<Float>(durationMillis = 90)
         NavHost(
             navController = nav,

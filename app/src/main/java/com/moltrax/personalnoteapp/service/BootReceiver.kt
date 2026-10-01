@@ -12,14 +12,14 @@ import com.moltrax.personalnoteapp.worker.RescheduleNotificationsWorker
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
-        // Sistem alarm deposu bu olaylarda sıfırlanabilir/kayabilir: yeniden kurmayı tekilleştirilmiş
-        // işle (KEEP) tetikle; çift kuyruklanma olmaz.
+        // The system alarm store can be reset/shifted on these events: trigger re-scheduling via a deduplicated
+        // job (KEEP); no double enqueueing.
         val reschedule = action == Intent.ACTION_BOOT_COMPLETED ||
             action == Intent.ACTION_MY_PACKAGE_REPLACED ||
             action == Intent.ACTION_TIME_CHANGED ||
             action == Intent.ACTION_TIMEZONE_CHANGED ||
             action == AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED ||
-            // OEM hızlı başlatma (bazı cihazlarda BOOT_COMPLETED yerine geçer).
+            // OEM quick boot (acts as BOOT_COMPLETED on some devices).
             action == "android.intent.action.QUICKBOOT_POWERON" ||
             action == "com.htc.intent.action.QUICKBOOT_POWERON"
         if (!reschedule) return

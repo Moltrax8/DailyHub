@@ -8,7 +8,7 @@ import com.moltrax.personalnoteapp.domain.model.Category
 data class CategoryEntity(
     @PrimaryKey val name: String,
     val isPermanent: Boolean = false,
-    // Mezar taşı (v18): silinen kategori saklanır, görünür sorgular filtreler, sync dahil eder.
+    // Tombstone (v18): deleted categories are kept, visible queries filter them, sync includes them.
     val isDeleted: Boolean = false,
 )
 

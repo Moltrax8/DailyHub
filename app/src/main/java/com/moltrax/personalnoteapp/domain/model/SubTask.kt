@@ -4,9 +4,9 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 /**
- * Bir ana görevin (Quest) altındaki tek bir kontrol-listesi (checklist) maddesi. Görevle birlikte
- * gömülü JSON liste olarak saklanır (ayrı tablo yok); böylece Drive senkronizasyonunda görevle
- * birlikte taşınır ve mevcut LWW birleştirmesi olduğu gibi çalışır.
+ * A single checklist item under a parent task (Quest). Stored as an embedded JSON list with
+ * the task (no separate table); so it travels with the task during Drive sync and the
+ * existing LWW merge keeps working as-is.
  */
 @Serializable
 data class SubTask(

@@ -32,7 +32,7 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     val notice by vm.fileNotice.collectAsStateWithLifecycle()
-    // Dışa aktarımı bekleyen program + önerilen dosya adı (picker dönüşünde yazılır).
+    // Pending export: program + suggested file name (written when the picker returns).
     var pendingExport by remember { mutableStateOf<Pair<WorkoutGroup, String>?>(null) }
 
     LaunchedEffect(notice) {
@@ -43,7 +43,7 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
     }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        // İptal (null URI) sessizce yoksayılır.
+        // Cancellation (null URI) is silently ignored.
         if (uri != null) vm.importProgramFile(uri)
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->

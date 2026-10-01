@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
-/** Tek seferlik dosya işlemi bildirimi (Snackbar ile tüketilir). */
+/** One-shot file-operation notice (consumed via Snackbar). */
 data class FileNotice(val messageRes: Int, val success: Boolean)
 
 @HiltViewModel
@@ -51,25 +51,25 @@ class WorkoutViewModel @Inject constructor(
     prefs: AppPreferences,
 ) : ViewModel() {
 
-    /** Kullanıcının kendi ExerciseDB anahtarı (boşsa demo videoları devre dışı). */
+    /** The user's own ExerciseDB key (empty means demo videos are disabled). */
     val exerciseDbKey: StateFlow<String?> = prefs.exerciseDbKey
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val groups: StateFlow<List<WorkoutGroup>> = workoutRepo.observeGroups()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Önbellekteki hareketler (exerciseId → Exercise) — düzenleme diyaloğunda lokal demo yolunu bulur. */
+    /** Cached exercises (exerciseId → Exercise) — finds the local demo path in the edit dialog. */
     val exercisesById: StateFlow<Map<String, Exercise>> = workoutRepo.observeExercises()
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    /** Arama kutusunun metni; gerçek API isteği [exerciseResults] içinde debounce'lanır. */
+    /** Search box text; the actual API request is debounced inside [exerciseResults]. */
     private val searchQuery = MutableStateFlow("")
 
     /**
-     * Hareket arama sonuçları: arama metni [debounce] (500 ms) ile dinlenir; kullanıcı yazmayı
-     * bıraktıktan yarım saniye sonra TEK bir ExerciseDB isteği atılır. [mapLatest] yeni harf
-     * gelince bekleyen/çalışan isteği iptal eder (RapidAPI hız limitini korur).
+     * Exercise search results: the query text is observed with [debounce] (500 ms); a SINGLE ExerciseDB
+     * request fires half a second after the user stops typing. [mapLatest] cancels the pending/running
+     * request when a new letter arrives (protects the RapidAPI rate limit).
      */
     @OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val exerciseResults: StateFlow<List<Exercise>> = searchQuery
@@ -95,17 +95,17 @@ class WorkoutViewModel @Inject constructor(
 
     fun deleteGroup(id: String) { viewModelScope.launch { workoutRepo.deleteGroup(id) } }
 
-    // ------------------------------------------------------- JSON içe/dışa aktarma ---
+    // ------------------------------------------------------- JSON import/export ---
 
-    /** Tek seferlik dosya bildirimi (Snackbar ile tüketilir). */
+    /** One-shot file notice (consumed via Snackbar). */
     private val _fileNotice = MutableStateFlow<FileNotice?>(null)
     val fileNotice: StateFlow<FileNotice?> = _fileNotice.asStateFlow()
     fun consumeFileNotice() { _fileNotice.value = null }
 
     /**
-     * SAF ile seçilen JSON dosyasını içe aktarır. Dosya önce tamamen doğrulanır;
-     * doğrulama geçmeden hiçbir şey yazılmaz. Başarılı içe aktarma YENİ bir program
-     * oluşturur (mevcut programların üzerine yazmaz).
+     * Imports the JSON file picked via SAF. The file is fully validated first;
+     * nothing is written unless validation passes. A successful import creates a NEW program
+     * (it never overwrites existing programs).
      */
     fun importProgramFile(uri: Uri) {
         viewModelScope.launch {
@@ -124,7 +124,7 @@ class WorkoutViewModel @Inject constructor(
         }
     }
 
-    /** Programı kullanıcının seçtiği belgeye JSON olarak yazar. Program değişmez. */
+    /** Writes the program as JSON to the user-picked document. The program is unchanged. */
     fun exportProgramToUri(group: WorkoutGroup, uri: Uri) {
         viewModelScope.launch {
             val ok = fileManager
@@ -158,14 +158,14 @@ class WorkoutViewModel @Inject constructor(
     fun deleteWorkout(group: WorkoutGroup, workoutId: String) {
         viewModelScope.launch {
             workoutRepo.upsertGroup(group.copy(workouts = group.workouts.filter { it.id != workoutId }))
-            // Bu antrenmanla giden hareketlerin demo dosyaları başka yerde kullanılmıyorsa silinir.
+            // Demo files of exercises removed with this workout are deleted when unused elsewhere.
             workoutRepo.cleanupOrphanedExerciseMedia()
         }
     }
 
     /**
-     * Eklenmiş bir hareketin hedef değerlerini (ad/tip/plan setleri) günceller. Hareket [exerciseId]
-     * (WorkoutExercise.id) ile bulunur; grup yeniden yazılır (LWW updatedAt repo'da bump'lanır).
+     * Updates the target values (name/type/planned sets) of an added exercise. The exercise is found
+     * by [exerciseId] (WorkoutExercise.id); the group is rewritten (LWW updatedAt is bumped in the repo).
      */
     fun updateExercise(
         group: WorkoutGroup,
@@ -188,7 +188,7 @@ class WorkoutViewModel @Inject constructor(
         viewModelScope.launch { workoutRepo.upsertGroup(updated) }
     }
 
-    /** Eklenmiş bir hareketi antrenmandan kaldırır. */
+    /** Removes an added exercise from the workout. */
     fun deleteExercise(group: WorkoutGroup, workoutId: String, exerciseId: String) {
         val updated = group.copy(
             workouts = group.workouts.map { w ->
@@ -197,7 +197,7 @@ class WorkoutViewModel @Inject constructor(
         )
         viewModelScope.launch {
             workoutRepo.upsertGroup(updated)
-            // Hareket kaldırıldı; başka antrenmanda kullanılmıyorsa demo dosyası temizlenir.
+            // The exercise was removed; clean up its demo file when unused by any other workout.
             workoutRepo.cleanupOrphanedExerciseMedia()
         }
     }
@@ -227,9 +227,9 @@ class WorkoutViewModel @Inject constructor(
     }
 
     /**
-     * Arama sonucundan hareket ekler: gerçek ExerciseDB id'sini korur, tipini bodyPart'tan
-     * (ör. "cardio" → CARDIO) çıkarır, hedef değerleri ([plannedSets]) ile birlikte kaydeder
-     * ve hareketi yerel önbelleğe yazar.
+     * Adds an exercise from a search result: keeps the real ExerciseDB id, derives the type from bodyPart
+     * (e.g. "cardio" → CARDIO), saves it with the target values ([plannedSets]),
+     * and writes the exercise to the local cache.
      */
     fun addExerciseFromSearch(
         group: WorkoutGroup,
@@ -238,8 +238,8 @@ class WorkoutViewModel @Inject constructor(
         plannedSets: List<PlannedSet> = emptyList(),
     ) {
         viewModelScope.launch {
-            // Önce hareketi önbelleğe yaz (demo URL'siyle), sonra demo medyasını arka planda
-            // çevrimdışı kullanım için indirip lokal yolu kaydet.
+            // Write the exercise to the cache first (with its demo URL), then download the demo media
+            // in the background and save the local path for offline use.
             workoutRepo.upsertExercise(exercise)
             downloadMediaIfNeeded(exercise)
         }
@@ -250,7 +250,7 @@ class WorkoutViewModel @Inject constructor(
         )
     }
 
-    /** Hareketin demo medyasını (henüz inmemişse) lokal depolamaya indirir ve yolu kaydeder. */
+    /** Downloads the exercise demo media (if not yet downloaded) to local storage and saves the path. */
     private suspend fun downloadMediaIfNeeded(exercise: Exercise) {
         val url = exercise.mediaUrl
         if (url.isNullOrBlank() || !exercise.localMediaPath.isNullOrBlank()) return
@@ -259,8 +259,8 @@ class WorkoutViewModel @Inject constructor(
     }
 
     /**
-     * Hedef girişlerinden plan setleri üretir. Ağırlıkta [sets] adet aynı (tekrar+kg) set;
-     * kardiyoda tek bir hedef (süre + adım/mesafe). EXP/hedef hesabı [PlannedSet] listesini kullanır.
+     * Builds planned sets from the target inputs. For weights, [sets] identical (reps+kg) sets;
+     * for cardio, a single target (duration + steps/distance). EXP/target math uses the [PlannedSet] list.
      */
     fun buildPlannedSets(
         type: ExerciseType,
@@ -271,17 +271,17 @@ class WorkoutViewModel @Inject constructor(
         steps: Int?,
         durationSeconds: Int? = null,
     ): List<PlannedSet> = when (type) {
-        // Ağırlık: tekrar + kg. Vücut ağırlığı: tekrar + (varsa) ek ağırlık (weightKg = ek yük).
+        // Weights: reps + kg. Bodyweight: reps + (optional) added load (weightKg = extra load).
         ExerciseType.WEIGHTLIFTING, ExerciseType.BODYWEIGHT ->
             List(sets.coerceAtLeast(1)) { PlannedSet(reps = reps, weightKg = weightKg) }
-        // Süre bazlı (plank): set başına hedef süre (saniye), tekrar yok.
+        // Duration-based (plank): target duration (seconds) per set, no reps.
         ExerciseType.DURATION ->
             List(sets.coerceAtLeast(1)) { PlannedSet(durationSeconds = durationSeconds) }
         ExerciseType.CARDIO ->
             listOf(PlannedSet(durationSeconds = durationMinutes?.times(60), steps = steps))
     }
 
-    /** Arama metnini günceller; isteğin kendisi [exerciseResults] içinde debounce'lanır. */
+    /** Updates the search text; the request itself is debounced inside [exerciseResults]. */
     fun searchExercises(query: String) {
         searchQuery.value = query
     }
@@ -292,7 +292,7 @@ class WorkoutViewModel @Inject constructor(
         }
     }
 
-    // LiveWorkoutScreen farklı ViewModel örneği aldığı için buradan session başlatır
+    // LiveWorkoutScreen takes a different ViewModel instance, so it starts the session from here
     fun initSession(workoutId: String) {
         if (_liveSession.value?.workoutId == workoutId) return
         viewModelScope.launch {
@@ -324,7 +324,7 @@ class WorkoutViewModel @Inject constructor(
         }
     }
 
-    /** Seansı tamamlar: gerçekleşen setleri kalıcılaştırır ve özet ekranını açar. */
+    /** Completes the session: persists the actual sets and opens the summary screen. */
     fun finishSession(onDone: (String) -> Unit) {
         viewModelScope.launch {
             val session = _liveSession.value?.copy(completedAt = System.currentTimeMillis()) ?: return@launch
@@ -337,16 +337,16 @@ class WorkoutViewModel @Inject constructor(
     private fun ExerciseDbItem.toExercise() = Exercise(
         id = id, name = name, bodyPart = bodyPart,
         equipment = equipment,
-        // ExerciseDB "instructions" adımlarını madde-madde açıklamaya çevir (hareket seçim/detay
-        // ekranında gösterilir). Boşsa null kalır.
+        // Converts ExerciseDB "instructions" steps into a bulleted description (shown on the
+        // exercise pick/detail screen). Stays null when empty.
         description = instructions.takeIf { it.isNotEmpty() }?.joinToString("\n") { "• ${it.trim()}" },
-        // ExerciseDB artık yanıt gövdesinde gifUrl DÖNDÜRMÜYOR; demo GIF'i id üzerinden ayrı
-        // resim ucundan gelir ve X-RapidAPI-Key header'ı ister (Coil/indirici header'ı ekler).
+        // ExerciseDB no longer returns gifUrl in the response body; the demo GIF comes from a separate
+        // image endpoint by id and requires the X-RapidAPI-Key header (the Coil/downloader adds it).
         mediaUrl = exerciseGifUrl(id),
     )
 
     companion object {
-        /** ExerciseDB demo GIF'inin URL'si (id'den). RapidAPI anahtarı header'ı ile yüklenir. */
+        /** URL of the ExerciseDB demo GIF (from id). Loaded with the RapidAPI key header. */
         fun exerciseGifUrl(exerciseId: String): String =
             "https://exercisedb.p.rapidapi.com/image?exerciseId=$exerciseId&resolution=360"
     }

@@ -15,15 +15,15 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 data class ProfileUiState(
-    /** Görünen ad — kullanıcının elle düzenlediği ad; yoksa Google hesabı adı; o da yoksa varsayılan. */
+    /** Display name — the user's manually edited name; otherwise the Google account name; otherwise the default. */
     val displayName: String = "",
     val photoUrl: String? = null,
 )
 
 /**
- * Profil başlığının salt-okunur verisini sağlar: görünen ad ve profil fotoğrafı. Görünen ad,
- * kullanıcının ayarladığı özel adı (DataStore) önceler; ayarlı değilse Google hesabı adına düşülür.
- * Düzenleme/çıkış işlevleri [com.moltrax.personalnoteapp.ui.screen.settings.SettingsViewModel]'de.
+ * Provides the read-only data of the profile header: display name and profile photo. The display
+ * name prefers the user's custom name (DataStore); when unset it falls back to the Google account
+ * name. Edit/sign-out behavior lives in [com.moltrax.personalnoteapp.ui.screen.settings.SettingsViewModel].
  */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(

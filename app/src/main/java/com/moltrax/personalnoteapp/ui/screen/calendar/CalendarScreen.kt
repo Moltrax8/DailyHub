@@ -40,8 +40,8 @@ import java.time.format.TextStyle
 import java.util.Date
 
 /**
- * Takvim görünümü — artık ayrı bir sekme değil; "Görevler" sekmesi içindeki bir alt görünüm olarak
- * gömülü çalışır (kendi Scaffold/alt bar'ı yoktur). [modifier] ile saran ekran yerleşimi verir.
+ * Calendar view — no longer a separate tab; embedded as a sub-view inside the "Tasks" tab
+ * (it has no Scaffold/bottom bar of its own). [modifier] provides the wrapping screen layout.
  */
 @Composable
 fun CalendarContent(
@@ -50,7 +50,7 @@ fun CalendarContent(
     vm: CalendarViewModel = hiltViewModel(),
 ) {
     val tasks by vm.tasks.collectAsStateWithLifecycle()
-    // "Bugün" her ön plana gelişte (ON_START) yeniden hesaplanır; gece yarısı geçmişse göstergeler güncellenir.
+    // "Today" is recomputed on every foregrounding (ON_START); indicators update past midnight.
     var today by remember { mutableStateOf(LocalDate.now()) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -62,15 +62,15 @@ fun CalendarContent(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    // Ay/gün seçimi process-death'e dayanıklı: ISO String olarak saklanır
-    // (YearMonth/LocalDate Bundle'a yazılamaz). Okuma/yazma yardımcıları aşağıda.
+    // Month/day selection survives process death: stored as ISO strings
+    // (YearMonth/LocalDate cannot be written to a Bundle). Read/write helpers below.
     var currentMonthIso by rememberSaveable { mutableStateOf(YearMonth.from(today).toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
     val currentMonth = runCatching { YearMonth.parse(currentMonthIso) }
         .getOrDefault(YearMonth.from(today))
     val selectedDate = runCatching { LocalDate.parse(selectedDateIso) }.getOrDefault(today)
 
-    // Görünür ay için gün -> görev eşlemesi (tekrarlar dahil). Ay/görev değişince yeniden hesaplanır.
+    // Day -> task mapping for the visible month (including recurrences). Recomputed when the month/tasks change.
     val occurrences: Map<LocalDate, List<Task>> = remember(tasks, currentMonthIso) {
         val first = currentMonth.atDay(1)
         val last = currentMonth.atEndOfMonth()
@@ -151,7 +151,7 @@ private fun MonthGrid(
     onSelect: (LocalDate) -> Unit,
 ) {
     val first = month.atDay(1)
-    // ISO: Pazartesi=1 → ilk haftadaki boş hücre sayısı.
+    // ISO: Monday=1 → number of empty cells in the first week.
     val leading = first.dayOfWeek.value - 1
     val daysInMonth = month.lengthOfMonth()
     val totalCells = ((leading + daysInMonth + 6) / 7) * 7
@@ -208,7 +208,7 @@ private fun DayCell(
                 fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) AppColors.Accent else MaterialTheme.colorScheme.onBackground,
             )
-            // Görev varsa küçük bir nokta.
+            // Small dot when there are tasks.
             Box(
                 Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape)
                     .background(if (hasTasks) AppColors.Accent else androidx.compose.ui.graphics.Color.Transparent)
@@ -224,7 +224,7 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
         val d = Date(date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
         SimpleDateFormat("d MMMM yyyy, EEEE", locale).format(d)
     }
-    // Saat etiketi composition locale'una bağlı; dil değişince yeniden kurulur.
+    // Time label depends on the composition locale; recreated when the language changes.
     val dayTimeFmt = remember(locale) { SimpleDateFormat("HH:mm", locale) }
     Text(header, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,

@@ -23,8 +23,8 @@ class DriveAuthService @Inject constructor(
 ) {
     private val driveScope = Scope(BuildConfig.DRIVE_SCOPE)
 
-    // Android'de requestServerAuthCode gerekmez — GoogleAuthUtil.getToken
-    // cihaz üzerinde doğrudan OAuth token alır.
+    // No requestServerAuthCode needed on Android — GoogleAuthUtil.getToken
+    // fetches the OAuth token directly on the device.
     private val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestEmail()
         .requestScopes(driveScope)
@@ -41,7 +41,7 @@ class DriveAuthService @Inject constructor(
         GoogleSignIn.hasPermissions(it, driveScope)
     } ?: false
 
-    // GoogleAuthUtil için scope string'i: "oauth2:<tam-scope-url>"
+    // Scope string for GoogleAuthUtil: "oauth2:<full-scope-url>"
     private val tokenScope = "oauth2:${BuildConfig.DRIVE_SCOPE}"
 
     suspend fun getAccessToken(account: Account): String = withContext(Dispatchers.IO) {
@@ -49,9 +49,9 @@ class DriveAuthService @Inject constructor(
     }
 
     /**
-     * Geçerli erişim jetonunu döner. Giriş yapılmamışsa null döner; jeton alınırken hata
-     * oluşursa (izin gerekiyor, ağ, vb.) istisnayı YUKARI fırlatır — gerçek neden sessizce
-     * yutulmaz, böylece arayüzde gösterilebilir.
+     * Returns the current access token. Returns null when not signed in; if fetching the token
+     * fails (consent required, network, etc.) the exception is rethrown UP — the real cause is
+     * never swallowed silently, so it can be shown in the UI.
      */
     suspend fun getFreshToken(): String? {
         val account = getLastSignedInAccount()?.account ?: return null
@@ -59,9 +59,9 @@ class DriveAuthService @Inject constructor(
     }
 
     /**
-     * Drive erişimi için kullanıcı onayı gerekiyorsa onay ekranını açacak Intent'i döner;
-     * onay zaten verilmişse null. Giriş akışında, sign-in sonrası çağrılır ki hassas
-     * `drive.appdata` izni mutlaka istensin.
+     * Returns the Intent that opens the consent screen when user approval is required for
+     * Drive access; null when consent was already granted. Called after sign-in in the login
+     * flow so the sensitive `drive.appdata` permission is definitely requested.
      */
     suspend fun getConsentIntentOrNull(): Intent? = withContext(Dispatchers.IO) {
         val account = getLastSignedInAccount()?.account ?: return@withContext null

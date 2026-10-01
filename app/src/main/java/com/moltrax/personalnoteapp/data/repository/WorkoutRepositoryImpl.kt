@@ -25,8 +25,8 @@ class WorkoutRepositoryImpl @Inject constructor(
     private val videoStorage: ExerciseVideoStorage,
 ) : WorkoutRepository {
 
-    // Üç tabloyu da (groups, workouts, workout_exercises) reaktif olarak dinler; herhangi birine
-    // ekleme/silme yapıldığında Flow yeniden tetiklenir ve UI anında güncellenir.
+    // Listens reactively to all three tables (groups, workouts, workout_exercises); whenever
+    // anything is inserted/deleted the Flow re-emits and the UI updates instantly.
     override fun observeGroups(): Flow<List<WorkoutGroup>> =
         combine(
             workoutDao.observeGroups(),
@@ -48,12 +48,12 @@ class WorkoutRepositoryImpl @Inject constructor(
             }
         }
 
-    // Kullanıcı düzenlemesi: updatedAt'i şimdiye çek (LWW). Antrenman ekleme/silme dahil her
-    // değişiklik bu yolu kullandığından, silinen bir antrenman senkronizasyonda geri gelmez.
+    // User edit: bump updatedAt to now (LWW). Every change, including adding/removing
+    // workouts, goes through this path, so a deleted workout never comes back via sync.
     override suspend fun upsertGroup(group: WorkoutGroup) =
         persistGroup(group.copy(updatedAt = System.currentTimeMillis()))
 
-    /** Grubu ve çocuklarını verilen zaman damgalarını KORUYARAK yazar (senkronizasyon birleştirmesi). */
+    /** Writes the group and its children PRESERVING the given timestamps (sync merge). */
     private suspend fun persistGroup(group: WorkoutGroup) {
         val workoutEntities = group.workouts.mapIndexed { idx, workout ->
             workout.toEntity(group.id, idx)
@@ -64,8 +64,8 @@ class WorkoutRepositoryImpl @Inject constructor(
         workoutDao.upsertGroupWithChildren(group.toEntity(), workoutEntities, exerciseEntities)
     }
 
-    // Yumuşak silme (mezar taşı) — sync silinen grubu geri diriltmesin. Grup silindiğinde alt
-    // hareketleri de gittiğinden, artık kullanılmayan demo medya dosyalarını eş zamanlı temizle.
+    // Soft delete (tombstone) — so sync does not resurrect the deleted group. Since deleting
+    // a group also drops its child moves, clean up now-unused demo media files in passing.
     override suspend fun deleteGroup(id: String) {
         workoutDao.softDeleteGroup(id, System.currentTimeMillis())
         cleanupOrphanedExerciseMedia()
@@ -73,7 +73,7 @@ class WorkoutRepositoryImpl @Inject constructor(
 
     override suspend fun saveSession(session: WorkoutSession) = workoutDao.upsertSession(session.toEntity())
 
-    // Yumuşak silme (mezar taşı) — sync silinen seansı geri diriltmesin.
+    // Soft delete (tombstone) — so sync does not resurrect the deleted session.
     override suspend fun deleteSession(id: String) = workoutDao.softDeleteSession(id)
 
     override suspend fun getSessions(): List<WorkoutSession> =
@@ -91,7 +91,7 @@ class WorkoutRepositoryImpl @Inject constructor(
     override suspend fun getGroups(): List<WorkoutGroup> =
         workoutDao.getAllGroups().map { it.withChildren() }
 
-    // Mezar taşları dahil tüm gruplar. Silinmiş grupların çocuğu olmadığından boş listeyle gelir.
+    // All groups including tombstones. Deleted groups have no children, so they come with an empty list.
     override suspend fun getGroupsForSync(): List<WorkoutGroup> =
         workoutDao.getAllGroupsRaw().map { groupEntity ->
             if (groupEntity.isDeleted) groupEntity.toDomain(emptyList())
@@ -107,9 +107,9 @@ class WorkoutRepositoryImpl @Inject constructor(
     }
 
     override suspend fun replaceGroups(groups: List<WorkoutGroup>) {
-        // Birleştirilmiş grupları zaman damgalarını KORUYARAK yaz (bump etme) — aksi halde her pull
-        // sonrası tüm updatedAt'ler şimdiye çekilip LWW ve mezar taşları bozulurdu.
-        // Tek transaction içinde: yarıda kesilme eski veriyi korur (bkz. replaceGroupsAtomic).
+        // Write merged groups PRESERVING timestamps (do not bump) — otherwise every pull would
+        // reset all updatedAt values to now and break LWW and tombstones.
+        // Single transaction: an interruption keeps the old data (see replaceGroupsAtomic).
         val groupEntities = groups.map { it.toEntity() }
         val workoutEntities = groups.flatMap { group ->
             group.workouts.mapIndexed { idx, workout -> workout.toEntity(group.id, idx) }
@@ -135,9 +135,9 @@ class WorkoutRepositoryImpl @Inject constructor(
     override suspend fun getExercisesByBodyPart(bodyPart: String): List<Exercise> =
         exerciseDao.getByBodyPart(bodyPart).map { it.toDomain() }
 
-    // Referans sayımı: workout_exercises'te hâlâ geçen exerciseId'ler "canlı"dır. Geri kalan
-    // önbellek hareketleri yetimdir — önce fiziksel medya dosyaları (tüm uzantı varyantları),
-    // sonra DB kaydı silinir. Dosya G/Ç her zaman IO dispatcher'dadır (çağırandan bağımsız).
+    // Reference counting: exerciseIds still present in workout_exercises are "live". The remaining
+    // cached moves are orphans — first delete physical media files (all extension variants),
+    // then the DB record. File I/O is always on the IO dispatcher (independent of the caller).
     override suspend fun cleanupOrphanedExerciseMedia() {
         withContext(Dispatchers.IO) {
             val referenced = workoutDao.getReferencedExerciseIds().toSet()

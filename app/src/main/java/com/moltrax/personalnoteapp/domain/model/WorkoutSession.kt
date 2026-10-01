@@ -11,11 +11,11 @@ data class WorkoutSession(
     val startedAt: Long = System.currentTimeMillis(),
     val completedAt: Long? = null,
     val loggedExercises: List<LoggedExercise> = emptyList(),
-    // Bu seansı üreten spor görevinin id'si (varsa). Tamamlanan görevden özet/sonuç sayfasını
-    // bulmak için kullanılır. Canlı antrenmandan (göreve bağlı olmayan) başlatılan seanslarda null.
+    // Id of the sport task that produced this session (if any). Used to find the summary/result
+    // page from the completed task. Null for sessions started from a live workout (not tied to a task).
     val taskId: String? = null,
-    // Mezar taşı: silinen seans kaydı saklanır ki Drive senkronizasyonu silinmiş seansı
-    // uzaktan geri diriltmesin. Görünür listeler DAO katmanında filtrelenir.
+    // Tombstone: the deleted session record is kept so Drive sync does not resurrect the
+    // deleted session from remote. Visible lists are filtered at the DAO layer.
     val isDeleted: Boolean = false,
 )
 
@@ -24,15 +24,15 @@ data class LoggedExercise(
     val exerciseId: String,
     val exerciseName: String,
     val sets: List<LoggedSet> = emptyList(),
-    /** Hareketin tipi — EXP algoritması ağırlık/kardiyo dalını buna göre seçer. */
+    /** The move's type — the EXP algorithm picks the weight/cardio branch based on it. */
     val type: ExerciseType = ExerciseType.WEIGHTLIFTING,
-    /** Bilinmeyen (gelecek sürümdeki) tip adlarının ham karşılığı; yazma yolunda korunur. */
+    /** Raw form of unknown (future-version) type names; preserved on the write path. */
     val typeRaw: String? = null,
 )
 
 /**
- * Gerçekleşen (kaydedilen) set. Ağırlıkta [reps]/[weightKg]; kardiyoda [durationSeconds] +
- * [steps]/[distanceMeters] doldurulur.
+ * Performed (logged) set. For weight [reps]/[weightKg] is filled; for cardio [durationSeconds] +
+ * [steps]/[distanceMeters] is filled.
  */
 @Serializable
 data class LoggedSet(
@@ -43,7 +43,7 @@ data class LoggedSet(
     val distanceMeters: Double? = null,
     val completedAt: Long = System.currentTimeMillis(),
 ) {
-    /** En az bir anlamlı ölçü taşıyor mu? Tamamen boş setleri kayıttan ayıklamak için kullanılır. */
+    /** Does it carry at least one meaningful measurement? Used to filter fully empty sets from the log. */
     fun isMeaningful(): Boolean =
         reps > 0 || (weightKg ?: 0.0) > 0.0 || (durationSeconds ?: 0) > 0 ||
             (steps ?: 0) > 0 || (distanceMeters ?: 0.0) > 0.0

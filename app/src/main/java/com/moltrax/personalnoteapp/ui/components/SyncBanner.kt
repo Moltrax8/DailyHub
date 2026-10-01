@@ -33,12 +33,12 @@ import com.moltrax.personalnoteapp.ui.theme.AppColors
 import kotlinx.coroutines.delay
 
 /**
- * Global senkronizasyon banner'ı — tüm ekranların üstünde gösterilir. Durumu Activity
- * seviyesindeki [SyncViewModel]'den (paylaşılan @Singleton repository) okur.
+ * Global sync banner — shown above all screens. Reads state from the Activity-level
+ * [SyncViewModel] (shared @Singleton repository).
  *
- * "Senkronize edildi" başarı mesajı yalnızca manuel tetiklemede veya hatadan kurtarmada
- * yayınlanır (repository karar verir) ve birkaç saniye sonra otomatik temizlenir. Hatalar
- * kalıcı kalır; "Detay" ile tam hata metni görülebilir, "Yeniden Dene" ile tekrar denenir.
+ * The "Synced" success message is only published on manual triggers or recovery from an error
+ * (the repository decides) and is auto-cleared after a few seconds. Errors
+ * stay persistent; "Detail" shows the full error text, "Retry" tries again.
  */
 @Composable
 fun SyncBanner(
@@ -71,7 +71,7 @@ private fun SyncBannerContent(
     val (text, color, isError) = when (status) {
         is SyncStatus.Syncing -> Triple(stringResource(R.string.sync_in_progress), MaterialTheme.colorScheme.primary, false)
         is SyncStatus.Synced  -> Triple(stringResource(R.string.sync_done), AppColors.Success, false)
-        // Hata: ham mesajın tamamını (HTTP kodu + mesaj + istisna türü) göster, maskeleme yok
+        // Error: show the full raw message (HTTP code + message + exception type), no masking
         is SyncStatus.Error   -> Triple(status.message, AppColors.Error, true)
         else                  -> return
     }
@@ -113,7 +113,7 @@ private fun SyncBannerContent(
             onDismissRequest = { showDetail = false },
             title = { Text(stringResource(R.string.sync_error_title)) },
             text = {
-                // Tam hata metni — seçilebilir, böylece kopyalanıp incelenebilir
+                // Full error text — selectable, so it can be copied and inspected
                 SelectionContainer {
                     Text(status.message, style = MaterialTheme.typography.bodySmall)
                 }

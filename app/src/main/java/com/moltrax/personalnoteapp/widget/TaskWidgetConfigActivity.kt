@@ -48,13 +48,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Widget'taki çark butonuyla açılan, çoklu görev seçme ekranı. Saydam ve ana uygulamadan ayrı bir
- * task'ta çalışır (manifest: taskAffinity="", singleInstance, excludeFromRecents). Bu yüzden tıklama
- * MainActivity'yi açmaz; hafif bir dialog gibi görünür. Onaylandığında veya kapatıldığında
- * [finishAndRemoveTask] ile kendi task'ını kaldırır ve doğrudan cihazın ana ekranına dönülür.
+ * Multi-task selection screen opened via the gear button in the widget. It runs transparent and in a
+ * separate task from the main app (manifest: taskAffinity="", singleInstance, excludeFromRecents). Taps therefore
+ * do not open MainActivity; it looks like a lightweight dialog. On confirm or dismiss,
+ * it removes its own task via [finishAndRemoveTask] and returns directly to the device home screen.
  *
- * Not: Zorunlu kurulum kaldırıldı (appwidget-provider'da android:configure yok); widget ana ekrana
- * bırakıldığında bu ekran AÇILMAZ, varsayılan olarak tüm görevleri gösterir.
+ * Note: Mandatory setup was removed (no android:configure in the appwidget-provider); when the widget is
+ * dropped on the home screen this screen does NOT open and shows all tasks by default.
  */
 @AndroidEntryPoint
 class TaskWidgetConfigActivity : ComponentActivity() {
@@ -76,7 +76,7 @@ class TaskWidgetConfigActivity : ComponentActivity() {
             return
         }
 
-        // Mevcut seçimi (sonradan düzenleme için) yükledikten sonra dialog'u kuruyoruz.
+        // Set up the dialog after loading the existing selection (for later editing).
         lifecycleScope.launch {
             val initial = loadExistingSelection()
             setContent {
@@ -92,7 +92,7 @@ class TaskWidgetConfigActivity : ComponentActivity() {
         }
     }
 
-    /** Ekranı kapat ve kendi task'ını kaldırarak doğrudan ana ekrana dön. */
+    /** Close the screen and return directly to the home screen by removing its own task. */
     private fun dismiss() = finishAndRemoveTask()
 
     private suspend fun loadExistingSelection(): Set<String> = runCatching {
@@ -111,7 +111,7 @@ class TaskWidgetConfigActivity : ComponentActivity() {
                 glanceId,
             ) { prefs ->
                 prefs.toMutablePreferences().apply {
-                    // Boş seçim = varsayılan (tüm görevler). Anahtarı tamamen kaldırıyoruz.
+                    // Empty selection = default (all tasks). We remove the key entirely.
                     if (ids.isEmpty()) remove(TaskWidget.SELECTED_TASK_IDS)
                     else this[TaskWidget.SELECTED_TASK_IDS] = ids
                 }
@@ -134,7 +134,7 @@ private fun ConfigDialog(
     val openTasks = tasks.filter { !it.isDone }
     val selected = remember { mutableStateListOf<String>().apply { addAll(initialSelected) } }
 
-    // Saydam karartma (scrim): dışına dokununca kapanır → ana ekrana döner.
+    // Transparent dim (scrim): closes on outside tap → returns to the home screen.
     androidx.compose.foundation.layout.Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
@@ -144,7 +144,7 @@ private fun ConfigDialog(
             ) { onDismiss() },
         contentAlignment = Alignment.Center,
     ) {
-        // Kart üzerindeki dokunuşları yutarak (consume) scrim'e geçmesini ve kapanmasını engelle.
+        // Consume touches on the card so they don't reach the scrim and close it.
         Card(
             modifier = Modifier
                 .fillMaxWidth()

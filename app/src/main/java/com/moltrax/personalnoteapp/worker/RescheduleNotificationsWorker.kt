@@ -22,7 +22,7 @@ class RescheduleNotificationsWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val all = taskRepo.getAll()
-        // Sistem uyarıları kapalıysa hiçbir hatırlatma kurma — önceden kurulanları temizle.
+        // If system alerts are off, schedule no reminders — clear any previously scheduled ones.
         if (!prefs.systemAlertsEnabled.first()) {
             notifService.cancelAll(all.map { it.id })
             return Result.success()
@@ -31,7 +31,7 @@ class RescheduleNotificationsWorker @AssistedInject constructor(
         val minutes = prefs.reminderMinutes.first()
         val actives = all.filter { !it.isDone && it.dueDate != null && it.dueDate > now }
         val activeIds = actives.map { it.id }.toSet()
-        // Sahipsiz alarm bırakma: bitmiş/geçmiş/gösterilmeyecek görevlerin PendingIntent'lerini iptal et.
+        // Leave no orphaned alarms: cancel PendingIntents of done/past/hidden tasks.
         notifService.cancelAll(all.map { it.id }.filter { it !in activeIds })
         actives.forEach { notifService.scheduleReminder(it, minutes) }
         return Result.success()

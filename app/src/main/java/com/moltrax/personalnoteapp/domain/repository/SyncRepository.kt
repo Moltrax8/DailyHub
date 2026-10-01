@@ -4,16 +4,16 @@ import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Senkronizasyon işleminin makinece okunabilir sonucu (insanca okunabilir durum
- * [SyncStatus] akışında kalır). Dönüş tipi olduğu için çağıranlar yok sayabilir;
- * [androidx.work.CoroutineWorker] bunu success/retry/failure kararında kullanır.
+ * Machine-readable outcome of a sync operation (the human-readable state stays in the
+ * [SyncStatus] flow). Since it is a return type, callers may ignore it;
+ * [androidx.work.CoroutineWorker] uses it for the success/retry/failure decision.
  */
 sealed interface SyncResult {
     data object Ok : SyncResult
 
     /**
-     * [retryable] true = geçici hata (ağ) → worker yeniden denemeli;
-     * false = kalıcı hata (auth/parse) → worker başarısız saymalı.
+     * [retryable] true = transient error (network) → worker should retry;
+     * false = permanent error (auth/parse) → worker should report failure.
      */
     data class Failed(val error: Throwable, val retryable: Boolean) : SyncResult
 }
@@ -22,25 +22,25 @@ interface SyncRepository {
     val syncStatus: Flow<SyncStatus>
 
     /**
-     * Arka plan (otomatik) gönderim — veri değiştikçe çağrılır, başarısı sessiz geçer.
-     * Kayıp güncellemeyi önlemek için içeride çek-birleştir-gönder yapar (salt push,
-     * eşzamanlı düzenlenen veriyi ezebilirdi); imza uyumluluğu için korunur.
+     * Background (automatic) push — called as data changes, its success stays silent.
+     * Internally does pull-merge-push to avoid lost updates (a plain push could overwrite
+     * concurrently edited data); kept for signature compatibility.
      */
     suspend fun pushToDrive(): SyncResult
 
     suspend fun pullFromDrive(manual: Boolean = false): SyncResult
 
     /**
-     * Güvenli tam senkronizasyon: önce uzaktaki veriyi çekip yerelle birleştirir,
-     * sonra birleşmiş sonucu geri gönderir. Yeni/boş bir cihazda uzaktaki yedeğin
-     * boş veriyle ezilmesini önler. Açılışta ve manuel "Senkronize et" için kullanılır.
+     * Safe full sync: first pulls remote data and merges it locally, then pushes the merged
+     * result back. Prevents a new/empty device from overwriting the remote backup with empty
+     * data. Used at startup and for manual "Sync now".
      *
-     * [manual] true ise (kullanıcı tetiklediyse) başarı durumu arayüzde gösterilir.
-     * Otomatik (arka plan) senkronizasyonda başarı yalnızca önceki durum HATA ise gösterilir;
-     * aksi halde sessizce tamamlanır.
+     * When [manual] is true (user-triggered) the success state is shown in the UI.
+     * For automatic (background) sync, success is only shown when the previous state was ERROR;
+     * otherwise it completes silently.
      */
     suspend fun sync(manual: Boolean = false): SyncResult
 
-    /** Gösterilen "Senkronize edildi" başarı durumunu temizler (Idle'a çeker). Hatayı temizlemez. */
+    /** Clears the shown "Synced" success state (pulls back to Idle). Does not clear errors. */
     fun acknowledgeStatus()
 }

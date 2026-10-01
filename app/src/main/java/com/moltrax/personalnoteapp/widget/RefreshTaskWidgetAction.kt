@@ -7,10 +7,10 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.updateAppWidgetState
 
 /**
- * 'Yenile' butonuna tıklandığında çalışır: widget güncelleme tetikleyicisini çalıştırır.
- * updateAll → provideGlance yeniden composition demektir; provideGlance her seferinde veriyi
- * repository'den taze çektiği için liste anında güncel haline yenilenir. Bekleyen geri al şeridi
- * de yenilemede temizlenir (eskimiş bir geri al kalmasın).
+ * Runs when the 'Refresh' button is tapped: triggers a widget update.
+ * updateAll means re-composition via provideGlance; since provideGlance freshly pulls data
+ * from the repository each time, the list is instantly refreshed. Any pending undo strip
+ * is also cleared on refresh (so no stale undo remains).
  */
 class RefreshTaskWidgetAction : ActionCallback {
 

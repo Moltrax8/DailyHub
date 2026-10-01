@@ -9,11 +9,11 @@ interface TaskRepository {
     suspend fun upsert(task: Task)
     suspend fun delete(id: String)
     suspend fun getAll(): List<Task>
-    /** Senkronizasyon için TÜM görevler — silinmiş (mezar taşı) kayıtlar dahil. */
+    /** ALL tasks for sync — including deleted (tombstone) records. */
     suspend fun getAllForSync(): List<Task>
-    /** Liste sırası vektörünün LWW saati (sıralama birleştirmesi için). */
+    /** LWW clock of the list-order vector (for order merging). */
     suspend fun getTaskOrderTimestamp(): Long
-    /** Sıra vektörü saatini yazar (yeniden sıralamada şimdi, uzaktan benimserken uzaktaki değer). */
+    /** Writes the order-vector clock (now on reorder, the remote value when adopting remote). */
     suspend fun setTaskOrderTimestamp(v: Long)
     suspend fun replaceAll(tasks: List<Task>)
 }

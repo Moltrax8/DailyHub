@@ -23,7 +23,7 @@ data class WorkoutSessionEntity(
     val completedAt: Long?,
     val loggedExercisesJson: String,
     val taskId: String? = null,
-    // Mezar taşı (v18): silinen seans saklanır, görünür sorgular filtreler, sync dahil eder.
+    // Tombstone (v18): deleted sessions are kept, visible queries filter them, sync includes them.
     val isDeleted: Boolean = false,
 )
 
@@ -48,7 +48,7 @@ private data class LoggedExerciseJson(
 private val json = Json { ignoreUnknownKeys = true }
 
 fun WorkoutSessionEntity.toDomain(): WorkoutSession {
-    // Bozuk seans JSON'u tüm okumayı öldürmesin: çözülemezse boş egzersiz listesi.
+    // A corrupt session JSON must not kill the whole read: fall back to an empty exercise list if unparseable.
     val exercises = runCatching { json.decodeFromString<List<LoggedExerciseJson>>(loggedExercisesJson) }
         .getOrDefault(emptyList())
         .map { ex ->

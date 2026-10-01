@@ -7,8 +7,8 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.updateAppWidgetState
 
 /**
- * Geri al şeridindeki "✕" (kapat) çipine basılınca çalışır: geri al bilgisini temizler; görev
- * tamamlanmış olarak kalır. Yalnızca bu widget örneğini etkiler.
+ * Runs when the "✕" (close) chip in the undo strip is pressed: clears the undo info; the task
+ * stays completed. Affects only this widget instance.
  */
 class DismissUndoAction : ActionCallback {
 
