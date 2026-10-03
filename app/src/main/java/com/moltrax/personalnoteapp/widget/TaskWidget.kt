@@ -117,7 +117,7 @@ class TaskWidget : GlanceAppWidget() {
         // Resolve appWidgetId from glanceId so the 'Settings' button can open the config screen for this specific widget.
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         // Resolve strings for the selected language (the widget cannot use the LocalContext provider).
-        val lang = runCatching { entryPoint(context).appPreferences().language.first() }.getOrDefault("tr")
+        val lang = runCatching { entryPoint(context).appPreferences().language.first() }.getOrDefault("en")
         val lc = context.localizedFor(lang)
         val strings = WidgetStrings(
             title = lc.getString(R.string.home_title),

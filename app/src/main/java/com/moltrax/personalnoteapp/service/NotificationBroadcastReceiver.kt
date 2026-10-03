@@ -42,7 +42,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
         // Localize to the selected language (one-shot short DataStore read — on a background thread).
         val lang = runCatching {
             TaskWidget.entryPoint(context).appPreferences().language.first()
-        }.getOrDefault("tr")
+        }.getOrDefault("en")
         val ctx = context.localizedFor(lang)
 
         ensureChannel(ctx)

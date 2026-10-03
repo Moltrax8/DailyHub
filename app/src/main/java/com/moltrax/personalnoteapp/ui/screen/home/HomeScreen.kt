@@ -62,7 +62,8 @@ import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.text.SimpleDateFormat
-// Explicit import instead of java.util.*: java.util.Calendar conflicted with the navigation route Calendar.
+// Explicit import instead of java.util.*: java.util.Calendar would clash with the
+// CalendarContent sub-tab composable (there is no Calendar navigation route).
 import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -896,7 +897,7 @@ fun BottomNavBar(nav: NavController) {
     val dest = backStackEntry?.destination
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        // Simplified bottom bar (4 tabs). Calendar → tab inside Tasks; Progress → tab inside Profile.
+        // Simplified bottom bar (3 tabs). Calendar → sub-tab inside Tasks; Progress → tab inside Profile.
         // To avoid stacking tabs on all tabs: launchSingleTop + popUpTo(Home){saveState} + restoreState.
         NavigationBarItem(
             selected = dest?.hasRoute<Home>() == true,
