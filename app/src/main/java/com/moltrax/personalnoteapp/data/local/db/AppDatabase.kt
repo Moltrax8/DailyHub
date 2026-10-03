@@ -7,10 +7,12 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.moltrax.personalnoteapp.data.local.db.dao.CategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.ExerciseDao
+import com.moltrax.personalnoteapp.data.local.db.dao.TaskCategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.TaskDao
 import com.moltrax.personalnoteapp.data.local.db.dao.WorkoutDao
 import com.moltrax.personalnoteapp.data.local.db.entity.CategoryEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.ExerciseEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.TaskCategoryCrossRef
 import com.moltrax.personalnoteapp.data.local.db.entity.TaskEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.WorkoutEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.WorkoutExerciseEntity
@@ -211,6 +213,33 @@ val MIGRATION_18_19 = object : Migration(18, 19) {
     }
 }
 
+// Multi-category tags (Phase 2): per-category positions + backfill from the legacy
+// single tasks.category column (kept one release as read-fallback).
+// Index names must exactly match Room's defaults (see MIGRATION_18_19 note).
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS task_category_cross_ref (" +
+                "taskId TEXT NOT NULL, categoryName TEXT NOT NULL, " +
+                "sortOrder INTEGER NOT NULL DEFAULT 0, addedAt INTEGER NOT NULL DEFAULT 0, " +
+                "PRIMARY KEY (taskId, categoryName))"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_task_category_cross_ref_taskId " +
+                "ON task_category_cross_ref (taskId)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_task_category_cross_ref_categoryName " +
+                "ON task_category_cross_ref (categoryName)"
+        )
+        db.execSQL(
+            "INSERT OR IGNORE INTO task_category_cross_ref (taskId, categoryName, sortOrder, addedAt) " +
+                "SELECT id, category, sortOrder, createdAt FROM tasks " +
+                "WHERE category IS NOT NULL AND category <> ''"
+        )
+    }
+}
+
 @Database(
     entities = [
         TaskEntity::class,
@@ -220,8 +249,9 @@ val MIGRATION_18_19 = object : Migration(18, 19) {
         WorkoutExerciseEntity::class,
         ExerciseEntity::class,
         WorkoutSessionEntity::class,
+        TaskCategoryCrossRef::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -230,4 +260,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun exerciseDao(): ExerciseDao
+    abstract fun taskCategoryDao(): TaskCategoryDao
 }

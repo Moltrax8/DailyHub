@@ -47,6 +47,8 @@ interface CategoryDao {
      * Converts temporary (isPermanent = 0) categories with no visible linked task into tombstones
      * (NOT a hard-delete — so the deletion propagates via sync and is not resurrected from remote).
      * Called when a task is deleted / its category changes.
+     * Links are read from task_category_cross_ref (Phase 2); the legacy tasks.category
+     * column is dual-written but no longer consulted here.
      */
     @Query(
         """
@@ -54,10 +56,10 @@ interface CategoryDao {
         WHERE isDeleted = 0
           AND isPermanent = 0
           AND NOT EXISTS (
-            SELECT 1 FROM tasks
-            WHERE tasks.category IS NOT NULL
-              AND tasks.isDeleted = 0
-              AND tasks.category = categories.name COLLATE NOCASE
+            SELECT 1 FROM task_category_cross_ref x
+            INNER JOIN tasks t ON t.id = x.taskId
+            WHERE t.isDeleted = 0
+              AND x.categoryName = categories.name COLLATE NOCASE
           )
         """
     )

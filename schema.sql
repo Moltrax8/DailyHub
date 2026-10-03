@@ -1,5 +1,5 @@
 -- ============================================================================
--- DailyHub — SQLite schema (Room AppDatabase v19, `personal_note_app.db`)
+-- DailyHub — SQLite schema (Room AppDatabase v20, `personal_note_app.db`)
 -- ============================================================================
 -- Source: app/src/main/java/com/moltrax/personalnoteapp/data/local/db/
 --   AppDatabase.kt, Converters.kt, entity/*.kt, dao/*.kt
@@ -12,7 +12,7 @@
 --   Double (inside JSON)   -> REAL in JSON payload, never a column
 --   Nullable Kotlin field  -> nullable column, except JSON lists (NOT NULL '[]')
 --
--- History (18 migrations 1->19, see AppDatabase.kt):
+-- History (19 migrations 1->20, see AppDatabase.kt):
 --   1->2  tasks.linkedWorkoutId added
 --   2->3  food_entries created            (later dropped in 15->16)
 --   3->4  vault_entries.salt added        (table later dropped in 4->5)
@@ -32,6 +32,8 @@
 --   17->18 isDeleted tombstones added to tasks / categories / workout_sessions
 --   18->19 indices on tasks.category, tasks.linkedWorkoutId, tasks.linkedProgramId,
 --           workout_sessions.workoutId, workout_sessions.taskId
+--   19->20 task_category_cross_ref created + backfilled from tasks.category
+--           (legacy tasks.category column kept one release as read-fallback)
 --
 -- Dropped tables (intentionally absent below): vault_entries, food_entries,
 -- body_weight_entries. Do NOT reintroduce without a new migration.
@@ -74,6 +76,23 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS index_tasks_category ON tasks (category);
 CREATE INDEX IF NOT EXISTS index_tasks_linkedWorkoutId ON tasks (linkedWorkoutId);
 CREATE INDEX IF NOT EXISTS index_tasks_linkedProgramId ON tasks (linkedProgramId);
+
+-- ----------------------------------------------------------------------------
+-- task_category_cross_ref: per-category positions (dao: TaskCategoryDao, v20)
+-- Same task may be #1 in one category and #4 in another. categoryName keeps
+-- display casing; all lookups compare NOCASE. Backfilled from tasks.category
+-- in 19->20; the legacy column is dual-written but no longer consulted.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS task_category_cross_ref (
+    taskId      TEXT    NOT NULL,
+    categoryName TEXT   NOT NULL,
+    sortOrder   INTEGER NOT NULL DEFAULT 0,
+    addedAt     INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (taskId, categoryName)
+);
+
+CREATE INDEX IF NOT EXISTS index_task_category_cross_ref_taskId ON task_category_cross_ref (taskId);
+CREATE INDEX IF NOT EXISTS index_task_category_cross_ref_categoryName ON task_category_cross_ref (categoryName);
 
 -- ----------------------------------------------------------------------------
 -- categories: CategoryEntity (dao: CategoryDao)
