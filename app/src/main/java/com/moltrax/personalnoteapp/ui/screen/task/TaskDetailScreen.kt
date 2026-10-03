@@ -22,7 +22,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
-import com.moltrax.personalnoteapp.domain.model.Priority
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
 import com.moltrax.personalnoteapp.ui.theme.AppColors
 import java.text.SimpleDateFormat
@@ -195,22 +194,8 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                     style = MaterialTheme.typography.bodyMedium)
             }
 
-            // Priority — editor of the field carried in the ViewModel (works together with the filter).
-            Text(stringResource(R.string.task_priority), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    Priority.LOW to stringResource(R.string.priority_low),
-                    Priority.MEDIUM to stringResource(R.string.priority_medium),
-                    Priority.HIGH to stringResource(R.string.priority_high),
-                ).forEach { (priority, label) ->
-                    FilterChip(
-                        selected = state.priority == priority,
-                        onClick = { vm.update { copy(priority = priority) } },
-                        label = { Text(label) },
-                    )
-                }
-            }
+            // Priority editor removed in v1.1 (Phase 1.2): manual sortOrder is the
+            // explicit prioritization mechanism. Field kept in ViewModel/Room/Drive for compat.
 
             // Recurrence (Recurring / Habit)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
@@ -291,26 +276,8 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 )
             }
 
-            // Focus duration (optional). When off, focusDurationSeconds = 0 is stored; the focus
-            // (timer) icon is hidden in this task's list.
-            val focusEnabled = state.focusDurationSeconds > 0
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.task_focus_optional), style = MaterialTheme.typography.bodyLarge)
-                Switch(
-                    checked = focusEnabled,
-                    onCheckedChange = { on -> vm.update { copy(focusDurationSeconds = if (on) 1500 else 0) } },
-                )
-            }
-            if (focusEnabled) {
-                Text(stringResource(R.string.task_focus_duration, state.focusDurationSeconds / 60),
-                    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Slider(
-                    value = state.focusDurationSeconds.toFloat(),
-                    onValueChange = { vm.update { copy(focusDurationSeconds = it.toInt().coerceAtLeast(300)) } },
-                    valueRange = 300f..7200f, steps = 23,
-                )
-            }
+            // Focus duration editor removed in v1.1 (Phase 1.2). Field kept in
+            // ViewModel/Room/Drive for compat; existing values still fire reminders.
 
             // Workout / Program link
             if (workoutGroups.isNotEmpty()) {

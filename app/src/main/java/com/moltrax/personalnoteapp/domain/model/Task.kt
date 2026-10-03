@@ -9,6 +9,7 @@ data class Task(
     val title: String,
     val notes: String? = null,
     val dueDate: Long? = null,
+    @Deprecated("Hidden from UI since v1.1 (Phase 1.2); kept for Room/Drive compat, do not use for sort/display.")
     val priority: Priority = Priority.MEDIUM,
     val isDone: Boolean = false,
     val isRecurring: Boolean = false,
@@ -18,6 +19,7 @@ data class Task(
     // For WEEKLY, the selected days of week (ISO: 1=Monday .. 7=Sunday). When empty the task
     // repeats weekly on its own day (every 7 days).
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
+    @Deprecated("Hidden from UI since v1.1 (Phase 1.2); kept for Room/Drive compat.")
     val focusDurationSeconds: Int = 1500,
     val category: String? = null,
     // Checklist items under the parent task. Stored embedded with the task.
@@ -40,6 +42,7 @@ data class Task(
     val isDeleted: Boolean = false,
     // Raw form of unknown (future-version) priority names. When null, [priority] is valid;
     // when set it is preserved as-is on the read/write path (forward compatibility).
+    @Deprecated("Hidden from UI since v1.1 (Phase 1.2); kept for Room/Drive compat.")
     val priorityRaw: String? = null,
 ) {
     /** Number of completed subtasks. */

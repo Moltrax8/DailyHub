@@ -42,6 +42,7 @@ data class TaskJson(
     val title: String,
     val notes: String? = null,
     val dueDate: Long? = null,
+    // Deprecated since v1.1 (Phase 1.2, hidden from UI): retained so old backups decode.
     val priority: String = "MEDIUM",
     val isDone: Boolean = false,
     val isRecurring: Boolean = false,
@@ -49,6 +50,7 @@ data class TaskJson(
     // Rich recurrence (in old backups the field is missing: null / empty → intervalDays behavior is kept)
     val recurrenceType: String? = null,
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
+    // Deprecated since v1.1 (Phase 1.2, hidden from UI): retained so old backups decode.
     val focusDurationSeconds: Int = 1500,
     val category: String? = null,
     // Subtasks (checklist) — travel with the task during sync (empty in old backups)

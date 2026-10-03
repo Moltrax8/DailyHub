@@ -20,7 +20,7 @@ Related artefacts in this repo:
 
 Personal productivity hub:
 
-- **Tasks** — title, notes, due date, priority, category, manual order (drag-and-drop), subtask checklist, rich recurrence (daily/weekly/monthly/interval), focus-timer duration, links to workouts/programs.
+- **Tasks** — title, notes, due date, category, manual order (drag-and-drop), subtask checklist, rich recurrence (daily/weekly/monthly/interval), links to workouts/programs. (Priority chips and focus-timer duration were hidden from the UI in v1.1 / Phase 1.2; the fields stay in Room/Drive for compat. Manual `sortOrder` is the explicit prioritization.)
 - **Calendar** — agenda view over task due dates. Implemented as the `CalendarContent` composable (`ui/screen/calendar/CalendarScreen.kt` + `CalendarViewModel`), embedded as a sub-tab inside the Home Tasks tab. There is no standalone Calendar navigation route.
 - **Workouts** — program groups → workouts → exercises → planned sets; live session logging; session summary; exercise library with demo media (GIF/video, cached offline); weightlifting / bodyweight / duration / cardio exercise types.
 - **Focus timer** — per-task countdown (`FocusScreen` + `FocusTimerViewModel`).

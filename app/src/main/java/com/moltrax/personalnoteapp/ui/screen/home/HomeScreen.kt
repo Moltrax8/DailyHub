@@ -246,7 +246,6 @@ fun HomeScreen(
                                 vm.requestSummaryForTask(task.id)
                             else nav.navigate(TaskDetail(task.id))
                         },
-                        onFocus = { nav.navigate(FocusTimer(it.id)) },
                         onDelete = { vm.deleteTask(it.id) },
                         emptyText = when (state.filter.status) {
                             TaskStatus.DONE   -> stringResource(R.string.empty_done)
@@ -473,7 +472,6 @@ private fun TaskList(
     onReorder: (List<String>) -> Unit,
     onToggle: (Task) -> Unit,
     onTap: (Task) -> Unit,
-    onFocus: (Task) -> Unit,
     onDelete: (Task) -> Unit,
     emptyText: String,
 ) {
@@ -513,7 +511,6 @@ private fun TaskList(
                     elevation = elevation,
                     onToggle = { onToggle(task) },
                     onTap = { onTap(task) },
-                    onFocus = { onFocus(task) },
                     onDelete = { onDelete(task) },
                     dragHandle = {
                         IconButton(
@@ -537,7 +534,6 @@ fun TaskItem(
     task: Task,
     onToggle: () -> Unit,
     onTap: () -> Unit,
-    onFocus: () -> Unit,
     onDelete: () -> Unit,
     elevation: Dp = 0.dp,
     dragHandle: (@Composable () -> Unit)? = null,
@@ -614,13 +610,8 @@ fun TaskItem(
                 }
             }
             Checkbox(checked = task.isDone, onCheckedChange = { onToggle() })
-            // Focus duration is optional: the focus (timer) icon is only visible when a duration is set.
-            if (task.focusDurationSeconds > 0) {
-                IconButton(onClick = onFocus, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Timer, contentDescription = stringResource(R.string.cd_focus), modifier = Modifier.size(18.dp),
-                        tint = AppColors.Accent)
-                }
-            }
+            // Focus entry removed in v1.1 (Phase 1.2): the focus timer screen stays
+            // reachable via its route, but Home no longer links to it.
             IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete), modifier = Modifier.size(18.dp),
                     tint = AppColors.PriorityHigh)
