@@ -10,7 +10,7 @@ info:
 
     1. **ExerciseDB via RapidAPI** (`data/remote/exercisedb/ExerciseDbApi.kt`,
        wired in `di/NetworkModule.kt`) — exercise library metadata + demo GIF URLs.
-       Optional: empty `EXERCISEDB_KEY` still builds/runs, videos just don't load.
+       Optional: empty DataStore `exercisedb_key` still builds/runs, videos just don't load.
     2. **Google Drive v3 subset** (`data/remote/drive/DriveApiService.kt`,
        auth in `data/remote/drive/DriveAuthService.kt`) — local-first backup/sync.
        The whole dataset is one JSON snapshot file `tasks_sync.json`
