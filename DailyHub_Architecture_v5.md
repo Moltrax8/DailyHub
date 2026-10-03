@@ -1,6 +1,4 @@
-# DailyHub — Architecture
-
-> Canonical spec (promoted from `DailyHub_Architecture_v5.md`).
+# DailyHub — Architecture v5
 
 > Buildable system specification for this repository.
 > App module: `PersonalNoteApp` · package `com.moltrax.personalnoteapp`

@@ -12,7 +12,7 @@
 --   Double (inside JSON)   -> REAL in JSON payload, never a column
 --   Nullable Kotlin field  -> nullable column, except JSON lists (NOT NULL '[]')
 --
--- History (migrations 1->17, see AppDatabase.kt):
+-- History (18 migrations 1->19, see AppDatabase.kt):
 --   1->2  tasks.linkedWorkoutId added
 --   2->3  food_entries created            (later dropped in 15->16)
 --   3->4  vault_entries.salt added        (table later dropped in 4->5)

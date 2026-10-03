@@ -14,7 +14,7 @@ info:
     2. **Google Drive v3 subset** (`data/remote/drive/DriveApiService.kt`,
        auth in `data/remote/drive/DriveAuthService.kt`) — local-first backup/sync.
        The whole dataset is one JSON snapshot file `tasks_sync.json`
-       (`data/remote/drive/model/SyncMetadata.kt`, `version: 3`) stored in the
+       (`data/remote/drive/model/SyncMetadata.kt`, `version: 4`) stored in the
        user's Drive `appDataFolder`. No ETag / If-Match: conflicts are resolved
        client-side with pull-merge-push (last-write-wins on `updatedAt`).
        Currently gated by `FeatureFlags.DRIVE_SYNC_ENABLED = false`.
@@ -130,10 +130,11 @@ paths:
       tags: [DriveSync]
       summary: Find the backup file by name
       description: |
-        Mirrors `DriveApiService.findOrNull()`: `GET /drive/v3/files?spaces=...
-        &q=name='tasks_sync.json'&fields=files(id)`.
+        Mirrors `DriveApiService.findOrNull()` / `findIn()`:
+        `GET /drive/v3/files?spaces=...&q=name='tasks_sync.json' and trashed=false&fields=files(id)`.
         `spaces` is `appDataFolder` when `BuildConfig.DRIVE_SCOPE` contains
-        `appdata`, else `drive`. Empty `files` array means "no backup yet".
+        `appdata`, else `drive`, with cross-space fallback when the scope changed.
+        Empty `files` array means "no backup yet".
       operationId: findBackupFile
       security:
         - DriveOAuth: []
@@ -150,7 +151,7 @@ paths:
           required: true
           schema:
             type: string
-          example: name='tasks_sync.json'
+          example: name='tasks_sync.json' and trashed=false
         - name: fields
           in: query
           schema:
@@ -323,8 +324,11 @@ components:
       in: header
       name: X-RapidAPI-Key
       description: |
-        RapidAPI key for ExerciseDB (`BuildConfig.EXERCISEDB_KEY` from
-        `local.properties` `EXERCISEDB_KEY`). Optional — requests without it are
+        Per-user RapidAPI key entered in Settings → Exercise Demo Videos,
+        stored in DataStore `exercisedb_key` (AppPreferences.kt) and read
+        per-request via `runBlocking(prefs.exerciseDbKey.first())`.
+        There is no `BuildConfig` key for ExerciseDB (`app/build.gradle.kts`
+        emits only `DRIVE_*`). Optional — requests without it are
         rejected with 401/403 and the app falls back to cached/offline content.
     DriveOAuth:
       type: oauth2
@@ -393,8 +397,9 @@ components:
       description: |
         Root of `tasks_sync.json` (`SyncMetadata`, `version: 4`).
         Missing arrays default to `[]` so v1/v2/v3 backups still decode.
-        LWW merge: tasks and workout groups by `updatedAt` (strict `>` keeps local
-        on ties); categories and sessions union by key with tombstone-wins
+        LWW merge: tasks and workout groups by `updatedAt` with a deterministic
+        lexical `toString()` tiebreak (`>=` adopts remote on ties so both devices
+        converge); categories and sessions union by key with tombstone-wins
         (`isDeleted` on either side stays deleted); sessions otherwise keep local.
         List order travels as a `taskOrder` id vector with its own LWW clock
         (`taskOrderUpdatedAt`); absent/empty vector keeps local order.
