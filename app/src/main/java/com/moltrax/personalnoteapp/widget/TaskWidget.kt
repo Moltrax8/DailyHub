@@ -56,6 +56,7 @@ import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.domain.model.withCompletion
 import com.moltrax.personalnoteapp.domain.repository.SyncRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
+import com.moltrax.personalnoteapp.service.NotificationScheduler
 import com.moltrax.personalnoteapp.service.NotificationService
 import com.moltrax.personalnoteapp.ui.i18n.localizedFor
 import com.moltrax.personalnoteapp.ui.theme.AppColors
@@ -86,6 +87,7 @@ class TaskWidget : GlanceAppWidget() {
         fun taskRepository(): TaskRepository
         fun syncRepository(): SyncRepository
         fun notificationService(): NotificationService
+        fun notificationScheduler(): NotificationScheduler
         fun appPreferences(): AppPreferences
     }
 
@@ -513,10 +515,7 @@ class TaskWidget : GlanceAppWidget() {
             // Recurring tasks advance (stay open), normal tasks close.
             val result = task.withCompletion(now)
             ep.taskRepository().upsert(result)
-            ep.notificationService().cancelReminder(task.id)
-            if (!result.isDone && ep.appPreferences().systemAlertsEnabled.first()) {
-                ep.notificationService().scheduleReminder(result, ep.appPreferences().reminderMinutes.first())
-            }
+            ep.notificationScheduler().refresh(result)
             return task
         }
 
@@ -546,10 +545,9 @@ class TaskWidget : GlanceAppWidget() {
         suspend fun restoreTask(context: Context, taskJson: String) {
             val ep = entryPoint(context)
             val task = runCatching { json.decodeFromString<TaskJson>(taskJson).toDomain() }.getOrNull() ?: return
-            ep.taskRepository().upsert(task.copy(updatedAt = System.currentTimeMillis()))
-            if (!task.isDone && ep.appPreferences().systemAlertsEnabled.first()) {
-                ep.notificationService().scheduleReminder(task, ep.appPreferences().reminderMinutes.first())
-            }
+            val restored = task.copy(updatedAt = System.currentTimeMillis())
+            ep.taskRepository().upsert(restored)
+            ep.notificationScheduler().refresh(restored)
         }
 
         /**

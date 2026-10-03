@@ -12,12 +12,20 @@ import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.Task
+import com.moltrax.personalnoteapp.domain.util.planReminder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val CHANNEL_ID      = "task_reminders"
 private const val CHANNEL_NAME    = "Task Reminders"
+
+// Last-staged reminder diagnostics (Settings debug row + E2E assertions).
+private const val DIAG_PREFS            = "notification_diag"
+private const val KEY_DIAG_TASK         = "last_task_id"
+private const val KEY_DIAG_FIRE_AT      = "last_fire_at"
+private const val KEY_DIAG_EXACT        = "last_exact"
+private const val KEY_DIAG_RECORDED_AT  = "last_recorded_at"
 
 const val ACTION_TASK_REMINDER = "com.moltrax.personalnoteapp.ACTION_TASK_REMINDER"
 
@@ -102,25 +110,24 @@ class NotificationService @Inject constructor(
         }
 
     /**
-     * Schedules the reminder alarm. Uses [setExactAndAllowWhileIdle] when exact-alarm permission
-     * is granted, otherwise inexact [setAndAllowWhileIdle] (may be delayed — the UI should direct
+     * Schedules the reminder alarm. Timing follows [planReminder] (single source of
+     * truth, JVM-tested): fire `reminderMinutes` before the deadline, or at the
+     * deadline itself when the lead window already passed.
+     * Uses [setExactAndAllowWhileIdle] when exact-alarm permission is granted,
+     * otherwise inexact [setAndAllowWhileIdle] (may be delayed — the UI should direct
      * the user to the permission screen via [canScheduleExactAlarms]).
-     * @return true = exact alarm scheduled, false = fell back to inexact.
+     * @return true = exact alarm scheduled, false = fell back to inexact
+     *   (or nothing staged when there is no usable deadline).
      */
     fun scheduleReminder(task: Task, reminderMinutes: Int = 60): Boolean {
-        if (task.dueDate == null) return false
-        val now = System.currentTimeMillis()
-        val due = task.dueDate
-        if (due <= now) return false
-
-        val triggerAt = due - reminderMinutes * 60_000L
-        val fireAt    = if (triggerAt > now) triggerAt else due
-        if (fireAt <= now) return false
+        val plan = planReminder(task.dueDate, System.currentTimeMillis(), reminderMinutes)
+            ?: return false
 
         // The notification text must show the ACTUAL remaining time: if the reminder window already passed
         // (fireAt = due) this is 0 ("very short" text), otherwise reminderMinutes. This way a notification
         // firing at the deadline never wrongly says "1 hour left".
-        val minutesLeftAtFire = ((due - fireAt) / 60_000L).toInt()
+        val minutesLeftAtFire = plan.minutesLeftAtFire
+        val fireAt = plan.fireAt
 
         val notifIntent = alarmIntent(task.id).apply {
             putExtra("task_id", task.id)
@@ -140,10 +147,68 @@ class NotificationService @Inject constructor(
         } else {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi)
         }
+        recordLastReminder(task.id, fireAt, exact)
         return exact
     }
 
+    /**
+     * Whether an alarm is currently staged for [taskId] (a matching PendingIntent
+     * exists — covers both exact and inexact alarms, plus legacy hashCode ones).
+     * Test hook for the reminder E2E test; also backs the Settings diagnostics row.
+     */
+    fun isReminderScheduled(taskId: String): Boolean {
+        val pi = PendingIntent.getBroadcast(
+            context,
+            NotificationIds.stableId(context, taskId),
+            alarmIntent(taskId),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+        )
+        if (pi != null) return true
+        return PendingIntent.getBroadcast(
+            context,
+            taskId.hashCode(),
+            Intent(context, NotificationBroadcastReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+        ) != null
+    }
+
+    /** Last alarm staged by [scheduleReminder] (for the Settings diagnostics row). */
+    data class ReminderDiag(
+        val taskId: String,
+        val fireAt: Long,
+        val exact: Boolean,
+        val recordedAt: Long,
+    )
+
+    fun lastReminder(): ReminderDiag? {
+        val prefs = context.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE)
+        val taskId = prefs.getString(KEY_DIAG_TASK, null) ?: return null
+        return ReminderDiag(
+            taskId = taskId,
+            fireAt = prefs.getLong(KEY_DIAG_FIRE_AT, 0L),
+            exact = prefs.getBoolean(KEY_DIAG_EXACT, false),
+            recordedAt = prefs.getLong(KEY_DIAG_RECORDED_AT, 0L),
+        )
+    }
+
+    private fun recordLastReminder(taskId: String, fireAt: Long, exact: Boolean) {
+        context.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_DIAG_TASK, taskId)
+            .putLong(KEY_DIAG_FIRE_AT, fireAt)
+            .putBoolean(KEY_DIAG_EXACT, exact)
+            .putLong(KEY_DIAG_RECORDED_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun clearLastReminder(taskId: String) {
+        val prefs = context.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE)
+        if (prefs.getString(KEY_DIAG_TASK, null) == taskId) {
+            prefs.edit().clear().apply()
+        }
+    }
+
     fun cancelReminder(taskId: String) {
+        clearLastReminder(taskId)
         val pi = PendingIntent.getBroadcast(
             context,
             NotificationIds.stableId(context, taskId),

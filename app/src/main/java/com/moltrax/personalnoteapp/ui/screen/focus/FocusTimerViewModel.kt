@@ -3,12 +3,11 @@ package com.moltrax.personalnoteapp.ui.screen.focus
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.domain.model.withCompletion
 import com.moltrax.personalnoteapp.domain.repository.SyncRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
-import com.moltrax.personalnoteapp.service.NotificationService
+import com.moltrax.personalnoteapp.service.NotificationScheduler
 import com.moltrax.personalnoteapp.widget.TaskWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -38,9 +36,8 @@ data class FocusState(
 class FocusTimerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val taskRepo: TaskRepository,
-    private val notifService: NotificationService,
+    private val scheduler: NotificationScheduler,
     private val syncRepo: SyncRepository,
-    private val prefs: AppPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FocusState())
@@ -107,10 +104,7 @@ class FocusTimerViewModel @Inject constructor(
         // Roll a recurring task forward, close a normal one (consistent with the main list)
         val result = task.withCompletion()
         taskRepo.upsert(result)
-        notifService.cancelReminder(task.id)
-        if (!result.isDone && prefs.systemAlertsEnabled.first()) {
-            notifService.scheduleReminder(result, prefs.reminderMinutes.first())
-        }
+        scheduler.refresh(result)
         syncRepo.pushToDrive()
         TaskWidget.requestUpdate(context)
     }

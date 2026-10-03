@@ -22,7 +22,7 @@ import com.moltrax.personalnoteapp.domain.repository.SyncRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.domain.repository.WorkoutRepository
 import com.moltrax.personalnoteapp.domain.util.BirthdayUtils
-import com.moltrax.personalnoteapp.service.NotificationService
+import com.moltrax.personalnoteapp.service.NotificationScheduler
 import com.moltrax.personalnoteapp.widget.TaskWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -125,7 +125,7 @@ class HomeViewModel @Inject constructor(
     private val taskRepo: TaskRepository,
     private val categoryRepo: CategoryRepository,
     private val syncRepo: SyncRepository,
-    private val notifService: NotificationService,
+    private val scheduler: NotificationScheduler,
     private val prefs: AppPreferences,
     private val workoutRepo: WorkoutRepository,
     private val savedStateHandle: SavedStateHandle,
@@ -356,10 +356,7 @@ class HomeViewModel @Inject constructor(
             // Completing: recurring tasks roll forward (stay open), normal tasks close
             val result = task.withCompletion(now)
             taskRepo.upsert(result)
-            notifService.cancelReminder(task.id)
-            if (!result.isDone && prefs.systemAlertsEnabled.first()) {
-                notifService.scheduleReminder(result, prefs.reminderMinutes.first())
-            }
+            scheduler.refresh(result)
             // Undo opportunity against accidental completion (unlinked/normal task flow).
             if (registerUndo) {
                 _undo.value = UndoableCompletion(
@@ -384,10 +381,7 @@ class HomeViewModel @Inject constructor(
         val u = _undo.value ?: return
         viewModelScope.launch {
             taskRepo.upsert(u.task)
-            notifService.cancelReminder(u.task.id)
-            if (!u.task.isDone && prefs.systemAlertsEnabled.first()) {
-                notifService.scheduleReminder(u.task, prefs.reminderMinutes.first())
-            }
+            scheduler.refresh(u.task)
             u.sessionId?.let { workoutRepo.deleteSession(it) }
             u.programGroup?.let { workoutRepo.upsertGroup(it) }
             syncRepo.pushToDrive()
@@ -529,7 +523,6 @@ class HomeViewModel @Inject constructor(
     fun deleteTask(id: String) {
         clearWorkoutDraft(id)
         viewModelScope.launch {
-            notifService.cancelReminder(id)
             taskRepo.delete(id)
             // Automatically clean up temporary categories left orphaned when the task is deleted
             categoryRepo.cleanupTemporary()

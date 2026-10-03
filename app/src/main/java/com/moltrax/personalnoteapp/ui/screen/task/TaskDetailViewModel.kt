@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.domain.model.Category
 import com.moltrax.personalnoteapp.domain.model.Priority
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
@@ -15,7 +14,7 @@ import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
 import com.moltrax.personalnoteapp.domain.repository.SyncRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.domain.repository.WorkoutRepository
-import com.moltrax.personalnoteapp.service.NotificationService
+import com.moltrax.personalnoteapp.service.NotificationScheduler
 import com.moltrax.personalnoteapp.widget.TaskWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -63,8 +61,7 @@ class TaskDetailViewModel @Inject constructor(
     private val categoryRepo: CategoryRepository,
     private val workoutRepo: WorkoutRepository,
     private val syncRepo: SyncRepository,
-    private val notifService: NotificationService,
-    private val prefs: AppPreferences,
+    private val scheduler: NotificationScheduler,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -265,6 +262,8 @@ class TaskDetailViewModel @Inject constructor(
                 sortOrder = sortOrder,
             )
             taskRepo.upsert(task)
+            // Reminder alarm follows the saved task (done/dateless/deleted → cancelled).
+            scheduler.refresh(task)
             // On a program link, start the cycle from the picked start day: set the group's currentIndex.
             task.linkedProgramId?.let { pid ->
                 workoutRepo.getGroups().find { it.id == pid }?.let { group ->
@@ -276,10 +275,6 @@ class TaskDetailViewModel @Inject constructor(
             // then clean up old temporary categories left orphaned by a category change.
             task.category?.let { categoryRepo.ensureExists(it) }
             categoryRepo.cleanupTemporary()
-            notifService.cancelReminder(task.id)
-            if (task.dueDate != null && prefs.systemAlertsEnabled.first()) {
-                notifService.scheduleReminder(task, prefs.reminderMinutes.first())
-            }
             syncRepo.pushToDrive()
             TaskWidget.requestUpdate(context)
             _state.update { it.copy(isSaving = false) }
