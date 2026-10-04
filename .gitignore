@@ -46,3 +46,6 @@ desktop.ini
 
 # Local-only working docs (never commit)
 ROADMAP.md
+
+# Supabase CLI link metadata (local only, contains project wiring)
+supabase/.temp/

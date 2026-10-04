@@ -51,8 +51,10 @@ fun isSessionExpired(expiresInSecs: Long, savedAtMs: Long, nowMs: Long, marginSe
  */
 fun parseGoTrueError(httpCode: Int, body: String?): String {
     if (!body.isNullOrBlank()) {
-        val quoted = Regex("\"(?:message|msg|error_description)\"\\s*:\\s*\"([^\"]+)\"")
+        // Handles escaped quotes inside server messages (e.g. Email address \"x\" is invalid).
+        val quoted = Regex("\"(?:message|msg|error_description)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
             .find(body)?.groupValues?.getOrNull(1)
+            ?.replace("\\\"", "\"")?.replace("\\\\", "\\")
         if (!quoted.isNullOrBlank()) return quoted
     }
     return when (httpCode) {

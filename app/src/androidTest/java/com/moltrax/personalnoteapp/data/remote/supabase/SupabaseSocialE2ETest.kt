@@ -65,7 +65,7 @@ class SupabaseSocialE2ETest {
     private suspend fun signUpFresh(tag: String): Actor {
         val (url, _, http) = backend()
         val stamp = System.currentTimeMillis() % 100000
-        val email = "soc${tag}${stamp}@example.com"
+        val email = "soc${tag}${stamp}@gmail.com"
         val username = "soc${tag}${stamp}"
         val res = authApi(url, http).signUp(EmailCredentials(email, "pass1234"))
         assertTrue("signup $tag: HTTP ${res.code()}", res.isSuccessful)

@@ -76,11 +76,12 @@ class SupabaseProfileE2ETest {
     fun signup_profile_avatar_signout() {
         runBlocking {
             val stamp = System.currentTimeMillis() % 100000
-            val email = "e2e$stamp@example.com"
+            val email = "e2e$stamp@gmail.com"
             val username = "e2e$stamp"
             assertTrue(isValidUsername(username))
 
-            assertTrue(auth.signUp(email, "pass1234").isSuccess)
+            val signup = auth.signUp(email, "pass1234")
+            assertTrue(signup.exceptionOrNull()?.message ?: "signup ok", signup.isSuccess)
             val uid = auth.currentUserId()
             assertNotNull(uid)
 
