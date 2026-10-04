@@ -308,6 +308,8 @@
     <string name="supabase_auth_offline">Çevrimdışı devam et</string>
     <string name="profile_account_offline_desc">Giriş yapmadın — uygulama çevrimdışı tam çalışır. Giriş yaparsan arkadaşlar ve ortak alanlar açılır.</string>
     <string name="profile_account_loading">Yükleniyor…</string>
+    <string name="profile_avatar">Profil fotoğrafı (değiştirmek için dokun)</string>
+    <string name="profile_rename">Kullanıcı adını düzenle</string>
 
     <!-- Social (Phase 4+) -->
     <string name="social_title">Arkadaşlar</string>

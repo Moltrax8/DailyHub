@@ -308,6 +308,8 @@
     <string name="supabase_auth_offline">Continue offline</string>
     <string name="profile_account_offline_desc">You are signed out — the app fully works offline. Sign in to unlock friends and shared spaces.</string>
     <string name="profile_account_loading">Loading…</string>
+    <string name="profile_avatar">Profile photo (tap to change)</string>
+    <string name="profile_rename">Edit username</string>
 
     <!-- Social (Phase 4+) -->
     <string name="social_title">Friends</string>

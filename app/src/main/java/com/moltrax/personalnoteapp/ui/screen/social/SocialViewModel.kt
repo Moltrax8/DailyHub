@@ -6,6 +6,7 @@ import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
 import com.moltrax.personalnoteapp.domain.model.FriendRequest
 import com.moltrax.personalnoteapp.domain.model.FriendRequestStatus
 import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
+import com.moltrax.personalnoteapp.domain.model.isValidUsername
 import com.moltrax.personalnoteapp.domain.repository.ProfileRepository
 import com.moltrax.personalnoteapp.domain.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -101,6 +102,42 @@ class SocialViewModel @Inject constructor(
     fun reject(requestId: String) = mutate { social.rejectRequest(requestId); refresh() }
 
     fun removeFriend(friendUserId: String) = mutate { social.removeFriend(friendUserId); refresh() }
+
+    /** Renames the own profile (username unique, server-enforced). */
+    fun renameMe(name: String, onDone: () -> Unit = {}) {
+        val clean = name.trim()
+        if (!isValidUsername(clean)) {
+            _state.update { it.copy(error = "Username: 3–20 chars, letters/digits/_/., starts with letter/digit.") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, error = null) }
+            runCatching {
+                val uid = auth.currentUserId() ?: throw IllegalStateException("Not signed in.")
+                val current = profiles.getMyProfile(uid)
+                    ?: SupabaseProfile(id = uid, username = clean)
+                profiles.upsertMyProfile(current.copy(username = clean))
+                refresh()
+            }.onSuccess { onDone() }
+                .onFailure { e -> _state.update { it.copy(busy = false, error = e.message) } }
+        }
+    }
+
+    /** Uploads a new avatar (Photo Picker bytes) and stores its URL on the profile. */
+    fun uploadMyAvatar(bytes: ByteArray, extension: String, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, error = null) }
+            runCatching {
+                val uid = auth.currentUserId() ?: throw IllegalStateException("Not signed in.")
+                val url = profiles.uploadAvatar(uid, bytes, extension)
+                val current = profiles.getMyProfile(uid)
+                    ?: SupabaseProfile(id = uid, username = "me")
+                profiles.upsertMyProfile(current.copy(avatarUrl = url))
+                refresh()
+            }.onSuccess { _state.update { it.copy(busy = false) }; onDone() }
+                .onFailure { e -> _state.update { it.copy(busy = false, error = e.message) } }
+        }
+    }
 
     /** Best-effort display name for a user id (known profiles, else shortened id). */
     fun displayNameOf(userId: String): String {
