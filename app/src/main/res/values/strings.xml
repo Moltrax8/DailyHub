@@ -348,6 +348,21 @@
     <string name="spaces_none">Henüz ortak alan yok — bir arkadaşından Duo aç.</string>
     <string name="spaces_open_hub">Hub\'ı aç</string>
 
+    <!-- Project Manager (Phase 6+) -->
+    <string name="nav_projects">Projeler</string>
+    <string name="nav_social">Sosyal</string>
+    <string name="projects_title">Projeler</string>
+    <string name="projects_empty">Henüz proje yok — + ile oluştur.</string>
+    <string name="projects_untitled">Başlıksız proje</string>
+    <string name="projects_new">Yeni proje</string>
+    <string name="projects_name">Proje adı</string>
+    <string name="projects_description">Açıklama (isteğe bağlı)</string>
+    <string name="projects_board">Pano</string>
+    <string name="projects_new_item">Yeni kart</string>
+    <string name="projects_open_hub">Hub\'ı aç</string>
+    <string name="projects_comment_hint">Yorum yaz…</string>
+    <string name="projects_comment_add">Yorum ekle</string>
+
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>
 

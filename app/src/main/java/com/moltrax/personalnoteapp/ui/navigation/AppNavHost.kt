@@ -35,6 +35,8 @@ import com.moltrax.personalnoteapp.ui.screen.focus.FocusScreen
 import com.moltrax.personalnoteapp.ui.screen.home.HomeScreen
 import com.moltrax.personalnoteapp.ui.screen.profile.ProfileScreen
 import com.moltrax.personalnoteapp.ui.screen.settings.SettingsScreen
+import com.moltrax.personalnoteapp.ui.screen.project.ProjectDetailScreen
+import com.moltrax.personalnoteapp.ui.screen.project.ProjectsScreen
 import com.moltrax.personalnoteapp.ui.screen.social.FriendRequestsScreen
 import com.moltrax.personalnoteapp.ui.screen.social.SocialGraphScreen
 import com.moltrax.personalnoteapp.ui.screen.social.UserProfileScreen
@@ -155,6 +157,8 @@ fun AppNavHost(
             composable<FriendRequests> { FriendRequestsScreen(nav) }
             composable<UserProfile>   { entry -> UserProfileScreen(entry.toRoute<UserProfile>().username, nav) }
             composable<DuoHub>        { entry -> DuoHubScreen(entry.toRoute<DuoHub>().spaceId, nav) }
+            composable<Projects>      { ProjectsScreen(nav) }
+            composable<ProjectDetail> { entry -> ProjectDetailScreen(entry.toRoute<ProjectDetail>().spaceId, nav) }
         }
     }
 }

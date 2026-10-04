@@ -7,12 +7,16 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.moltrax.personalnoteapp.data.local.db.dao.CategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.ExerciseDao
+import com.moltrax.personalnoteapp.data.local.db.dao.ProjectDao
 import com.moltrax.personalnoteapp.data.local.db.dao.SpaceDao
 import com.moltrax.personalnoteapp.data.local.db.dao.TaskCategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.TaskDao
 import com.moltrax.personalnoteapp.data.local.db.dao.WorkoutDao
 import com.moltrax.personalnoteapp.data.local.db.entity.CategoryEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.ExerciseEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.ProjectCommentEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.ProjectEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.ProjectItemEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.SharedNoteEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.SharedTaskEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.SpaceEntity
@@ -276,6 +280,27 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
     }
 }
 
+// Project content cache (Phase 6): brand-new tables, empty start, no backfill.
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS projects (spaceId TEXT NOT NULL PRIMARY KEY, " +
+                "descriptionMd TEXT, boardColumns TEXT NOT NULL)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS project_items (id TEXT NOT NULL PRIMARY KEY, spaceId TEXT NOT NULL, " +
+                "title TEXT NOT NULL, status TEXT NOT NULL, bodyMd TEXT, linkedUrl TEXT, " +
+                "sortOrder INTEGER NOT NULL, updatedAt TEXT NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_project_items_spaceId ON project_items (spaceId)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS project_comments (id TEXT NOT NULL PRIMARY KEY, spaceId TEXT NOT NULL, " +
+                "refType TEXT, refId TEXT, author TEXT, bodyMd TEXT, createdAt TEXT NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_project_comments_spaceId ON project_comments (spaceId)")
+    }
+}
+
 @Database(
     entities = [
         TaskEntity::class,
@@ -291,8 +316,11 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
         SharedNoteEntity::class,
         SharedTaskEntity::class,
         SpaceLinkEntity::class,
+        ProjectEntity::class,
+        ProjectItemEntity::class,
+        ProjectCommentEntity::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -303,4 +331,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun taskCategoryDao(): TaskCategoryDao
     abstract fun spaceDao(): SpaceDao
+    abstract fun projectDao(): ProjectDao
 }

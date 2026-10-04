@@ -23,3 +23,7 @@ import kotlinx.serialization.Serializable
 
 // Shared spaces (Phase 5+): Duo hubs (Projects reuse the same routes later).
 @Serializable data class DuoHub(val spaceId: String)
+
+// Project Manager (Phase 6): containers on spaces(type=PROJECT).
+@Serializable object Projects
+@Serializable data class ProjectDetail(val spaceId: String)

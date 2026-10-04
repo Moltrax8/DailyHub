@@ -122,7 +122,18 @@ Assemble + androidTest-compile green; device run pending.
 - Android `SpaceRepository` with offline Room cache mirrors + Realtime
   subscribe; sharing is always an explicit per-object copy, never auto-upload.
 
-## Phase 6 — Project Manager
+## Phase 6 — Project Manager — CODE DONE, needs SQL + device run
+
+`004_phase6_projects.sql` (projects + project_items + comments, member-only
+RLS; run in dashboard SQL editor). Room v22 cache mirror (`ProjectDao`,
+replace-on-fetch) + `MIGRATION_21_22`. `ProjectRepository` (create/update/
+delete project, items drag-column via arrows, comments). Projects list +
+board detail (Board columns, item dialog with comments, Hub shortcut),
+bottom bar now 5 tabs (Tasks·Workouts·Projects·Social·Profile).
+Tests: `ProjectBoardTest` 2/2 JVM green; `SupabaseProjectsE2ETest` prepared
+(two-user board flow + outsider-denied + cascade, runs on the VM phone once
+001–004 are applied + Confirm-email OFF). Assemble + androidTest-compile
+green; device run pending.
 
 - `projects(space_id, description_md, board_columns)` +
   `project_items(space_id, title, status Idea|Planned|Developing|Finished, ...)` +

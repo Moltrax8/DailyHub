@@ -1,6 +1,9 @@
 package com.moltrax.personalnoteapp.data.remote.supabase
 
 import com.moltrax.personalnoteapp.domain.model.FriendRequest
+import com.moltrax.personalnoteapp.domain.model.Project
+import com.moltrax.personalnoteapp.domain.model.ProjectComment
+import com.moltrax.personalnoteapp.domain.model.ProjectItem
 import com.moltrax.personalnoteapp.domain.model.SharedNote
 import com.moltrax.personalnoteapp.domain.model.SharedTask
 import com.moltrax.personalnoteapp.domain.model.Space
@@ -203,6 +206,67 @@ interface SupabaseDbApi {
 
     @DELETE("links")
     suspend fun deleteLink(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+    ): Response<Unit>
+
+    // ---- Phase 6: projects ----------------------------------------------
+
+    @GET("projects?select=*")
+    suspend fun getProject(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+    ): Response<List<Project>>
+
+    @POST("projects")
+    suspend fun upsertProject(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<List<Project>>
+
+    @GET("project_items?select=*&order=sort_order.asc")
+    suspend fun projectItems(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+    ): Response<List<ProjectItem>>
+
+    @POST("project_items")
+    suspend fun createProjectItem(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=representation",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<List<ProjectItem>>
+
+    @PATCH("project_items")
+    suspend fun updateProjectItem(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<Unit>
+
+    @DELETE("project_items")
+    suspend fun deleteProjectItem(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+    ): Response<Unit>
+
+    @GET("comments?select=*&order=created_at.asc")
+    suspend fun itemComments(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+        @Query("ref_id") refEq: String,
+    ): Response<List<ProjectComment>>
+
+    @POST("comments")
+    suspend fun createComment(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=representation",
+        @Body body: Map<String, String?>,
+    ): Response<List<ProjectComment>>
+
+    @DELETE("comments")
+    suspend fun deleteComment(
         @Header("Authorization") bearer: String,
         @Query("id") idEq: String,
     ): Response<Unit>

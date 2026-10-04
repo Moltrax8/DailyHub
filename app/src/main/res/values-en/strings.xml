@@ -348,6 +348,21 @@
     <string name="spaces_none">No shared spaces yet — open a Duo hub from a friend.</string>
     <string name="spaces_open_hub">Open hub</string>
 
+    <!-- Project Manager (Phase 6+) -->
+    <string name="nav_projects">Projects</string>
+    <string name="nav_social">Social</string>
+    <string name="projects_title">Projects</string>
+    <string name="projects_empty">No projects yet — create one with +.</string>
+    <string name="projects_untitled">Untitled project</string>
+    <string name="projects_new">New project</string>
+    <string name="projects_name">Project name</string>
+    <string name="projects_description">Description (optional)</string>
+    <string name="projects_board">Board</string>
+    <string name="projects_new_item">New card</string>
+    <string name="projects_open_hub">Open hub</string>
+    <string name="projects_comment_hint">Write a comment…</string>
+    <string name="projects_comment_add">Add comment</string>
+
     <!-- Profile default -->
     <string name="profile_default_name">User</string>
 

@@ -46,6 +46,7 @@ import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import com.moltrax.personalnoteapp.ui.navigation.FriendRequests
 import com.moltrax.personalnoteapp.ui.navigation.UserProfile
 import com.moltrax.personalnoteapp.ui.navigation.DuoHub
+import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 import com.moltrax.personalnoteapp.ui.screen.space.SpaceRow
 import com.moltrax.personalnoteapp.ui.screen.space.SpaceViewModel
 
@@ -61,7 +62,10 @@ fun SocialGraphScreen(
     val spaces by spaceVm.mySpaces.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refresh() }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.social_title)) }) }) { padding ->
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.social_title)) }) },
+        bottomBar = { BottomNavBar(nav) },
+    ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

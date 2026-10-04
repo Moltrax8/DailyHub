@@ -1,0 +1,316 @@
+package com.moltrax.personalnoteapp.ui.screen.project
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.domain.model.ProjectItem
+import com.moltrax.personalnoteapp.domain.model.ProjectStatus
+import com.moltrax.personalnoteapp.domain.model.groupBoardItems
+import com.moltrax.personalnoteapp.ui.navigation.DuoHub
+import com.moltrax.personalnoteapp.ui.navigation.ProjectDetail
+import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
+
+private val COLUMNS = listOf(
+    ProjectStatus.IDEA to "Idea",
+    ProjectStatus.PLANNED to "Planned",
+    ProjectStatus.DEVELOPING to "Developing",
+    ProjectStatus.FINISHED to "Finished",
+)
+
+/** Project containers (Phase 6). Each is a PROJECT space with a board. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
+    val projects by vm.myProjects.collectAsStateWithLifecycle()
+    var showCreate by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.projects_title)) }) },
+        bottomBar = { BottomNavBar(nav) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showCreate = true }) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+            }
+        },
+    ) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (projects.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.projects_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            items(projects, key = { it.id }) { space ->
+                Card(Modifier.fillMaxWidth().clickable { nav.navigate(ProjectDetail(space.id)) }) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        Text(space.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.projects_untitled))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showCreate) {
+        var name by remember { mutableStateOf("") }
+        var desc by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCreate = false },
+            title = { Text(stringResource(R.string.projects_new)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text(stringResource(R.string.projects_name)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = desc,
+                        onValueChange = { desc = it },
+                        label = { Text(stringResource(R.string.projects_description)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.createProject(name, desc) { id ->
+                            showCreate = false
+                            nav.navigate(ProjectDetail(id))
+                        }
+                    },
+                    enabled = name.isNotBlank(),
+                ) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = { TextButton(onClick = { showCreate = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+}
+
+/** One project: lightweight board (Idea → Planned → Developing → Finished). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
+    val state by vm.detail.collectAsStateWithLifecycle()
+    var showAdd by remember { mutableStateOf(false) }
+    var selected by remember { mutableStateOf<ProjectItem?>(null) }
+
+    LaunchedEffect(spaceId) { vm.openProject(spaceId) }
+    val board = groupBoardItems(state.items)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.projects_board)) },
+                navigationIcon = {
+                    IconButton(onClick = { nav.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { nav.navigate(DuoHub(spaceId)) }) {
+                        Icon(Icons.Default.Hub, contentDescription = stringResource(R.string.projects_open_hub))
+                    }
+                },
+            )
+        },
+        bottomBar = { BottomNavBar(nav) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAdd = true }) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+            }
+        },
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+            state.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+            }
+            Row(
+                Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                COLUMNS.forEach { (status, label) ->
+                    BoardColumn(
+                        label = label,
+                        items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }]
+                            .orEmpty(),
+                        onMoveLeft = { item ->
+                            val idx = COLUMNS.indexOfFirst { it.first == status }
+                            if (idx > 0) vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
+                        },
+                        onMoveRight = { item ->
+                            val idx = COLUMNS.indexOfFirst { it.first == status }
+                            if (idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
+                        },
+                        onTap = { selected = it },
+                        onDelete = { vm.deleteItem(spaceId, it.id) },
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAdd) {
+        var title by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAdd = false },
+            title = { Text(stringResource(R.string.projects_new_item)) },
+            text = {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.task_title_field)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { vm.addItem(spaceId, title) { showAdd = false } },
+                    enabled = title.isNotBlank(),
+                ) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = { TextButton(onClick = { showAdd = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+
+    selected?.let { item ->
+        ItemDetailDialog(
+            spaceId = spaceId,
+            item = item,
+            onDismiss = { selected = null },
+        )
+    }
+}
+
+@Composable
+private fun BoardColumn(
+    label: String,
+    items: List<ProjectItem>,
+    onMoveLeft: (ProjectItem) -> Unit,
+    onMoveRight: (ProjectItem) -> Unit,
+    onTap: (ProjectItem) -> Unit,
+    onDelete: (ProjectItem) -> Unit,
+) {
+    Column(modifier = Modifier.width(250.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.titleSmall)
+        if (items.isEmpty()) {
+            Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        items.forEach { item ->
+            Card(Modifier.fillMaxWidth().clickable { onTap(item) }) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { onMoveLeft(item) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier)
+                    }
+                    Text(item.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    IconButton(onClick = { onMoveRight(item) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    }
+                    IconButton(onClick = { onDelete(item) }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ItemDetailDialog(
+    spaceId: String,
+    item: ProjectItem,
+    vm: ProjectViewModel = hiltViewModel(),
+    onDismiss: () -> Unit,
+) {
+    val comments by vm.observeComments(spaceId, item.id).collectAsStateWithLifecycle(initialValue = emptyList())
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(item.title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item.bodyMd?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium)
+                }
+                item.linkedUrl?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+                comments.forEach { c ->
+                    Text(
+                        "• ${c.bodyMd.orEmpty()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text(stringResource(R.string.projects_comment_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    onClick = { vm.addComment(spaceId, item.id, comment) { comment = "" } },
+                    enabled = comment.isNotBlank(),
+                ) { Text(stringResource(R.string.projects_comment_add)) }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_save)) } },
+    )
+}

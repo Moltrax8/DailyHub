@@ -1,5 +1,5 @@
 -- ============================================================================
--- DailyHub — SQLite schema (Room AppDatabase v21, `personal_note_app.db`)
+-- DailyHub — SQLite schema (Room AppDatabase v22, `personal_note_app.db`)
 -- ============================================================================
 -- Source: app/src/main/java/com/moltrax/personalnoteapp/data/local/db/
 --   AppDatabase.kt, Converters.kt, entity/*.kt, dao/*.kt
@@ -12,7 +12,7 @@
 --   Double (inside JSON)   -> REAL in JSON payload, never a column
 --   Nullable Kotlin field  -> nullable column, except JSON lists (NOT NULL '[]')
 --
--- History (20 migrations 1->21, see AppDatabase.kt):
+-- History (21 migrations 1->22, see AppDatabase.kt):
 --   1->2  tasks.linkedWorkoutId added
 --   2->3  food_entries created            (later dropped in 15->16)
 --   3->4  vault_entries.salt added        (table later dropped in 4->5)
@@ -36,6 +36,8 @@
 --           (legacy tasks.category column kept one release as read-fallback)
 --   20->21 shared-spaces offline cache (spaces, space_members, shared_notes,
 --           shared_tasks, space_links); new feature, empty start, no backfill
+--   21->22 project content cache (projects, project_items, project_comments);
+--           new feature, empty start, no backfill
 --
 -- Dropped tables (intentionally absent below): vault_entries, food_entries,
 -- body_weight_entries. Do NOT reintroduce without a new migration.
@@ -151,6 +153,41 @@ CREATE TABLE IF NOT EXISTS space_links (
 );
 
 CREATE INDEX IF NOT EXISTS index_space_links_spaceId ON space_links (spaceId);
+
+-- ----------------------------------------------------------------------------
+-- Project content cache (dao: ProjectDao, v22) — same replace-on-fetch
+-- contract as the spaces cache.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS projects (
+    spaceId        TEXT    NOT NULL PRIMARY KEY,
+    descriptionMd  TEXT,
+    boardColumns   TEXT    NOT NULL              -- JSON ["Idea",...] via Converters
+);
+
+CREATE TABLE IF NOT EXISTS project_items (
+    id        TEXT    NOT NULL PRIMARY KEY,
+    spaceId   TEXT    NOT NULL,
+    title     TEXT    NOT NULL,
+    status    TEXT    NOT NULL,             -- Idea | Planned | Developing | Finished
+    bodyMd    TEXT,
+    linkedUrl TEXT,
+    sortOrder INTEGER NOT NULL,
+    updatedAt TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS index_project_items_spaceId ON project_items (spaceId);
+
+CREATE TABLE IF NOT EXISTS project_comments (
+    id        TEXT    NOT NULL PRIMARY KEY,
+    spaceId   TEXT    NOT NULL,
+    refType   TEXT,
+    refId     TEXT,
+    author    TEXT,
+    bodyMd    TEXT,
+    createdAt TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS index_project_comments_spaceId ON project_comments (spaceId);
 
 -- ----------------------------------------------------------------------------
 -- categories: CategoryEntity (dao: CategoryDao)

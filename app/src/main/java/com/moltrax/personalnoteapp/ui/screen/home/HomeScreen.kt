@@ -906,8 +906,9 @@ fun BottomNavBar(nav: NavController) {
     val dest = backStackEntry?.destination
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        // Simplified bottom bar (3 tabs). Calendar → sub-tab inside Tasks; Progress → tab inside Profile.
-        // To avoid stacking tabs on all tabs: launchSingleTop + popUpTo(Home){saveState} + restoreState.
+        // Bottom bar (5 tabs, Phase 6): Tasks · Workouts · Projects · Social · Profile.
+        // Calendar → sub-tab inside Tasks. To avoid stacking tabs on all tabs:
+        // launchSingleTop + popUpTo(Home){saveState} + restoreState.
         NavigationBarItem(
             selected = dest?.hasRoute<Home>() == true,
             onClick = { nav.navigate(Home) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
@@ -919,6 +920,18 @@ fun BottomNavBar(nav: NavController) {
             onClick = { nav.navigate(WorkoutList) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
             icon = { Icon(Icons.Default.FitnessCenter, null) },
             label = { Text(stringResource(R.string.nav_workouts)) },
+        )
+        NavigationBarItem(
+            selected = dest?.hasRoute<Projects>() == true,
+            onClick = { nav.navigate(Projects) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
+            icon = { Icon(Icons.Default.Dashboard, null) },
+            label = { Text(stringResource(R.string.nav_projects)) },
+        )
+        NavigationBarItem(
+            selected = dest?.hasRoute<SocialGraph>() == true,
+            onClick = { nav.navigate(SocialGraph) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
+            icon = { Icon(Icons.Default.People, null) },
+            label = { Text(stringResource(R.string.nav_social)) },
         )
         NavigationBarItem(
             selected = dest?.hasRoute<Profile>() == true,
