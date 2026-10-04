@@ -166,7 +166,19 @@ androidTest-compile green; device run pending.
   space lookup → pref check → insert) → `push-dispatch` → FCM → Android
   (`dev_activity` channel → tap opens `ProjectDetail`).
 
-## Phase 8 — Expanded shared
+## Phase 8 — Expanded shared — CODE DONE, needs SQL + device run
+
+`006_phase8_expanded.sql` (events + messages + files + activity_feed +
+private space-files bucket, member-only RLS; run in dashboard SQL editor).
+Events (single instance, recurrence deferred), chat (pull-on-open + 15s poll
+until Realtime in Phase 9), files (25 MB cap, signed-URL viewer via
+FileProvider), feed (best-effort writes on every create/join/leave).
+DuoHub grows to 7 scrollable tabs; Phase 8 content is online-only mirrors
+(no Room — pull on open; documented tradeoff).
+Tests: `FeedKindTest` 2/2 JVM green; `SupabaseExpandedE2ETest` prepared
+(chat/event/file/feed round-trip + outsider-denied everywhere, runs on the
+VM phone once 001+003+006 are applied + Confirm-email OFF). Assemble +
+androidTest-compile green; device run pending.
 
 - `events`, `messages` (Realtime), `files` (Storage `space-files`),
   `activity_feed`. Same RLS + Room-cache pattern as Phase 5.

@@ -348,6 +348,22 @@
     <string name="spaces_none">Henüz ortak alan yok — bir arkadaşından Duo aç.</string>
     <string name="spaces_open_hub">Hub\'ı aç</string>
 
+    <!-- Phase 8: chat/events/files/feed -->
+    <string name="spaces_chat">Sohbet</string>
+    <string name="spaces_events">Etkinlikler</string>
+    <string name="spaces_files">Dosyalar</string>
+    <string name="spaces_feed">Akış</string>
+    <string name="spaces_empty_chat">Henüz mesaj yok.</string>
+    <string name="spaces_empty_events">Henüz etkinlik yok.</string>
+    <string name="spaces_empty_files">Henüz dosya yok.</string>
+    <string name="spaces_empty_feed">Henüz hareket yok.</string>
+    <string name="spaces_send">Gönder</string>
+    <string name="spaces_chat_hint">Mesaj yaz…</string>
+    <string name="spaces_upload">Dosya yükle</string>
+    <string name="spaces_new_event">Yeni etkinlik</string>
+    <string name="spaces_event_time">Saat seç</string>
+    <string name="spaces_event_end">Bitiş de ekle</string>
+
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projeler</string>
     <string name="nav_social">Sosyal</string>

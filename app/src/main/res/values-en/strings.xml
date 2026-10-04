@@ -348,6 +348,22 @@
     <string name="spaces_none">No shared spaces yet — open a Duo hub from a friend.</string>
     <string name="spaces_open_hub">Open hub</string>
 
+    <!-- Phase 8: chat/events/files/feed -->
+    <string name="spaces_chat">Chat</string>
+    <string name="spaces_events">Events</string>
+    <string name="spaces_files">Files</string>
+    <string name="spaces_feed">Feed</string>
+    <string name="spaces_empty_chat">No messages yet.</string>
+    <string name="spaces_empty_events">No events yet.</string>
+    <string name="spaces_empty_files">No files yet.</string>
+    <string name="spaces_empty_feed">No activity yet.</string>
+    <string name="spaces_send">Send</string>
+    <string name="spaces_chat_hint">Write a message…</string>
+    <string name="spaces_upload">Upload file</string>
+    <string name="spaces_new_event">New event</string>
+    <string name="spaces_event_time">Pick a time</string>
+    <string name="spaces_event_end">Add an end</string>
+
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projects</string>
     <string name="nav_social">Social</string>

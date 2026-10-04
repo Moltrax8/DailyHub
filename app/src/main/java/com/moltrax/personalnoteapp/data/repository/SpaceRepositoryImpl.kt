@@ -8,18 +8,32 @@ import com.moltrax.personalnoteapp.data.local.db.entity.SpaceLinkEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.SpaceMemberEntity
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseDbApi
+import com.moltrax.personalnoteapp.di.SupabaseConfig
+import com.moltrax.personalnoteapp.domain.model.FeedEntry
+import com.moltrax.personalnoteapp.domain.model.FeedKind
 import com.moltrax.personalnoteapp.domain.model.SharedNote
 import com.moltrax.personalnoteapp.domain.model.SharedTask
 import com.moltrax.personalnoteapp.domain.model.Space
+import com.moltrax.personalnoteapp.domain.model.SpaceEvent
+import com.moltrax.personalnoteapp.domain.model.SpaceFile
 import com.moltrax.personalnoteapp.domain.model.SpaceLink
 import com.moltrax.personalnoteapp.domain.model.SpaceMember
+import com.moltrax.personalnoteapp.domain.model.SpaceMessage
 import com.moltrax.personalnoteapp.domain.model.SpaceType
 import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +43,8 @@ class SpaceRepositoryImpl @Inject constructor(
     private val db: SupabaseDbApi?,
     private val auth: SupabaseAuthService,
     private val cache: SpaceDao,
+    private val config: SupabaseConfig,
+    private val http: OkHttpClient,
 ) : SpaceRepository {
 
     private fun api(): SupabaseDbApi =
@@ -134,12 +150,14 @@ class SpaceRepositoryImpl @Inject constructor(
             ),
             "Invite failed",
         )
+        appendFeed(spaceId, FeedKind.MEMBER_JOINED, userId)
         pullSpace(spaceId)
     }
 
     override suspend fun removeMember(spaceId: String, userId: String) {
         val res = api().removeMember(bearer(), "eq.$spaceId", "eq.$userId")
         if (!res.isSuccessful) throw IOException("Remove failed (HTTP ${res.code()}).")
+        appendFeed(spaceId, FeedKind.MEMBER_LEFT, userId)
         pullSpace(spaceId)
     }
 
@@ -176,6 +194,7 @@ class SpaceRepositoryImpl @Inject constructor(
             ),
             "Note create failed",
         ).first()
+        appendFeed(spaceId, FeedKind.NOTE_ADDED, note.id)
         pullSpace(spaceId)
         return note
     }
@@ -198,6 +217,7 @@ class SpaceRepositoryImpl @Inject constructor(
             put("sort_order", 0L)
         }
         val task = checked(api().createSharedTask(bearer(), body = body), "Task create failed").first()
+        appendFeed(spaceId, FeedKind.TASK_ADDED, task.id)
         pullSpace(spaceId)
         return task
     }
@@ -223,6 +243,7 @@ class SpaceRepositoryImpl @Inject constructor(
             ),
             "Link create failed",
         ).first()
+        appendFeed(spaceId, FeedKind.LINK_ADDED, link.id)
         pullSpace(spaceId)
         return link
     }
@@ -230,5 +251,175 @@ class SpaceRepositoryImpl @Inject constructor(
     override suspend fun deleteLink(linkId: String) {
         val res = api().deleteLink(bearer(), "eq.$linkId")
         if (!res.isSuccessful) throw IOException("Link delete failed (HTTP ${res.code()}).")
+    }
+
+    // -- Phase 8: expanded shared (online-only mirrors) ----------------------
+
+    private data class ExtraCache(
+        val messages: List<SpaceMessage> = emptyList(),
+        val events: List<SpaceEvent> = emptyList(),
+        val files: List<SpaceFile> = emptyList(),
+        val feed: List<FeedEntry> = emptyList(),
+    )
+
+    private val extras = mutableMapOf<String, MutableStateFlow<ExtraCache>>()
+
+    private fun extraFlow(spaceId: String): MutableStateFlow<ExtraCache> =
+        extras.getOrPut(spaceId) { MutableStateFlow(ExtraCache()) }
+
+    override suspend fun pullExtra(spaceId: String) {
+        val token = bearer()
+        val messages = checked(api().spaceMessages(token, "eq.$spaceId"), "Messages load failed")
+        val events = checked(api().spaceEvents(token, "eq.$spaceId"), "Events load failed")
+        val files = checked(api().spaceFiles(token, "eq.$spaceId"), "Files load failed")
+        val feed = checked(api().spaceFeed(token, "eq.$spaceId"), "Feed load failed")
+        extraFlow(spaceId).update { ExtraCache(messages, events, files, feed) }
+    }
+
+    override fun observeMessages(spaceId: String): Flow<List<SpaceMessage>> =
+        extraFlow(spaceId).map { it.messages }
+
+    override fun observeEvents(spaceId: String): Flow<List<SpaceEvent>> =
+        extraFlow(spaceId).map { it.events }
+
+    override fun observeFiles(spaceId: String): Flow<List<SpaceFile>> =
+        extraFlow(spaceId).map { it.files }
+
+    override fun observeFeed(spaceId: String): Flow<List<FeedEntry>> =
+        extraFlow(spaceId).map { it.feed }
+
+    override suspend fun sendMessage(spaceId: String, body: String) {
+        val clean = body.trim()
+        require(clean.isNotBlank()) { "Message required." }
+        val res = api().sendMessage(
+            bearer(),
+            body = mapOf("space_id" to spaceId, "author" to myId(), "body" to clean),
+        )
+        if (!res.isSuccessful) throw IOException("Send failed (HTTP ${res.code()}).")
+        pullExtra(spaceId)
+    }
+
+    override suspend fun deleteMessage(messageId: String) {
+        val res = api().deleteMessage(bearer(), "eq.$messageId")
+        if (!res.isSuccessful) throw IOException("Delete failed (HTTP ${res.code()}).")
+    }
+
+    override suspend fun addEvent(spaceId: String, title: String, startAt: Long, endAt: Long?): SpaceEvent {
+        val clean = title.trim()
+        require(clean.isNotBlank()) { "Title required." }
+        if (endAt != null) require(endAt >= startAt) { "End must be after start." }
+        val event = checked(
+            api().createEvent(
+                bearer(),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("title", clean)
+                    put("start_at", startAt)
+                    put("end_at", endAt)
+                    put("created_by", myId())
+                },
+            ),
+            "Event create failed",
+        ).first()
+        pullExtra(spaceId)
+        return event
+    }
+
+    override suspend fun deleteEvent(eventId: String) {
+        val res = api().deleteEvent(bearer(), "eq.$eventId")
+        if (!res.isSuccessful) throw IOException("Delete failed (HTTP ${res.code()}).")
+    }
+
+    override suspend fun uploadFile(spaceId: String, fileName: String, bytes: ByteArray, mime: String): SpaceFile {
+        require(bytes.isNotEmpty()) { "Empty file." }
+        require(bytes.size <= MAX_FILE_BYTES) { "File too large (25 MB max)." }
+        val safe = fileName.trim().replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "file" }
+        val path = "$spaceId/$safe"
+        val token = auth.freshToken() ?: throw IllegalStateException("Not signed in.")
+        val putReq = Request.Builder()
+            .url("${config.url}/storage/v1/object/space-files/$path")
+            .header("apikey", config.anonKey)
+            .header("Authorization", "Bearer $token")
+            .header("x-upsert", "true")
+            .post(bytes.toRequestBody(mime.toMediaType()))
+            .build()
+        http.newCall(putReq).execute().use { resp ->
+            if (!resp.isSuccessful) throw IOException("Upload failed (HTTP ${resp.code}).")
+        }
+        val row = checked(
+            api().createFileRow(
+                bearer(),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("path", path)
+                    put("size", bytes.size.toLong())
+                    put("created_by", myId())
+                },
+            ),
+            "File record failed",
+        ).first()
+        pullExtra(spaceId)
+        appendFeed(spaceId, "file.added", row.id)
+        return SpaceFile(row.id, spaceId, path, bytes.size.toLong(), myId(), row.createdAt)
+    }
+
+    override suspend fun deleteFile(file: SpaceFile) {
+        val token = auth.freshToken() ?: throw IllegalStateException("Not signed in.")
+        val delReq = Request.Builder()
+            .url("${config.url}/storage/v1/object/space-files/${file.path}")
+            .header("apikey", config.anonKey)
+            .header("Authorization", "Bearer $token")
+            .delete()
+            .build()
+        http.newCall(delReq).execute().use { resp ->
+            if (!resp.isSuccessful && resp.code != 404) throw IOException("Delete failed (HTTP ${resp.code}).")
+        }
+        val res = api().deleteFileRow(bearer(), "eq.${file.id}")
+        if (!res.isSuccessful) throw IOException("Record delete failed (HTTP ${res.code()}).")
+    }
+
+    override suspend fun downloadFile(file: SpaceFile): ByteArray {
+        val token = auth.freshToken() ?: throw IllegalStateException("Not signed in.")
+        val signReq = Request.Builder()
+            .url("${config.url}/storage/v1/object/sign/space-files/${file.path}")
+            .header("apikey", config.anonKey)
+            .header("Authorization", "Bearer $token")
+            .header("Content-Type", "application/json")
+            .post("""{"expiresIn":3600}""".toRequestBody("application/json".toMediaType()))
+            .build()
+        val signedPath = http.newCall(signReq).execute().use { resp ->
+            if (!resp.isSuccessful) throw IOException("Sign failed (HTTP ${resp.code}).")
+            JSONObject(resp.body?.string().orEmpty()).optString("signedURL")
+        }
+        if (signedPath.isBlank()) throw IOException("Sign failed.")
+        val getReq = Request.Builder().url("${config.url}/storage/v1$signedPath").get().build()
+        http.newCall(getReq).execute().use { resp ->
+            if (!resp.isSuccessful) throw IOException("Download failed (HTTP ${resp.code}).")
+            return resp.body?.bytes() ?: throw IOException("Empty file.")
+        }
+    }
+
+    /**
+     * Best-effort feed writer: failures are swallowed so content features
+     * never break when the feed insert is denied/fails.
+     */
+    private suspend fun appendFeed(spaceId: String, kind: String, ref: String?) {
+        runCatching {
+            api().appendFeed(
+                bearer(),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("kind", kind)
+                    if (ref != null) {
+                        put("ref", buildJsonObject { put("id", ref) })
+                    }
+                    put("actor", myId())
+                },
+            )
+        }
+    }
+
+    private companion object {
+        const val MAX_FILE_BYTES = 25 * 1024 * 1024
     }
 }

@@ -1,6 +1,7 @@
 package com.moltrax.personalnoteapp.data.remote.supabase
 
 import com.moltrax.personalnoteapp.domain.model.FriendRequest
+import com.moltrax.personalnoteapp.domain.model.FeedEntry
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
@@ -8,6 +9,9 @@ import com.moltrax.personalnoteapp.domain.model.NotifPrefRow
 import com.moltrax.personalnoteapp.domain.model.Project
 import com.moltrax.personalnoteapp.domain.model.ProjectComment
 import com.moltrax.personalnoteapp.domain.model.ProjectItem
+import com.moltrax.personalnoteapp.domain.model.SpaceEvent
+import com.moltrax.personalnoteapp.domain.model.SpaceFile
+import com.moltrax.personalnoteapp.domain.model.SpaceMessage
 import com.moltrax.personalnoteapp.domain.model.SharedNote
 import com.moltrax.personalnoteapp.domain.model.SharedTask
 import com.moltrax.personalnoteapp.domain.model.Space
@@ -328,5 +332,79 @@ interface SupabaseDbApi {
         @Header("Authorization") bearer: String,
         @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
         @Body body: Map<String, String>,
+    ): Response<Unit>
+
+    // ---- Phase 8: expanded shared -----------------------------------------
+
+    @GET("events?select=*&order=start_at.asc")
+    suspend fun spaceEvents(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+    ): Response<List<SpaceEvent>>
+
+    @POST("events")
+    suspend fun createEvent(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=representation",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<List<SpaceEvent>>
+
+    @DELETE("events")
+    suspend fun deleteEvent(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+    ): Response<Unit>
+
+    @GET("messages?select=*&order=created_at.asc")
+    suspend fun spaceMessages(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+        @Query("limit") limit: Int = 100,
+    ): Response<List<SpaceMessage>>
+
+    @POST("messages")
+    suspend fun sendMessage(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=representation",
+        @Body body: Map<String, String?>,
+    ): Response<List<SpaceMessage>>
+
+    @DELETE("messages")
+    suspend fun deleteMessage(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+    ): Response<Unit>
+
+    @GET("files?select=*&order=created_at.desc")
+    suspend fun spaceFiles(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+    ): Response<List<SpaceFile>>
+
+    @POST("files")
+    suspend fun createFileRow(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=representation",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<List<SpaceFile>>
+
+    @DELETE("files")
+    suspend fun deleteFileRow(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+    ): Response<Unit>
+
+    @GET("activity_feed?select=*&order=created_at.desc")
+    suspend fun spaceFeed(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+        @Query("limit") limit: Int = 50,
+    ): Response<List<FeedEntry>>
+
+    @POST("activity_feed")
+    suspend fun appendFeed(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=minimal",
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<Unit>
 }

@@ -1,15 +1,25 @@
 package com.moltrax.personalnoteapp.ui.screen.space
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -25,10 +35,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -38,9 +49,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -48,10 +61,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
+import kotlinx.coroutines.launch
 
 private const val TAB_NOTES = 0
 private const val TAB_TASKS = 1
 private const val TAB_LINKS = 2
+private const val TAB_CHAT = 3
+private const val TAB_EVENTS = 4
+private const val TAB_FILES = 5
+private const val TAB_FEED = 6
 
 /**
  * One Duo hub: Notes | Tasks | Links tabs + members row (Phase 5 MVP).
@@ -83,16 +101,22 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+            if (tab == TAB_NOTES || tab == TAB_TASKS || tab == TAB_LINKS || tab == TAB_EVENTS) {
+                FloatingActionButton(onClick = { showAdd = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+                }
             }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = tab) {
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
                 Tab(selected = tab == TAB_NOTES, onClick = { tab = TAB_NOTES }, text = { Text(stringResource(R.string.spaces_notes)) })
                 Tab(selected = tab == TAB_TASKS, onClick = { tab = TAB_TASKS }, text = { Text(stringResource(R.string.spaces_tasks)) })
                 Tab(selected = tab == TAB_LINKS, onClick = { tab = TAB_LINKS }, text = { Text(stringResource(R.string.spaces_links)) })
+                Tab(selected = tab == TAB_CHAT, onClick = { tab = TAB_CHAT }, text = { Text(stringResource(R.string.spaces_chat)) })
+                Tab(selected = tab == TAB_EVENTS, onClick = { tab = TAB_EVENTS }, text = { Text(stringResource(R.string.spaces_events)) })
+                Tab(selected = tab == TAB_FILES, onClick = { tab = TAB_FILES }, text = { Text(stringResource(R.string.spaces_files)) })
+                Tab(selected = tab == TAB_FEED, onClick = { tab = TAB_FEED }, text = { Text(stringResource(R.string.spaces_feed)) })
             }
             if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
             state.error?.let {
@@ -155,7 +179,7 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
                         }
                     }
                 }
-                else -> LazyColumn(
+                TAB_LINKS -> LazyColumn(
                     Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -188,6 +212,10 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
                         }
                     }
                 }
+                TAB_CHAT -> ChatTab(vm = vm, spaceId = spaceId, state = state)
+                TAB_EVENTS -> EventsTab(vm = vm, spaceId = spaceId, state = state)
+                TAB_FILES -> FilesTab(vm = vm, spaceId = spaceId, state = state)
+                TAB_FEED -> FeedTab(state = state)
             }
         }
     }
@@ -200,9 +228,13 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
             TAB_TASKS -> TaskDialog(onDismiss = { showAdd = false }) { title ->
                 vm.addSharedTask(spaceId, title) { showAdd = false }
             }
-            else -> LinkDialog(onDismiss = { showAdd = false }) { url, title ->
+            TAB_LINKS -> LinkDialog(onDismiss = { showAdd = false }) { url, title ->
                 vm.addLink(spaceId, url, title) { showAdd = false }
             }
+            TAB_EVENTS -> EventDialog(onDismiss = { showAdd = false }) { title, start, end ->
+                vm.addEvent(spaceId, title, start, end) { showAdd = false }
+            }
+            else -> Unit
         }
     }
 }
@@ -300,6 +332,320 @@ private fun LinkDialog(onDismiss: () -> Unit, onConfirm: (String, String?) -> Un
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
+}
+
+/** Chat tab (Phase 8): pull on open + 15s poll until Realtime (Phase 9). */
+@Composable
+private fun ChatTab(
+    vm: SpaceViewModel,
+    spaceId: String,
+    state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDetailUiState,
+) {
+    var draft by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (state.messages.isEmpty()) {
+                item { Text(stringResource(R.string.spaces_empty_chat)) }
+            }
+            items(state.messages, key = { it.id }) { msg ->
+                Card(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(msg.body, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        IconButton(onClick = { vm.deleteMessage(spaceId, msg.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                        }
+                    }
+                }
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                label = { Text(stringResource(R.string.spaces_chat_hint)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+            )
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = { vm.sendMessage(spaceId, draft) { draft = "" } }, enabled = draft.isNotBlank()) {
+                Text(stringResource(R.string.spaces_send))
+            }
+        }
+    }
+}
+
+/** Events tab (Phase 8): single instances (recurrence deferred). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EventsTab(
+    vm: SpaceViewModel,
+    spaceId: String,
+    state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDetailUiState,
+) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (state.events.isEmpty()) {
+            item { Text(stringResource(R.string.spaces_empty_events)) }
+        }
+        items(state.events, key = { it.id }) { event ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(event.title, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            fmtRange(event.startAt, event.endAt),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { vm.deleteEvent(spaceId, event.id) }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Files tab (Phase 8): space-files bucket (25 MB cap), tap to view. */
+@Composable
+private fun FilesTab(
+    vm: SpaceViewModel,
+    spaceId: String,
+    state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDetailUiState,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                val name = contentName(context, uri) ?: "file"
+                val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: throw IllegalStateException("Unreadable file.")
+            }.onSuccess { bytes ->
+                val name = contentName(context, uri) ?: "file"
+                val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                vm.uploadFile(spaceId, name, bytes, mime)
+            }
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        Button(
+            onClick = { picker.launch("*/*") },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        ) { Text(stringResource(R.string.spaces_upload)) }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (state.files.isEmpty()) {
+                item { Text(stringResource(R.string.spaces_empty_files)) }
+            }
+            items(state.files, key = { it.id }) { file ->
+                Card(Modifier.fillMaxWidth().clickable {
+                    scope.launch {
+                        runCatching { vm.downloadBytes(file) }.onSuccess { bytes ->
+                            openBytes(context, file.displayName, bytes)
+                        }
+                    }
+                }) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(file.displayName, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                kbLabel(file.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(onClick = { vm.deleteFile(spaceId, file) }) {
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Feed tab (Phase 8): server-side event log, best-effort writes. */
+@Composable
+private fun FeedTab(state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDetailUiState) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (state.feed.isEmpty()) {
+            item { Text(stringResource(R.string.spaces_empty_feed)) }
+        }
+        items(state.feed, key = { it.id }) { entry ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(
+                        com.moltrax.personalnoteapp.domain.model.feedKindTitle(entry.kind),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        entry.createdAt,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun fmtRange(startMs: Long, endMs: Long?): String {
+    val fmt = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.getDefault())
+    val start = fmt.format(java.util.Date(startMs))
+    return if (endMs == null) start else "$start → ${fmt.format(java.util.Date(endMs))}"
+}
+
+private fun kbLabel(bytes: Long): String =
+    if (bytes < 1024) "$bytes B" else "${bytes / 1024} KB"
+
+private fun contentName(context: android.content.Context, uri: android.net.Uri): String? =
+    runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            if (c.moveToFirst()) {
+                val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) c.getString(idx) else null
+            } else null
+        }
+    }.getOrNull()
+
+private fun openBytes(context: android.content.Context, name: String, bytes: ByteArray) {
+    runCatching {
+        val safe = name.replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "file" }
+        val out = java.io.File(context.cacheDir, "shared").apply { mkdirs() }.resolve(safe)
+        out.writeBytes(bytes)
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", out,
+        )
+        val mime = when (safe.substringAfterLast('.', "").lowercase()) {
+            "png", "jpg", "jpeg", "gif", "webp" -> "image/*"
+            "mp4", "mkv" -> "video/*"
+            "pdf" -> "application/pdf"
+            "txt", "md" -> "text/plain"
+            else -> "*/*"
+        }
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, mime)
+                addFlags(
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EventDialog(onDismiss: () -> Unit, onConfirm: (String, Long, Long?) -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var start by remember { mutableStateOf(System.currentTimeMillis() + 3600_000L) }
+    var useEnd by remember { mutableStateOf(false) }
+    var end by remember { mutableStateOf(start + 3600_000L) }
+    var picking by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.spaces_new_event)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.task_title_field)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedButton(onClick = { picking = "start" }, modifier = Modifier.fillMaxWidth()) {
+                    Text(fmtRange(start, null))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = useEnd, onCheckedChange = { useEnd = it })
+                    Text(stringResource(R.string.spaces_event_end))
+                }
+                if (useEnd) {
+                    OutlinedButton(onClick = { picking = "end" }, modifier = Modifier.fillMaxWidth()) {
+                        Text(fmtRange(end, null))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(title.trim(), start, if (useEnd) maxOf(end, start) else null) },
+                enabled = title.isNotBlank(),
+            ) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+
+    when (picking) {
+        "start", "end" -> {
+            val initial = if (picking == "start") start else end
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = initial }
+            val dateState = rememberDatePickerState(initialSelectedDateMillis = initial)
+            var dateDone by remember { mutableStateOf(false) }
+            if (!dateDone) {
+                DatePickerDialog(
+                    onDismissRequest = { picking = null },
+                    confirmButton = {
+                        TextButton(onClick = { dateDone = true }) { Text(stringResource(R.string.action_save)) }
+                    },
+                ) { DatePicker(state = dateState) }
+            } else {
+                val timeState = rememberTimePickerState(
+                    initialHour = cal.get(java.util.Calendar.HOUR_OF_DAY),
+                    initialMinute = cal.get(java.util.Calendar.MINUTE),
+                )
+                AlertDialog(
+                    onDismissRequest = { picking = null },
+                    title = { Text(stringResource(R.string.spaces_event_time)) },
+                    text = { TimePicker(state = timeState) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val picked = java.util.Calendar.getInstance().apply {
+                                timeInMillis = dateState.selectedDateMillis ?: initial
+                                set(java.util.Calendar.HOUR_OF_DAY, timeState.hour)
+                                set(java.util.Calendar.MINUTE, timeState.minute)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }.timeInMillis
+                            if (picking == "start") start = picked else end = picked
+                            picking = null
+                        }) { Text(stringResource(R.string.action_save)) }
+                    },
+                    dismissButton = { TextButton(onClick = { picking = null }) { Text(stringResource(R.string.action_cancel)) } },
+                )
+            }
+        }
+        else -> Unit
+    }
 }
 
 /** Row for one space in lists (name + type label). */

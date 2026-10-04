@@ -148,6 +148,7 @@ class ProjectRepositoryImpl @Inject constructor(
             ),
             "Item create failed",
         ).first()
+        appendFeed(spaceId, "item.added", item.id)
         pullProject(spaceId)
         return item
     }
@@ -187,19 +188,39 @@ class ProjectRepositoryImpl @Inject constructor(
     override suspend fun addComment(spaceId: String, refType: String?, refId: String?, bodyMd: String) {
         val clean = bodyMd.trim()
         require(clean.isNotBlank()) { "Comment required." }
-        val res = api().createComment(
-            bearer(),
-            body = mapOf(
-                "space_id" to spaceId, "ref_type" to refType, "ref_id" to refId,
-                "author" to myId(), "body_md" to clean,
+        val created = checked(
+            api().createComment(
+                bearer(),
+                body = mapOf(
+                    "space_id" to spaceId, "ref_type" to refType, "ref_id" to refId,
+                    "author" to myId(), "body_md" to clean,
+                ),
             ),
-        )
-        if (!res.isSuccessful) throw IOException("Comment create failed (HTTP ${res.code()}).")
+            "Comment create failed",
+        ).first()
+        appendFeed(spaceId, "comment.added", created.id)
         pullProject(spaceId)
     }
 
     override suspend fun deleteComment(commentId: String) {
         val res = api().deleteComment(bearer(), "eq.$commentId")
         if (!res.isSuccessful) throw IOException("Comment delete failed (HTTP ${res.code()}).")
+    }
+
+    /** Best-effort feed writer: failures are swallowed so features never break. */
+    private suspend fun appendFeed(spaceId: String, kind: String, ref: String?) {
+        runCatching {
+            api().appendFeed(
+                bearer(),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("kind", kind)
+                    if (ref != null) {
+                        put("ref", buildJsonObject { put("id", ref) })
+                    }
+                    put("actor", myId())
+                },
+            )
+        }
     }
 }
