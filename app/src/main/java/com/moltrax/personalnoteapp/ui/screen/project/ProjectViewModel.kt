@@ -6,8 +6,12 @@ import com.moltrax.personalnoteapp.domain.model.Project
 import com.moltrax.personalnoteapp.domain.model.ProjectComment
 import com.moltrax.personalnoteapp.domain.model.ProjectItem
 import com.moltrax.personalnoteapp.domain.model.ProjectStatus
+import com.moltrax.personalnoteapp.domain.model.GithubActivity
+import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubRepo
 import com.moltrax.personalnoteapp.domain.model.Space
 import com.moltrax.personalnoteapp.domain.model.SpaceType
+import com.moltrax.personalnoteapp.domain.repository.GitHubRepository
 import com.moltrax.personalnoteapp.domain.repository.ProjectRepository
 import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +41,7 @@ data class ProjectDetailUiState(
 class ProjectViewModel @Inject constructor(
     private val projects: ProjectRepository,
     private val spaces: SpaceRepository,
+    private val github: GitHubRepository,
 ) : ViewModel() {
 
     val myProjects: StateFlow<List<Space>> = spaces.observeSpaces()
@@ -125,5 +130,82 @@ class ProjectViewModel @Inject constructor(
                 .onSuccess { onDone() }
                 .onFailure { e -> _detail.update { it.copy(error = e.message) } }
         }
+    }
+
+    // -- GitHub tab (Phase 7) -------------------------------------------------
+
+    data class GitHubUiState(
+        val connected: GithubConnection? = null,
+        val repos: List<GithubRepo> = emptyList(),
+        val activity: List<GithubActivity> = emptyList(),
+        val prefs: Map<String, Boolean> = emptyMap(),
+        val busy: Boolean = false,
+        val error: String? = null,
+    )
+
+    private val _github = MutableStateFlow(GitHubUiState())
+    val githubState: StateFlow<GitHubUiState> = _github.asStateFlow()
+
+    fun loadGitHub(spaceId: String) {
+        viewModelScope.launch {
+            _github.update { it.copy(busy = true, error = null) }
+            runCatching {
+                val connection = github.myConnection()
+                val repos = github.spaceRepos(spaceId)
+                val prefs = github.notifPrefs(spaceId)
+                Triple(connection, repos, prefs)
+            }.onSuccess { (connection, repos, prefs) ->
+                _github.update { it.copy(connected = connection, repos = repos, prefs = prefs, busy = false) }
+                refreshGitHubActivity(spaceId)
+            }.onFailure { e ->
+                _github.update { it.copy(busy = false, error = e.message) }
+            }
+        }
+        viewModelScope.launch {
+            github.observeActivity(spaceId).collect { feed ->
+                _github.update { it.copy(activity = feed) }
+            }
+        }
+    }
+
+    fun refreshGitHubActivity(spaceId: String) {
+        viewModelScope.launch {
+            runCatching { github.refreshActivity(spaceId) }
+                .onFailure { e -> _github.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun linkRepo(spaceId: String, repoId: Long, fullName: String, private: Boolean, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            runCatching { github.linkRepo(spaceId, repoId, fullName, private) }
+                .onSuccess { loadGitHub(spaceId); onDone() }
+                .onFailure { e -> _github.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun unlinkRepo(spaceId: String, repoId: Long) {
+        viewModelScope.launch {
+            runCatching { github.unlinkRepo(repoId) }
+                .onSuccess { loadGitHub(spaceId) }
+                .onFailure { e -> _github.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun togglePref(spaceId: String, kind: String, enabled: Boolean) {
+        viewModelScope.launch {
+            runCatching { github.setNotifPref(spaceId, kind, enabled) }
+                .onSuccess { loadGitHub(spaceId) }
+                .onFailure { e -> _github.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun enablePush() {
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                viewModelScope.launch {
+                    runCatching { github.registerFcmToken(token) }
+                        .onFailure { e -> _github.update { it.copy(error = e.message) } }
+                }
+            }
     }
 }

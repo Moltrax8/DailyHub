@@ -363,6 +363,24 @@
     <string name="projects_comment_hint">Yorum yaz…</string>
     <string name="projects_comment_add">Yorum ekle</string>
 
+    <!-- GitHub integration (Phase 7+) -->
+    <string name="projects_github">GitHub</string>
+    <string name="github_connect_hint">GitHub henüz bağlı değil — bağlantı ayarlardan (Edge Function üzerinden OAuth) yapılır, token cihazda tutulmaz.</string>
+    <string name="github_connected_as">%1$s olarak bağlı</string>
+    <string name="github_repos">Bağlı depolar</string>
+    <string name="github_link">Depo bağla</string>
+    <string name="github_unlink">Bağlantıyı kaldır</string>
+    <string name="github_prefs">Bildirim türleri</string>
+    <string name="github_enable_push">Push bildirimlerini etkinleştir</string>
+    <string name="github_activity">Hareketler</string>
+    <string name="github_activity_empty">Henüz hareket yok — webhook ilk olayda buraya düşer.</string>
+    <string name="github_link_title">Depo bağla</string>
+    <string name="github_link_hint">Erişebildiğin depoyu yaz (ör. moltrax8/DailyHub). ID, depo sayfasının HTML\'inden veya API\'den alınır.</string>
+    <string name="github_repo_id">Depo ID (sayı)</string>
+    <string name="github_repo_name">owner/repo</string>
+    <string name="github_private">Özel depo</string>
+    <string name="github_push_title">Geliştirici hareketi</string>
+
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>
 

@@ -1,6 +1,7 @@
 package com.moltrax.personalnoteapp.di
 
 import com.moltrax.personalnoteapp.data.repository.CategoryRepositoryImpl
+import com.moltrax.personalnoteapp.data.repository.GitHubRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.ProfileRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.ProjectRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.SocialRepositoryImpl
@@ -9,6 +10,7 @@ import com.moltrax.personalnoteapp.data.repository.SyncRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.TaskRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.WorkoutRepositoryImpl
 import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
+import com.moltrax.personalnoteapp.domain.repository.GitHubRepository
 import com.moltrax.personalnoteapp.domain.repository.ProfileRepository
 import com.moltrax.personalnoteapp.domain.repository.ProjectRepository
 import com.moltrax.personalnoteapp.domain.repository.SocialRepository
@@ -33,4 +35,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindSocialRepo(impl: SocialRepositoryImpl): SocialRepository
     @Binds @Singleton abstract fun bindSpaceRepo(impl: SpaceRepositoryImpl): SpaceRepository
     @Binds @Singleton abstract fun bindProjectRepo(impl: ProjectRepositoryImpl): ProjectRepository
+    @Binds @Singleton abstract fun bindGitHubRepo(impl: GitHubRepositoryImpl): GitHubRepository
 }

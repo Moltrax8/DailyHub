@@ -162,6 +162,10 @@ dependencies {
     // Drag-and-drop reorderable lists
     implementation(libs.reorderable)
 
+    // Firebase Cloud Messaging (Phase 7 dev-activity push; BoM 33.x fits compileSdk 35 / AGP 8.7).
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

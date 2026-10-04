@@ -1,6 +1,10 @@
 package com.moltrax.personalnoteapp.data.remote.supabase
 
 import com.moltrax.personalnoteapp.domain.model.FriendRequest
+import com.moltrax.personalnoteapp.domain.model.GithubActivity
+import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubRepo
+import com.moltrax.personalnoteapp.domain.model.NotifPrefRow
 import com.moltrax.personalnoteapp.domain.model.Project
 import com.moltrax.personalnoteapp.domain.model.ProjectComment
 import com.moltrax.personalnoteapp.domain.model.ProjectItem
@@ -269,5 +273,60 @@ interface SupabaseDbApi {
     suspend fun deleteComment(
         @Header("Authorization") bearer: String,
         @Query("id") idEq: String,
+    ): Response<Unit>
+
+    // ---- Phase 7: GitHub --------------------------------------------------
+
+    @GET("github_connections?select=*")
+    suspend fun myGithubConnection(
+        @Header("Authorization") bearer: String,
+        @Query("user_id") userEq: String,
+    ): Response<List<GithubConnection>>
+
+    @GET("github_repos?select=*")
+    suspend fun spaceRepos(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+    ): Response<List<GithubRepo>>
+
+    @POST("github_repos")
+    suspend fun linkRepo(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "return=representation",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<List<GithubRepo>>
+
+    @DELETE("github_repos")
+    suspend fun unlinkRepo(
+        @Header("Authorization") bearer: String,
+        @Query("id") idEq: String,
+    ): Response<Unit>
+
+    @GET("github_activity?select=*&order=created_at.desc")
+    suspend fun spaceActivity(
+        @Header("Authorization") bearer: String,
+        @Query("space_id") spaceEq: String,
+        @Query("limit") limit: Int = 50,
+    ): Response<List<GithubActivity>>
+
+    @GET("notification_prefs?select=*")
+    suspend fun myNotifPrefs(
+        @Header("Authorization") bearer: String,
+        @Query("user_id") userEq: String,
+        @Query("space_id") spaceEq: String,
+    ): Response<List<NotifPrefRow>>
+
+    @POST("notification_prefs")
+    suspend fun setNotifPref(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<Unit>
+
+    @POST("fcm_tokens")
+    suspend fun registerFcmToken(
+        @Header("Authorization") bearer: String,
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Body body: Map<String, String>,
     ): Response<Unit>
 }

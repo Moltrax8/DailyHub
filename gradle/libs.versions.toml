@@ -23,6 +23,7 @@ media3               = "1.4.1"
 securityCrypto       = "1.1.0-alpha06"
 reorderable          = "2.4.0"
 googleServices       = "4.4.2"
+firebaseBom          = "33.16.0"
 junit                = "4.13.2"
 junitExt             = "1.2.1"
 espresso             = "3.6.1"
@@ -106,6 +107,8 @@ junit              = { group = "junit",             name = "junit",            v
 androidx-junit     = { group = "androidx.test.ext", name = "junit",            version.ref = "junitExt" }
 androidx-espresso  = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 androidx-test-rules = { group = "androidx.test", name = "rules", version = "1.6.1" }
+firebase-bom       = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 [plugins]
 android-application  = { id = "com.android.application",                    version.ref = "agp" }

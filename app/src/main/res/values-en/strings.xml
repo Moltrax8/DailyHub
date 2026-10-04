@@ -363,6 +363,24 @@
     <string name="projects_comment_hint">Write a comment…</string>
     <string name="projects_comment_add">Add comment</string>
 
+    <!-- GitHub integration (Phase 7+) -->
+    <string name="projects_github">GitHub</string>
+    <string name="github_connect_hint">GitHub is not connected yet — connecting happens in Settings (OAuth via Edge Function), the token never lives on-device.</string>
+    <string name="github_connected_as">Connected as %1$s</string>
+    <string name="github_repos">Linked repos</string>
+    <string name="github_link">Link repo</string>
+    <string name="github_unlink">Unlink</string>
+    <string name="github_prefs">Notification kinds</string>
+    <string name="github_enable_push">Enable push notifications</string>
+    <string name="github_activity">Activity</string>
+    <string name="github_activity_empty">No activity yet — the webhook drops the first event here.</string>
+    <string name="github_link_title">Link repo</string>
+    <string name="github_link_hint">Type a repo you can access (e.g. moltrax8/DailyHub). The ID comes from the repo page HTML or the API.</string>
+    <string name="github_repo_id">Repo ID (number)</string>
+    <string name="github_repo_name">owner/repo</string>
+    <string name="github_private">Private repo</string>
+    <string name="github_push_title">Developer activity</string>
+
     <!-- Profile default -->
     <string name="profile_default_name">User</string>
 

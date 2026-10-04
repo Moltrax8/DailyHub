@@ -55,6 +55,9 @@ fun AppNavHost(
     pendingWidgetAction: String? = null,
     pendingWidgetTaskId: String? = null,
     onWidgetActionConsumed: () -> Unit = {},
+    // Developer-activity push tap (Phase 7): open this project space once.
+    pendingProjectId: String? = null,
+    onProjectConsumed: () -> Unit = {},
 ) {
     val nav = rememberNavController()
 
@@ -103,6 +106,14 @@ fun AppNavHost(
         if (pendingWidgetAction == MainActivity.ACTION_NEW_TASK) {
             nav.navigate(TaskDetail("new")) { launchSingleTop = true }
             onWidgetActionConsumed()
+        }
+    }
+
+    // Developer-activity push tap: open the project once, then consume.
+    LaunchedEffect(pendingProjectId) {
+        if (pendingProjectId != null) {
+            nav.navigate(ProjectDetail(pendingProjectId)) { launchSingleTop = true }
+            onProjectConsumed()
         }
     }
 

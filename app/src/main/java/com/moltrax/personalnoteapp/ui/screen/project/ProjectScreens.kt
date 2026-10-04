@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,14 +27,18 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -144,8 +149,9 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
     val state by vm.detail.collectAsStateWithLifecycle()
     var showAdd by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<ProjectItem?>(null) }
+    var mainTab by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(spaceId) { vm.openProject(spaceId) }
+    LaunchedEffect(spaceId) { vm.openProject(spaceId); vm.loadGitHub(spaceId) }
     val board = groupBoardItems(state.items)
 
     Scaffold(
@@ -166,37 +172,23 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
         },
         bottomBar = { BottomNavBar(nav) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+            if (mainTab == 0) {
+                FloatingActionButton(onClick = { showAdd = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+                }
             }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-            state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+            TabRow(selectedTabIndex = mainTab) {
+                Tab(selected = mainTab == 0, onClick = { mainTab = 0 }, text = { Text(stringResource(R.string.projects_board)) })
+                Tab(selected = mainTab == 1, onClick = { mainTab = 1 }, text = { Text(stringResource(R.string.projects_github)) })
             }
-            Row(
-                Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                COLUMNS.forEach { (status, label) ->
-                    BoardColumn(
-                        label = label,
-                        items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }]
-                            .orEmpty(),
-                        onMoveLeft = { item ->
-                            val idx = COLUMNS.indexOfFirst { it.first == status }
-                            if (idx > 0) vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
-                        },
-                        onMoveRight = { item ->
-                            val idx = COLUMNS.indexOfFirst { it.first == status }
-                            if (idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
-                        },
-                        onTap = { selected = it },
-                        onDelete = { vm.deleteItem(spaceId, it.id) },
-                    )
-                }
+            if (mainTab == 0) {
+                BoardTab(vm = vm, spaceId = spaceId, state = state, board = board,
+                    onAdd = { showAdd = true }, onSelect = { selected = it })
+            } else {
+                GitHubTab(vm = vm, spaceId = spaceId)
             }
         }
     }
@@ -230,6 +222,203 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
             spaceId = spaceId,
             item = item,
             onDismiss = { selected = null },
+        )
+    }
+}
+
+@Composable
+private fun BoardTab(
+    vm: ProjectViewModel,
+    spaceId: String,
+    state: com.moltrax.personalnoteapp.ui.screen.project.ProjectDetailUiState,
+    board: Map<String, List<ProjectItem>>,
+    onAdd: () -> Unit,
+    onSelect: (ProjectItem) -> Unit,
+) {
+    if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+    state.error?.let {
+        Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+    }
+    Row(
+        Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        COLUMNS.forEach { (status, label) ->
+            BoardColumn(
+                label = label,
+                items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }]
+                    .orEmpty(),
+                onMoveLeft = { item ->
+                    val idx = COLUMNS.indexOfFirst { it.first == status }
+                    if (idx > 0) vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
+                },
+                onMoveRight = { item ->
+                    val idx = COLUMNS.indexOfFirst { it.first == status }
+                    if (idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
+                },
+                onTap = onSelect,
+                onDelete = { vm.deleteItem(spaceId, it.id) },
+            )
+        }
+    }
+}
+
+/** GitHub tab (Phase 7): connection badge, linked repos, per-kind toggles, activity feed. */
+@Composable
+private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
+    val gh by vm.githubState.collectAsStateWithLifecycle()
+    var showLink by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (gh.connected?.githubLogin == null) {
+            item {
+                Text(
+                    stringResource(R.string.github_connect_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            item {
+                Text(
+                    stringResource(R.string.github_connected_as, gh.connected!!.githubLogin!!),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.github_repos),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { showLink = true }) { Text(stringResource(R.string.github_link)) }
+            }
+        }
+        items(gh.repos, key = { it.id }) { repo ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(repo.fullName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    IconButton(onClick = { vm.unlinkRepo(spaceId, repo.id) }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.github_unlink))
+                    }
+                }
+            }
+        }
+        item {
+            Text(stringResource(R.string.github_prefs), style = MaterialTheme.typography.titleSmall)
+        }
+        items(com.moltrax.personalnoteapp.domain.repository.GitHubRepository.KINDS, key = { it }) { kind ->
+            val enabled = gh.prefs[kind] ?: true
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    com.moltrax.personalnoteapp.domain.model.githubActivityTitle(kind),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                androidx.compose.material3.Switch(
+                    checked = enabled,
+                    onCheckedChange = { vm.togglePref(spaceId, kind, it) },
+                )
+            }
+        }
+        item {
+            OutlinedButton(onClick = { vm.enablePush() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.github_enable_push))
+            }
+        }
+        item {
+            Text(stringResource(R.string.github_activity), style = MaterialTheme.typography.titleSmall)
+        }
+        if (gh.activity.isEmpty()) {
+            item {
+                Text(
+                    stringResource(R.string.github_activity_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(gh.activity, key = { it.id }) { act ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(
+                        com.moltrax.personalnoteapp.domain.model.githubActivityTitle(act.kind),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    val summary = act.summary()
+                    if (summary != act.kind) {
+                        Text(
+                            summary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    act.repoFull?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+        gh.error?.let {
+            item { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
+    }
+
+    if (showLink) {
+        var repoId by remember { mutableStateOf("") }
+        var fullName by remember { mutableStateOf("") }
+        var isPrivate by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { showLink = false },
+            title = { Text(stringResource(R.string.github_link_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.github_link_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = repoId,
+                        onValueChange = { repoId = it },
+                        label = { Text(stringResource(R.string.github_repo_id)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        label = { Text(stringResource(R.string.github_repo_name)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(
+                            checked = isPrivate,
+                            onCheckedChange = { isPrivate = it },
+                        )
+                        Text(stringResource(R.string.github_private))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.linkRepo(spaceId, repoId.toLong(), fullName.trim(), isPrivate) { showLink = false }
+                    },
+                    enabled = repoId.toLongOrNull() != null && fullName.contains("/"),
+                ) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = { TextButton(onClick = { showLink = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

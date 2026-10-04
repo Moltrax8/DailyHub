@@ -43,11 +43,14 @@ class MainActivity : ComponentActivity() {
     private val pendingWidgetAction = mutableStateOf<String?>(null)
     // Id carrying which task to open the screen for on a sport-task completion request.
     private val pendingWidgetTaskId = mutableStateOf<String?>(null)
+    // Developer-activity push tap (Phase 7): open this project space.
+    private val pendingProjectSpaceId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingWidgetAction.value = intent?.getStringExtra(EXTRA_WIDGET_ACTION)
         pendingWidgetTaskId.value = intent?.getStringExtra(EXTRA_WIDGET_TASK_ID)
+        pendingProjectSpaceId.value = intent?.getStringExtra(EXTRA_PROJECT_SPACE_ID)
         enableEdgeToEdge()
         setContent {
             val language by appVm.language.collectAsStateWithLifecycle()
@@ -83,6 +86,8 @@ class MainActivity : ComponentActivity() {
                                 pendingWidgetAction.value = null
                                 pendingWidgetTaskId.value = null
                             },
+                            pendingProjectId = pendingProjectSpaceId.value,
+                            onProjectConsumed = { pendingProjectSpaceId.value = null },
                         )
                         if (isSwitchingLanguage) {
                             Column(
@@ -112,11 +117,13 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         pendingWidgetAction.value = intent.getStringExtra(EXTRA_WIDGET_ACTION)
         pendingWidgetTaskId.value = intent.getStringExtra(EXTRA_WIDGET_TASK_ID)
+        intent.getStringExtra(EXTRA_PROJECT_SPACE_ID)?.let { pendingProjectSpaceId.value = it }
     }
 
     companion object {
         const val EXTRA_WIDGET_ACTION = "extra_widget_action"
         const val EXTRA_WIDGET_TASK_ID = "extra_widget_task_id"
+        const val EXTRA_PROJECT_SPACE_ID = "extra_project_space_id"
         const val ACTION_NEW_TASK = "new_task"
         // Completing a sport-linked task from the widget: opens the set/weight entry screen in the app.
         const val ACTION_COMPLETE_WORKOUT = "complete_workout"

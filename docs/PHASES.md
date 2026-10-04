@@ -141,7 +141,23 @@ green; device run pending.
 - `ProjectRepository`: CRUD, members/roles, drag-column, links.
 - UI: `Projects | ProjectDetail { Board | Tasks | Links | Members | GitHub }`.
 
-## Phase 7 — GitHub integration
+## Phase 7 — GitHub integration — CODE DONE, needs SQL + console + device run
+
+`005_phase7_github.sql` (connections + repos + activity + notif_prefs +
+fcm_tokens, member-gated RLS; run in dashboard SQL editor). Edge Functions
+`github-webhook` (HMAC → kind map → space lookup → insert → chains
+push-dispatch) + `push-dispatch` (prefs-respecting FCM v1 via service
+account); deploy + webhook-secret + FCM secret steps in
+`supabase/functions/README.md` (your console work: secrets, deploy, repo
+webhook on Issues/PRs/comments/reviews/Releases).
+App: `GitHubRepository` (link/unlink, feed, per-kind toggles, token
+register), FCMService (`dev_activity` channel → tap opens ProjectDetail via
+new MainActivity extra), ProjectDetail GitHub tab (badge, repos, toggles,
+push enable, feed). No PAT on device; OAuth token stays server-side.
+Tests: `GithubContractTest` 4/4 JVM green; `SupabaseGithubE2ETest` prepared
+(link/unlink + prefs + token + feed read, runs on the VM phone once 001+005
+are applied + functions deployed for the live fire check). Assemble +
+androidTest-compile green; device run pending.
 
 - No long-lived PAT on device: OAuth via Supabase Auth GitHub provider, token
   in Vault/encrypted column; Android holds only the Supabase session.
