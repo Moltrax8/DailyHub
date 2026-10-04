@@ -91,33 +91,40 @@ class SupabaseProjectsE2ETest {
             val c = signUpFresh("c")
 
             // A creates a PROJECT space + project row, adds B as member.
-            val space = a.db.createSpace(
-                a.bearer,
-                body = buildJsonObject {
-                    put("type", "PROJECT")
-                    put("name", "E2E")
-                    put("created_by", a.uid)
-                },
-            ).body()!!.first()
-            val spaceId = space.id
+            val spaceId = java.util.UUID.randomUUID().toString()
+            assertTrue(
+                a.db.createSpace(
+                    a.bearer,
+                    body = buildJsonObject {
+                        put("id", spaceId)
+                        put("type", "PROJECT")
+                        put("name", "E2E")
+                        put("created_by", a.uid)
+                    },
+                ).isSuccessful
+            )
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to b.uid, "role" to "member")).isSuccessful)
             val up = a.db.upsertProject(a.bearer, body = projectBody(spaceId, "demo"))
             assertTrue("upsert project: HTTP ${up.code()}", up.isSuccessful)
 
             // A adds an item, moves it, comments.
-            val item = a.db.createProjectItem(
-                a.bearer,
-                body = buildJsonObject {
-                    put("space_id", spaceId)
-                    put("title", "Card 1")
-                    put("status", "Idea")
-                    put("sort_order", 0L)
-                },
-            ).body()!!.first()
+            val itemId = java.util.UUID.randomUUID().toString()
+            assertTrue(
+                a.db.createProjectItem(
+                    a.bearer,
+                    body = buildJsonObject {
+                        put("id", itemId)
+                        put("space_id", spaceId)
+                        put("title", "Card 1")
+                        put("status", "Idea")
+                        put("sort_order", 0L)
+                    },
+                ).isSuccessful
+            )
             assertTrue(
                 a.db.updateProjectItem(
-                    a.bearer, "eq.${item.id}",
+                    a.bearer, "eq.$itemId",
                     body = buildJsonObject { put("status", "Planned") },
                 ).isSuccessful
             )
@@ -127,7 +134,7 @@ class SupabaseProjectsE2ETest {
                     body = buildJsonObject {
                         put("space_id", spaceId)
                         put("ref_type", "project_item")
-                        put("ref_id", item.id)
+                        put("ref_id", itemId)
                         put("author", a.uid)
                         put("body_md", "nice")
                     },
@@ -141,7 +148,7 @@ class SupabaseProjectsE2ETest {
                 com.moltrax.personalnoteapp.domain.model.ProjectStatus.PLANNED,
                 bItems.first().status,
             )
-            assertEquals(1, b.db.itemComments(b.bearer, "eq.$spaceId", "eq.${item.id}").body()!!.size)
+            assertEquals(1, b.db.itemComments(b.bearer, "eq.$spaceId", "eq.$itemId").body()!!.size)
 
             // Outsider C sees nothing.
             assertTrue(c.db.projectItems(c.bearer, "eq.$spaceId").body().orEmpty().isEmpty())

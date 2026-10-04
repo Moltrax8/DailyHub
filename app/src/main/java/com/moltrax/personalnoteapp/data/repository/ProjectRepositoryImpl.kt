@@ -12,6 +12,7 @@ import com.moltrax.personalnoteapp.domain.model.ProjectComment
 import com.moltrax.personalnoteapp.domain.model.ProjectItem
 import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.Space
+import com.moltrax.personalnoteapp.domain.model.SpaceType
 import com.moltrax.personalnoteapp.domain.model.projectStatusOf
 import com.moltrax.personalnoteapp.domain.repository.ProjectRepository
 import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -65,23 +67,25 @@ class ProjectRepositoryImpl @Inject constructor(
     override suspend fun createProject(name: String, descriptionMd: String?): Space {
         val me = myId()
         val token = bearer()
-        val space = checked(
+        val spaceId = UUID.randomUUID().toString()
+        checked(
             api().createSpace(
                 token,
                 body = buildJsonObject {
+                    put("id", spaceId)
                     put("type", "PROJECT")
                     put("name", name.trim())
                     put("created_by", me)
                 },
             ),
             "Project space create failed",
-        ).first()
-        checked(api().addMember(token, body = mapOf("space_id" to space.id, "user_id" to me, "role" to "owner")), "Join failed")
-        val project = checked(
+        )
+        checked(api().addMember(token, body = mapOf("space_id" to spaceId, "user_id" to me, "role" to "owner")), "Join failed")
+        checked(
             api().upsertProject(
                 token,
                 body = buildJsonObject {
-                    put("space_id", space.id)
+                    put("space_id", spaceId)
                     put("description_md", descriptionMd?.takeIf { it.isNotBlank() })
                     putJsonArray("board_columns") {
                         listOf("Idea", "Planned", "Developing", "Finished").forEach { add(JsonPrimitive(it)) }
@@ -89,9 +93,9 @@ class ProjectRepositoryImpl @Inject constructor(
                 },
             ),
             "Project row create failed",
-        ).first()
-        cache.replaceProjectCache(project.toEntity(), emptyList(), emptyList())
-        return space
+        )
+        pullProject(spaceId)
+        return Space(spaceId, SpaceType.PROJECT, name.trim(), me, "", "")
     }
 
     override suspend fun updateDescription(spaceId: String, descriptionMd: String?) {
@@ -143,10 +147,12 @@ class ProjectRepositoryImpl @Inject constructor(
     override suspend fun addItem(spaceId: String, title: String, status: ProjectStatus): ProjectItem {
         val clean = title.trim()
         require(clean.isNotBlank()) { "Title required." }
-        val item = checked(
+        val id = UUID.randomUUID().toString()
+        checked(
             api().createProjectItem(
                 bearer(),
                 body = buildJsonObject {
+                    put("id", id)
                     put("space_id", spaceId)
                     put("title", clean)
                     put("status", status.name.lowercase().replaceFirstChar { it.uppercase() })
@@ -154,10 +160,10 @@ class ProjectRepositoryImpl @Inject constructor(
                 },
             ),
             "Item create failed",
-        ).first()
-        appendFeed(spaceId, "item.added", item.id)
+        )
+        appendFeed(spaceId, "item.added", id)
         pullProject(spaceId)
-        return item
+        return ProjectItem(id, spaceId, clean, status, sortOrder = 0L)
     }
 
     override suspend fun moveItem(item: ProjectItem, status: ProjectStatus) {
@@ -195,10 +201,12 @@ class ProjectRepositoryImpl @Inject constructor(
     override suspend fun addComment(spaceId: String, refType: String?, refId: String?, bodyMd: String) {
         val clean = bodyMd.trim()
         require(clean.isNotBlank()) { "Comment required." }
-        val created = checked(
+        val id = UUID.randomUUID().toString()
+        checked(
             api().createComment(
                 bearer(),
                 body = buildJsonObject {
+                    put("id", id)
                     put("space_id", spaceId)
                     put("ref_type", refType)
                     put("ref_id", refId)
@@ -207,8 +215,8 @@ class ProjectRepositoryImpl @Inject constructor(
                 },
             ),
             "Comment create failed",
-        ).first()
-        appendFeed(spaceId, "comment.added", created.id)
+        )
+        appendFeed(spaceId, "comment.added", id)
         pullProject(spaceId)
     }
 

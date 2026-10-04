@@ -1,7 +1,7 @@
 package com.moltrax.personalnoteapp.data.remote.supabase
 
-import com.moltrax.personalnoteapp.domain.model.FriendRequest
 import com.moltrax.personalnoteapp.domain.model.FeedEntry
+import com.moltrax.personalnoteapp.domain.model.FriendRequest
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
@@ -9,14 +9,14 @@ import com.moltrax.personalnoteapp.domain.model.NotifPrefRow
 import com.moltrax.personalnoteapp.domain.model.Project
 import com.moltrax.personalnoteapp.domain.model.ProjectComment
 import com.moltrax.personalnoteapp.domain.model.ProjectItem
-import com.moltrax.personalnoteapp.domain.model.SpaceEvent
-import com.moltrax.personalnoteapp.domain.model.SpaceFile
-import com.moltrax.personalnoteapp.domain.model.SpaceMessage
 import com.moltrax.personalnoteapp.domain.model.SharedNote
 import com.moltrax.personalnoteapp.domain.model.SharedTask
 import com.moltrax.personalnoteapp.domain.model.Space
+import com.moltrax.personalnoteapp.domain.model.SpaceEvent
+import com.moltrax.personalnoteapp.domain.model.SpaceFile
 import com.moltrax.personalnoteapp.domain.model.SpaceLink
 import com.moltrax.personalnoteapp.domain.model.SpaceMember
+import com.moltrax.personalnoteapp.domain.model.SpaceMessage
 import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import retrofit2.Response
 import retrofit2.http.Body
@@ -28,10 +28,17 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 /**
- * PostgREST surface (Phases 3-4: profiles + friends). Auth: apikey
- * (interceptor) + per-call Bearer token. RLS on the server decides.
+ * PostgREST surface (Phases 3-9). Auth: apikey (interceptor) + per-call
+ * Bearer token. RLS on the server decides.
+ *
+ * ALL writes use `Prefer: return=minimal` with client-generated UUIDs:
+ * `return=representation` re-runs SELECT RLS on the new row, which fails for
+ * member-gated tables (a just-created row has no members yet). Callers that
+ * need the row re-read it with a GET (proven pattern).
  */
 interface SupabaseDbApi {
+    // ---- Phase 3: profiles ------------------------------------------------
+
     @GET("profiles?select=*")
     suspend fun getProfile(
         @Header("Authorization") bearer: String,
@@ -41,9 +48,9 @@ interface SupabaseDbApi {
     @POST("profiles")
     suspend fun upsertProfile(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=minimal",
         @Body body: SupabaseProfile,
-    ): Response<List<SupabaseProfile>>
+    ): Response<Unit>
 
     @PATCH("profiles")
     suspend fun updateProfile(
@@ -70,9 +77,9 @@ interface SupabaseDbApi {
     @POST("friend_requests")
     suspend fun sendRequest(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
-        @Body body: Map<String, String>,
-    ): Response<List<FriendRequest>>
+        @Header("Prefer") prefer: String = "return=minimal",
+        @Body body: kotlinx.serialization.json.JsonObject,
+    ): Response<Unit>
 
     @GET("friend_requests?select=*")
     suspend fun sentRequests(
@@ -91,7 +98,7 @@ interface SupabaseDbApi {
         @Header("Authorization") bearer: String,
         @Query("id") idEq: String,
         @Body body: Map<String, String>,
-    ): Response<List<FriendRequest>>
+    ): Response<Unit>
 
     @DELETE("friend_requests")
     suspend fun deleteRequest(
@@ -110,15 +117,15 @@ interface SupabaseDbApi {
     @POST("spaces")
     suspend fun createSpace(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<Space>>
+    ): Response<Unit>
 
     @PATCH("spaces")
     suspend fun renameSpace(
         @Header("Authorization") bearer: String,
         @Query("id") idEq: String,
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<Unit>
 
     @DELETE("spaces")
@@ -136,9 +143,9 @@ interface SupabaseDbApi {
     @POST("space_members")
     suspend fun addMember(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: Map<String, String>,
-    ): Response<List<SpaceMember>>
+    ): Response<Unit>
 
     @DELETE("space_members")
     suspend fun removeMember(
@@ -156,15 +163,15 @@ interface SupabaseDbApi {
     @POST("notes")
     suspend fun createNote(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<SharedNote>>
+    ): Response<Unit>
 
     @PATCH("notes")
     suspend fun updateNote(
         @Header("Authorization") bearer: String,
         @Query("id") idEq: String,
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<Unit>
 
     @DELETE("notes")
@@ -182,9 +189,9 @@ interface SupabaseDbApi {
     @POST("shared_tasks")
     suspend fun createSharedTask(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<SharedTask>>
+    ): Response<Unit>
 
     @PATCH("shared_tasks")
     suspend fun updateSharedTask(
@@ -208,9 +215,9 @@ interface SupabaseDbApi {
     @POST("links")
     suspend fun createLink(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<SpaceLink>>
+    ): Response<Unit>
 
     @DELETE("links")
     suspend fun deleteLink(
@@ -218,7 +225,7 @@ interface SupabaseDbApi {
         @Query("id") idEq: String,
     ): Response<Unit>
 
-    // ---- Phase 6: projects ----------------------------------------------
+    // ---- Phase 6: projects ------------------------------------------------
 
     @GET("projects?select=*")
     suspend fun getProject(
@@ -229,9 +236,9 @@ interface SupabaseDbApi {
     @POST("projects")
     suspend fun upsertProject(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<Project>>
+    ): Response<Unit>
 
     @GET("project_items?select=*&order=sort_order.asc")
     suspend fun projectItems(
@@ -242,9 +249,9 @@ interface SupabaseDbApi {
     @POST("project_items")
     suspend fun createProjectItem(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<ProjectItem>>
+    ): Response<Unit>
 
     @PATCH("project_items")
     suspend fun updateProjectItem(
@@ -269,9 +276,9 @@ interface SupabaseDbApi {
     @POST("comments")
     suspend fun createComment(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<ProjectComment>>
+    ): Response<Unit>
 
     @DELETE("comments")
     suspend fun deleteComment(
@@ -296,9 +303,9 @@ interface SupabaseDbApi {
     @POST("github_repos")
     suspend fun linkRepo(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<GithubRepo>>
+    ): Response<Unit>
 
     @DELETE("github_repos")
     suspend fun unlinkRepo(
@@ -323,14 +330,14 @@ interface SupabaseDbApi {
     @POST("notification_prefs")
     suspend fun setNotifPref(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<Unit>
 
     @POST("fcm_tokens")
     suspend fun registerFcmToken(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=representation",
+        @Header("Prefer") prefer: String = "resolution=merge-duplicates,return=minimal",
         @Body body: Map<String, String>,
     ): Response<Unit>
 
@@ -345,9 +352,9 @@ interface SupabaseDbApi {
     @POST("events")
     suspend fun createEvent(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<SpaceEvent>>
+    ): Response<Unit>
 
     @DELETE("events")
     suspend fun deleteEvent(
@@ -365,9 +372,9 @@ interface SupabaseDbApi {
     @POST("messages")
     suspend fun sendMessage(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<SpaceMessage>>
+    ): Response<Unit>
 
     @DELETE("messages")
     suspend fun deleteMessage(
@@ -384,9 +391,9 @@ interface SupabaseDbApi {
     @POST("files")
     suspend fun createFileRow(
         @Header("Authorization") bearer: String,
-        @Header("Prefer") prefer: String = "return=representation",
+        @Header("Prefer") prefer: String = "return=minimal",
         @Body body: kotlinx.serialization.json.JsonObject,
-    ): Response<List<SpaceFile>>
+    ): Response<Unit>
 
     @DELETE("files")
     suspend fun deleteFileRow(

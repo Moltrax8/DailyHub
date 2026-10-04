@@ -83,15 +83,18 @@ class SupabaseGithubE2ETest {
             val a = signUpFresh("a")
 
             // Project space for the links to hang on.
-            val space = a.db.createSpace(
-                a.bearer,
-                body = buildJsonObject {
-                    put("type", "PROJECT")
-                    put("name", "GH")
-                    put("created_by", a.uid)
-                },
-            ).body()!!.first()
-            val spaceId = space.id
+            val spaceId = java.util.UUID.randomUUID().toString()
+            assertTrue(
+                a.db.createSpace(
+                    a.bearer,
+                    body = buildJsonObject {
+                        put("id", spaceId)
+                        put("type", "PROJECT")
+                        put("name", "GH")
+                        put("created_by", a.uid)
+                    },
+                ).isSuccessful
+            )
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)
 
             // Link + read back + unlink.

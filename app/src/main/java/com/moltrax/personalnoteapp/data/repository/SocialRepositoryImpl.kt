@@ -9,8 +9,11 @@ import com.moltrax.personalnoteapp.domain.repository.SocialRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.IOException
 import java.net.URLEncoder
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,9 +54,17 @@ class SocialRepositoryImpl @Inject constructor(
     override suspend fun sendRequest(toUserId: String): FriendRequest {
         val me = myId()
         require(toUserId != me) { "Cannot befriend yourself." }
-        val res = api().sendRequest(bearer(), body = mapOf("from_id" to me, "to_id" to toUserId))
+        val id = UUID.randomUUID().toString()
+        val res = api().sendRequest(
+            bearer(),
+            body = buildJsonObject {
+                put("id", id)
+                put("from_id", me)
+                put("to_id", toUserId)
+            },
+        )
         if (!res.isSuccessful) throw IOException(parseError(res.code(), res.errorBody()?.string()))
-        return res.body()?.firstOrNull() ?: throw IOException("Send failed.")
+        return FriendRequest(id, me, toUserId, FriendRequestStatus.PENDING)
     }
 
     override suspend fun cancelRequest(requestId: String) {

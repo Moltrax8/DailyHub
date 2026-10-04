@@ -7,6 +7,8 @@ import com.moltrax.personalnoteapp.domain.model.FriendRequestStatus
 import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
@@ -84,10 +86,17 @@ class SupabaseSocialE2ETest {
             val a = signUpFresh("a")
             val b = signUpFresh("b")
 
-            // A sends to B.
-            val sent = a.db.sendRequest(a.token, body = mapOf("from_id" to a.uid, "to_id" to b.uid))
+            // A sends to B (client-generated id; creates return minimal).
+            val reqId = java.util.UUID.randomUUID().toString()
+            val sent = a.db.sendRequest(
+                a.token,
+                body = buildJsonObject {
+                    put("id", reqId)
+                    put("from_id", a.uid)
+                    put("to_id", b.uid)
+                },
+            )
             assertTrue("send: HTTP ${sent.code()}", sent.isSuccessful)
-            val reqId = sent.body()!!.first().id
 
             // B sees it incoming.
             val incoming = b.db.receivedRequests(b.token, "eq.${b.uid}")

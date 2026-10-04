@@ -85,16 +85,17 @@ class SupabaseSpacesE2ETest {
             val c = signUpFresh("c")
 
             // A creates a Duo hub with B.
+            val spaceId = java.util.UUID.randomUUID().toString()
             val created = a.db.createSpace(
                 a.bearer,
                 body = buildJsonObject {
+                    put("id", spaceId)
                     put("type", "DUO")
                     put("name", null as String?)
                     put("created_by", a.uid)
                 },
             )
             assertTrue("create space: HTTP ${created.code()}", created.isSuccessful)
-            val spaceId = created.body()!!.first().id
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to b.uid, "role" to "member")).isSuccessful)
 

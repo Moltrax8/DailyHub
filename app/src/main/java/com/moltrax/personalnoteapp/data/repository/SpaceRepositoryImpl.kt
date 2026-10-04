@@ -35,6 +35,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -113,29 +114,37 @@ class SpaceRepositoryImpl @Inject constructor(
         val me = myId()
         require(friendUserId != me) { "Cannot open a Duo hub with yourself." }
         val token = bearer()
+        // Client-generated id: creates use return=minimal (representation
+        // re-runs SELECT RLS, which fails on member-gated rows).
+        val spaceId = UUID.randomUUID().toString()
         // Explicit create (accepted friendship is the invite — no dangling invites).
-        val space = checked(
+        checked(
             api().createSpace(
                 token,
                 body = buildJsonObject {
+                    put("id", spaceId)
                     put("type", "DUO")
                     put("name", name)
                     put("created_by", me)
                 },
             ),
             "Duo hub create failed",
-        ).first()
-        checked(api().addMember(token, body = mapOf("space_id" to space.id, "user_id" to me, "role" to "owner")), "Join failed")
+        )
+        checked(api().addMember(token, body = mapOf("space_id" to spaceId, "user_id" to me, "role" to "owner")), "Join failed")
         checked(
-            api().addMember(token, body = mapOf("space_id" to space.id, "user_id" to friendUserId, "role" to "member")),
+            api().addMember(token, body = mapOf("space_id" to spaceId, "user_id" to friendUserId, "role" to "member")),
             "Invite failed",
         )
-        cache.upsertSpaces(listOf(space.toEntity()))
-        return space
+        pullSpace(spaceId)
+        return cache.getSpace(spaceId)?.toDomain()
+            ?: Space(spaceId, SpaceType.DUO, name, me, "", "")
     }
 
     override suspend fun renameSpace(spaceId: String, name: String?) {
-        val res = api().renameSpace(bearer(), "eq.$spaceId", mapOf("name" to name))
+        val res = api().renameSpace(
+            bearer(), "eq.$spaceId",
+            body = buildJsonObject { put("name", name) },
+        )
         if (!res.isSuccessful) throw IOException("Rename failed (HTTP ${res.code()}).")
         pullSpace(spaceId)
     }
@@ -194,10 +203,12 @@ class SpaceRepositoryImpl @Inject constructor(
 
     override suspend fun addNote(spaceId: String, title: String?, bodyMd: String?): SharedNote {
         val me = myId()
-        val note = checked(
+        val id = UUID.randomUUID().toString()
+        checked(
             api().createNote(
                 bearer(),
                 body = buildJsonObject {
+                    put("id", id)
                     put("space_id", spaceId)
                     put("author", me)
                     put("title", title)
@@ -205,14 +216,20 @@ class SpaceRepositoryImpl @Inject constructor(
                 },
             ),
             "Note create failed",
-        ).first()
-        appendFeed(spaceId, FeedKind.NOTE_ADDED, note.id)
+        )
+        appendFeed(spaceId, FeedKind.NOTE_ADDED, id)
         pullSpace(spaceId)
-        return note
+        return SharedNote(id, spaceId, me, title, bodyMd)
     }
 
     override suspend fun editNote(noteId: String, title: String?, bodyMd: String?) {
-        val res = api().updateNote(bearer(), "eq.$noteId", mapOf("title" to title, "body_md" to bodyMd))
+        val res = api().updateNote(
+            bearer(), "eq.$noteId",
+            body = buildJsonObject {
+                put("title", title)
+                put("body_md", bodyMd)
+            },
+        )
         if (!res.isSuccessful) throw IOException("Note update failed (HTTP ${res.code()}).")
     }
 
@@ -222,16 +239,18 @@ class SpaceRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addSharedTask(spaceId: String, title: String, assignee: String?): SharedTask {
+        val id = UUID.randomUUID().toString()
         val body = buildJsonObject {
+            put("id", id)
             put("space_id", spaceId)
             put("title", title)
             put("assignee", assignee)
             put("sort_order", 0L)
         }
-        val task = checked(api().createSharedTask(bearer(), body = body), "Task create failed").first()
-        appendFeed(spaceId, FeedKind.TASK_ADDED, task.id)
+        checked(api().createSharedTask(bearer(), body = body), "Task create failed")
+        appendFeed(spaceId, FeedKind.TASK_ADDED, id)
         pullSpace(spaceId)
-        return task
+        return SharedTask(id, spaceId, title, isDone = false, assignee, dueAt = null, sortOrder = 0L)
     }
 
     override suspend fun toggleSharedTask(task: SharedTask) {
@@ -248,20 +267,23 @@ class SpaceRepositoryImpl @Inject constructor(
     override suspend fun addLink(spaceId: String, url: String, title: String?): SpaceLink {
         val trimmed = url.trim()
         require(trimmed.startsWith("http://") || trimmed.startsWith("https://")) { "Link must start with http(s)://." }
-        val link = checked(
+        val id = UUID.randomUUID().toString()
+        val cleanTitle = title?.takeIf { it.isNotBlank() }
+        checked(
             api().createLink(
                 bearer(),
                 body = buildJsonObject {
+                    put("id", id)
                     put("space_id", spaceId)
                     put("url", trimmed)
-                    put("title", title?.takeIf { it.isNotBlank() })
+                    put("title", cleanTitle)
                 },
             ),
             "Link create failed",
-        ).first()
-        appendFeed(spaceId, FeedKind.LINK_ADDED, link.id)
+        )
+        appendFeed(spaceId, FeedKind.LINK_ADDED, id)
         pullSpace(spaceId)
-        return link
+        return SpaceLink(id, spaceId, trimmed, cleanTitle)
     }
 
     override suspend fun deleteLink(linkId: String) {
@@ -328,10 +350,12 @@ class SpaceRepositoryImpl @Inject constructor(
         val clean = title.trim()
         require(clean.isNotBlank()) { "Title required." }
         if (endAt != null) require(endAt >= startAt) { "End must be after start." }
-        val event = checked(
+        val id = UUID.randomUUID().toString()
+        checked(
             api().createEvent(
                 bearer(),
                 body = buildJsonObject {
+                    put("id", id)
                     put("space_id", spaceId)
                     put("title", clean)
                     put("start_at", startAt)
@@ -340,9 +364,9 @@ class SpaceRepositoryImpl @Inject constructor(
                 },
             ),
             "Event create failed",
-        ).first()
+        )
         pullExtra(spaceId)
-        return event
+        return SpaceEvent(id, spaceId, clean, startAt, endAt)
     }
 
     override suspend fun deleteEvent(eventId: String) {
@@ -366,21 +390,24 @@ class SpaceRepositoryImpl @Inject constructor(
         http.newCall(putReq).execute().use { resp ->
             if (!resp.isSuccessful) throw IOException("Upload failed (HTTP ${resp.code}).")
         }
-        val row = checked(
+        val id = UUID.randomUUID().toString()
+        val me = myId()
+        checked(
             api().createFileRow(
                 bearer(),
                 body = buildJsonObject {
+                    put("id", id)
                     put("space_id", spaceId)
                     put("path", path)
                     put("size", bytes.size.toLong())
-                    put("created_by", myId())
+                    put("created_by", me)
                 },
             ),
             "File record failed",
-        ).first()
+        )
         pullExtra(spaceId)
-        appendFeed(spaceId, "file.added", row.id)
-        return SpaceFile(row.id, spaceId, path, bytes.size.toLong(), myId(), row.createdAt)
+        appendFeed(spaceId, "file.added", id)
+        return SpaceFile(id, spaceId, path, bytes.size.toLong(), me, "")
     }
 
     override suspend fun deleteFile(file: SpaceFile) {

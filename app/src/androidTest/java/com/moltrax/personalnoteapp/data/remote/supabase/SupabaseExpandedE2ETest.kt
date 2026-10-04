@@ -78,15 +78,18 @@ class SupabaseExpandedE2ETest {
     }
 
     private suspend fun makeDuo(a: Actor, b: Actor): String {
-        val space = a.db.createSpace(
-            a.bearer,
-            body = buildJsonObject {
-                put("type", "DUO")
-                put("name", null as String?)
-                put("created_by", a.uid)
-            },
-        ).body()!!.first()
-        val spaceId = space.id
+        val spaceId = java.util.UUID.randomUUID().toString()
+        assertTrue(
+            a.db.createSpace(
+                a.bearer,
+                body = buildJsonObject {
+                    put("id", spaceId)
+                    put("type", "DUO")
+                    put("name", null as String?)
+                    put("created_by", a.uid)
+                },
+            ).isSuccessful
+        )
         assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)
         assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to b.uid, "role" to "member")).isSuccessful)
         return spaceId

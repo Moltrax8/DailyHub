@@ -81,24 +81,17 @@ fun AppNavHost(
         }
     }
 
-    // Managed-account entry (Phase 3): without a session the app opens the Auth
-    // screen (v2 startDestination rule, applied after async session restore).
-    // Auth is an entry point, not a lock: backing out lands Home and the app
-    // stays fully usable offline; after an explicit sign-out we land on Auth.
+    // Managed-account entry (Phase 3) is deliberately NOT an auto-redirect:
+    // the app stays fully usable offline with zero account, so cold starts
+    // always land on Home. Sign-in lives behind Profile → AccountCard, and
+    // sign-out leaves the user where they are. (An earlier auto-gate broke
+    // this contract and the UI tests; removed.)
+    // Only the persisted session is restored into memory here.
     if (FeatureFlags.SUPABASE_ENABLED) {
         val gateVm: SupabaseAuthViewModel = hiltViewModel()
-        val session by gateVm.sessionState.collectAsStateWithLifecycle()
-        var redirected by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { gateVm.restore() }
-        LaunchedEffect(session) {
-            if (session is SessionState.SignedIn) {
-                redirected = false
-            } else if (!redirected) {
-                redirected = true
-                nav.navigate(SupabaseAuth) { launchSingleTop = true }
-            }
-        }
     }
+
 
     // The widget's '+' button wants to open the new-task screen. Single-shot:
     // opened without delay via launchSingleTop; so repeated entries don't pile up.
