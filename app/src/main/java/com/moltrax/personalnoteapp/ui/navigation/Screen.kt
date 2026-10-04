@@ -15,3 +15,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class LiveWorkout(val workoutId: String, val groupId: String)
 // Summary/result page of a completed workout session (set/rep/weight details).
 @Serializable data class WorkoutSummary(val sessionId: String)
+
+// Social graph (Phase 4+): friends, requests, per-user profile.
+@Serializable object SocialGraph
+@Serializable object FriendRequests
+@Serializable data class UserProfile(val username: String)

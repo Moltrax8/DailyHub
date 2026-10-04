@@ -94,6 +94,8 @@ fun ProfileScreen(
                 onPickDate = { showDatePicker = true },
                 onOpenSettings = { nav.navigate(Settings) },
             )
+            // Managed account (Phase 3+ Supabase): sign-in, friends, sign-out. Independent from Drive.
+            AccountCard(nav)
 
             // Sign-out is hidden while Drive sync is off (consistent with SettingsScreen):
             // avoids navigating to Login and getting stuck in a dead end.

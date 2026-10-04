@@ -2,11 +2,13 @@ package com.moltrax.personalnoteapp.di
 
 import com.moltrax.personalnoteapp.data.repository.CategoryRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.ProfileRepositoryImpl
+import com.moltrax.personalnoteapp.data.repository.SocialRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.SyncRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.TaskRepositoryImpl
 import com.moltrax.personalnoteapp.data.repository.WorkoutRepositoryImpl
 import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
 import com.moltrax.personalnoteapp.domain.repository.ProfileRepository
+import com.moltrax.personalnoteapp.domain.repository.SocialRepository
 import com.moltrax.personalnoteapp.domain.repository.SyncRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.domain.repository.WorkoutRepository
@@ -24,4 +26,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindWorkoutRepo(impl: WorkoutRepositoryImpl): WorkoutRepository
     @Binds @Singleton abstract fun bindCategoryRepo(impl: CategoryRepositoryImpl): CategoryRepository
     @Binds @Singleton abstract fun bindProfileRepo(impl: ProfileRepositoryImpl): ProfileRepository
+    @Binds @Singleton abstract fun bindSocialRepo(impl: SocialRepositoryImpl): SocialRepository
 }

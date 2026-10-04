@@ -35,6 +35,9 @@ import com.moltrax.personalnoteapp.ui.screen.focus.FocusScreen
 import com.moltrax.personalnoteapp.ui.screen.home.HomeScreen
 import com.moltrax.personalnoteapp.ui.screen.profile.ProfileScreen
 import com.moltrax.personalnoteapp.ui.screen.settings.SettingsScreen
+import com.moltrax.personalnoteapp.ui.screen.social.FriendRequestsScreen
+import com.moltrax.personalnoteapp.ui.screen.social.SocialGraphScreen
+import com.moltrax.personalnoteapp.ui.screen.social.UserProfileScreen
 import com.moltrax.personalnoteapp.ui.screen.task.TaskDetailScreen
 import com.moltrax.personalnoteapp.ui.screen.workout.LiveWorkoutScreen
 import com.moltrax.personalnoteapp.ui.screen.workout.WorkoutDetailScreen
@@ -147,6 +150,9 @@ fun AppNavHost(
             composable<WorkoutSummary> { entry ->
                 WorkoutSummaryScreen(nav, entry.toRoute<WorkoutSummary>().sessionId)
             }
+            composable<SocialGraph>   { SocialGraphScreen(nav) }
+            composable<FriendRequests> { FriendRequestsScreen(nav) }
+            composable<UserProfile>   { entry -> UserProfileScreen(entry.toRoute<UserProfile>().username, nav) }
         }
     }
 }

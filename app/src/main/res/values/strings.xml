@@ -306,6 +306,26 @@
     <string name="supabase_auth_username">Kullanıcı adı</string>
     <string name="supabase_auth_continue">Devam et</string>
     <string name="supabase_auth_offline">Çevrimdışı devam et</string>
+    <string name="profile_account_offline_desc">Giriş yapmadın — uygulama çevrimdışı tam çalışır. Giriş yaparsan arkadaşlar ve ortak alanlar açılır.</string>
+    <string name="profile_account_loading">Yükleniyor…</string>
+
+    <!-- Social (Phase 4+) -->
+    <string name="social_title">Arkadaşlar</string>
+    <string name="social_search_hint">Kullanıcı adı ara (en az 2 harf)</string>
+    <string name="social_add">Ekle</string>
+    <string name="social_requests_pending">%1$d bekleyen istek</string>
+    <string name="social_friends">Arkadaşlarım</string>
+    <string name="social_no_friends">Henüz arkadaş yok — yukarıdan kullanıcı adı ile ara.</string>
+    <string name="social_requests_title">İstekler</string>
+    <string name="social_incoming">Gelenler</string>
+    <string name="social_outgoing">Gidenler</string>
+    <string name="social_none">Yok</string>
+    <string name="social_not_found">Kullanıcı bulunamadı.</string>
+    <string name="social_pending">İstek bekliyor</string>
+    <string name="social_remove">Arkadaşlıktan çıkar</string>
+    <string name="social_accept">Kabul et</string>
+    <string name="social_reject">Reddet</string>
+    <string name="social_cancel">Vazgeç</string>
 
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>

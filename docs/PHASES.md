@@ -82,7 +82,17 @@ Assemble + androidTest-compile green; device run pending.
   DataStore, session tokens in EncryptedSharedPreferences.
 - SQL lives in `../supabase/migrations/`; run it in the project SQL editor.
 
-## Phase 4 — Social foundation
+## Phase 4 — Social foundation — CODE DONE, needs SQL + device run
+
+`002_phase4_friends.sql` (requests table + party-only RLS, friends view;
+run in dashboard SQL editor). `SocialRepository` (search/send/cancel/
+accept/reject/incoming/outgoing/friends/remove + 30s incoming poll; true push
+in Phase 7), SocialGraph/FriendRequests/UserProfile screens, Profile
+AccountCard (sign-in state, friends entry with pending badge, sign-out).
+Tests: `SocialContractTest` 3/3 JVM green; `SupabaseSocialE2ETest` prepared
+(two-user send→incoming→self-accept-DENIED→accept→remove incl. RLS negative,
+runs on the VM phone once both SQL files are applied + Confirm-email OFF).
+Assemble + androidTest-compile green; device run pending.
 
 - `friend_requests(from_id, to_id, status, unique(from_id,to_id))`; friends =
   accepted-requests view. Username (never email) is the public identifier.

@@ -306,6 +306,26 @@
     <string name="supabase_auth_username">Username</string>
     <string name="supabase_auth_continue">Continue</string>
     <string name="supabase_auth_offline">Continue offline</string>
+    <string name="profile_account_offline_desc">You are signed out — the app fully works offline. Sign in to unlock friends and shared spaces.</string>
+    <string name="profile_account_loading">Loading…</string>
+
+    <!-- Social (Phase 4+) -->
+    <string name="social_title">Friends</string>
+    <string name="social_search_hint">Search username (2+ chars)</string>
+    <string name="social_add">Add</string>
+    <string name="social_requests_pending">%1$d pending requests</string>
+    <string name="social_friends">My friends</string>
+    <string name="social_no_friends">No friends yet — search by username above.</string>
+    <string name="social_requests_title">Requests</string>
+    <string name="social_incoming">Incoming</string>
+    <string name="social_outgoing">Outgoing</string>
+    <string name="social_none">None</string>
+    <string name="social_not_found">User not found.</string>
+    <string name="social_pending">Request pending</string>
+    <string name="social_remove">Remove friend</string>
+    <string name="social_accept">Accept</string>
+    <string name="social_reject">Reject</string>
+    <string name="social_cancel">Cancel</string>
 
     <!-- Profile default -->
     <string name="profile_default_name">User</string>
