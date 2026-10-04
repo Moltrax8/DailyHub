@@ -4,7 +4,7 @@
 
 > Buildable system specification for this repository.
 > App module: `PersonalNoteApp` · package `com.moltrax.personalnoteapp`
-> Version `1.0.1` (`versionCode 10001`) · `minSdk 26`, `targetSdk 35`, `compileSdk 35`, Java/Kotlin JVM `17`.
+> Version `1.1` (`versionCode 10100`) · `minSdk 26`, `targetSdk 35`, `compileSdk 35`, Java/Kotlin JVM `17`.
 > Version codes follow the tag scheme `major*10000 + minor*100 + patch` (Phase 9 auto-update).
 > Single-module native Android app: Kotlin + Jetpack Compose (Material 3) + Hilt + Room + DataStore + Retrofit + WorkManager + Glance.
 
