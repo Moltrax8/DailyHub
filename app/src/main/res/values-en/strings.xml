@@ -327,6 +327,27 @@
     <string name="social_reject">Reject</string>
     <string name="social_cancel">Cancel</string>
 
+    <!-- Shared spaces (Phase 5+) -->
+    <string name="action_refresh">Refresh</string>
+    <string name="spaces_duo">Duo</string>
+    <string name="spaces_notes">Notes</string>
+    <string name="spaces_tasks">Tasks</string>
+    <string name="spaces_links">Links</string>
+    <string name="spaces_empty_notes">No notes yet.</string>
+    <string name="spaces_empty_tasks">No shared tasks yet.</string>
+    <string name="spaces_empty_links">No links yet.</string>
+    <string name="spaces_untitled">Untitled</string>
+    <string name="spaces_new_note">New note</string>
+    <string name="spaces_note_title">Title</string>
+    <string name="spaces_note_body">Body (Markdown)</string>
+    <string name="spaces_new_task">New shared task</string>
+    <string name="spaces_new_link">New link</string>
+    <string name="spaces_link_url">URL (https://…)</string>
+    <string name="spaces_link_title">Title (optional)</string>
+    <string name="spaces_section">Shared spaces</string>
+    <string name="spaces_none">No shared spaces yet — open a Duo hub from a friend.</string>
+    <string name="spaces_open_hub">Open hub</string>
+
     <!-- Profile default -->
     <string name="profile_default_name">User</string>
 

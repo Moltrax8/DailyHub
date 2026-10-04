@@ -327,6 +327,27 @@
     <string name="social_reject">Reddet</string>
     <string name="social_cancel">Vazgeç</string>
 
+    <!-- Shared spaces (Phase 5+) -->
+    <string name="action_refresh">Yenile</string>
+    <string name="spaces_duo">Duo</string>
+    <string name="spaces_notes">Notlar</string>
+    <string name="spaces_tasks">Görevler</string>
+    <string name="spaces_links">Bağlantılar</string>
+    <string name="spaces_empty_notes">Henüz not yok.</string>
+    <string name="spaces_empty_tasks">Henüz ortak görev yok.</string>
+    <string name="spaces_empty_links">Henüz bağlantı yok.</string>
+    <string name="spaces_untitled">Başlıksız</string>
+    <string name="spaces_new_note">Yeni not</string>
+    <string name="spaces_note_title">Başlık</string>
+    <string name="spaces_note_body">İçerik (Markdown)</string>
+    <string name="spaces_new_task">Yeni ortak görev</string>
+    <string name="spaces_new_link">Yeni bağlantı</string>
+    <string name="spaces_link_url">URL (https://…)</string>
+    <string name="spaces_link_title">Başlık (isteğe bağlı)</string>
+    <string name="spaces_section">Ortak alanlar</string>
+    <string name="spaces_none">Henüz ortak alan yok — bir arkadaşından Duo aç.</string>
+    <string name="spaces_open_hub">Hub\'ı aç</string>
+
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>
 

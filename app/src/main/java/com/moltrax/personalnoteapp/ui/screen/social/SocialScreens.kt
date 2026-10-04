@@ -45,12 +45,20 @@ import com.moltrax.personalnoteapp.domain.model.FriendRequestStatus
 import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import com.moltrax.personalnoteapp.ui.navigation.FriendRequests
 import com.moltrax.personalnoteapp.ui.navigation.UserProfile
+import com.moltrax.personalnoteapp.ui.navigation.DuoHub
+import com.moltrax.personalnoteapp.ui.screen.space.SpaceRow
+import com.moltrax.personalnoteapp.ui.screen.space.SpaceViewModel
 
 /** Friends graph: search + results, pending counts link to requests, friends list. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SocialGraphScreen(nav: NavController, vm: SocialViewModel = hiltViewModel()) {
+fun SocialGraphScreen(
+    nav: NavController,
+    vm: SocialViewModel = hiltViewModel(),
+    spaceVm: SpaceViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val spaces by spaceVm.mySpaces.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refresh() }
 
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.social_title)) }) }) { padding ->
@@ -107,7 +115,38 @@ fun SocialGraphScreen(nav: NavController, vm: SocialViewModel = hiltViewModel())
                 }
             }
             items(state.friends, key = { it.id }) { profile ->
-                ProfileRow(profile = profile, onClick = { nav.navigate(UserProfile(profile.username)) })
+                ProfileRow(
+                    profile = profile,
+                    action = {
+                        OutlinedButton(onClick = {
+                            spaceVm.openOrCreateDuo(profile.id, profile.username) { id ->
+                                nav.navigate(DuoHub(id))
+                            }
+                        }) { Text(stringResource(R.string.spaces_open_hub)) }
+                    },
+                    onClick = { nav.navigate(UserProfile(profile.username)) },
+                )
+            }
+            item {
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.spaces_section), style = MaterialTheme.typography.titleMedium)
+            }
+            if (spaces.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.spaces_none),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            items(spaces, key = { it.id }) { space ->
+                SpaceRow(
+                    spaceName = space.name?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.spaces_duo),
+                    typeLabel = space.type.name,
+                    onClick = { nav.navigate(DuoHub(space.id)) },
+                )
             }
             if (state.busy) {
                 item { CircularProgressIndicator() }

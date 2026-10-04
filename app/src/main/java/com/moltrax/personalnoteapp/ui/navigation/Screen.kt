@@ -20,3 +20,6 @@ import kotlinx.serialization.Serializable
 @Serializable object SocialGraph
 @Serializable object FriendRequests
 @Serializable data class UserProfile(val username: String)
+
+// Shared spaces (Phase 5+): Duo hubs (Projects reuse the same routes later).
+@Serializable data class DuoHub(val spaceId: String)

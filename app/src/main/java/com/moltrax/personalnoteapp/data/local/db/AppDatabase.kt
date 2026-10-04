@@ -7,11 +7,17 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.moltrax.personalnoteapp.data.local.db.dao.CategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.ExerciseDao
+import com.moltrax.personalnoteapp.data.local.db.dao.SpaceDao
 import com.moltrax.personalnoteapp.data.local.db.dao.TaskCategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.TaskDao
 import com.moltrax.personalnoteapp.data.local.db.dao.WorkoutDao
 import com.moltrax.personalnoteapp.data.local.db.entity.CategoryEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.ExerciseEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.SharedNoteEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.SharedTaskEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.SpaceEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.SpaceLinkEntity
+import com.moltrax.personalnoteapp.data.local.db.entity.SpaceMemberEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.TaskCategoryCrossRef
 import com.moltrax.personalnoteapp.data.local.db.entity.TaskEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.WorkoutEntity
@@ -240,6 +246,36 @@ val MIGRATION_19_20 = object : Migration(19, 20) {
     }
 }
 
+// Shared-spaces offline cache (Phase 5): brand-new tables, empty start, no backfill.
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS spaces (id TEXT NOT NULL PRIMARY KEY, type TEXT NOT NULL, " +
+                "name TEXT, createdBy TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS space_members (spaceId TEXT NOT NULL, userId TEXT NOT NULL, " +
+                "role TEXT NOT NULL, joinedAt TEXT NOT NULL, PRIMARY KEY (spaceId, userId))"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS shared_notes (id TEXT NOT NULL PRIMARY KEY, spaceId TEXT NOT NULL, " +
+                "author TEXT, title TEXT, bodyMd TEXT, updatedAt TEXT NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_shared_notes_spaceId ON shared_notes (spaceId)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT NOT NULL PRIMARY KEY, spaceId TEXT NOT NULL, " +
+                "title TEXT NOT NULL, isDone INTEGER NOT NULL, assignee TEXT, dueAt INTEGER, " +
+                "sortOrder INTEGER NOT NULL, updatedAt TEXT NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_shared_tasks_spaceId ON shared_tasks (spaceId)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS space_links (id TEXT NOT NULL PRIMARY KEY, spaceId TEXT NOT NULL, " +
+                "url TEXT NOT NULL, title TEXT, createdBy TEXT, createdAt TEXT NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_space_links_spaceId ON space_links (spaceId)")
+    }
+}
+
 @Database(
     entities = [
         TaskEntity::class,
@@ -250,8 +286,13 @@ val MIGRATION_19_20 = object : Migration(19, 20) {
         ExerciseEntity::class,
         WorkoutSessionEntity::class,
         TaskCategoryCrossRef::class,
+        SpaceEntity::class,
+        SpaceMemberEntity::class,
+        SharedNoteEntity::class,
+        SharedTaskEntity::class,
+        SpaceLinkEntity::class,
     ],
-    version = 20,
+    version = 21,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -261,4 +302,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun exerciseDao(): ExerciseDao
     abstract fun taskCategoryDao(): TaskCategoryDao
+    abstract fun spaceDao(): SpaceDao
 }

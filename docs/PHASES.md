@@ -100,7 +100,20 @@ Assemble + androidTest-compile green; device run pending.
   incoming/outgoing/friends. RLS: requests visible only to parties, accept only
   by `to_id`. UI: `SocialGraph | UserProfile | FriendRequests`.
 
-## Phase 5 — Shared spaces / Duo Hub MVP
+## Phase 5 — Shared spaces / Duo Hub MVP — CODE DONE, needs SQL + device run
+
+`003_phase5_spaces.sql` (spaces + members + notes + shared_tasks + links,
+member-only RLS via SECURITY DEFINER helpers; run in dashboard SQL editor).
+Room v21 offline cache mirror (`SpaceDao`, replace-on-fetch, no tombstones —
+server is truth) + `MIGRATION_20_21`. `SpaceRepository` (createDuo with
+accepted-friendship-as-invite, find-or-create open, invite/kick/leave,
+notes/tasks/links CRUD). DuoHub screen (Notes|Tasks|Links tabs + dialogs),
+Spaces section in Social + per-friend Open-hub. Pull-on-open + refresh;
+Realtime push arrives in Phase 9.
+Tests: `SpaceContractTest` 3/3 JVM green; `SupabaseSpacesE2ETest` prepared
+(Duo create → note visible to member → invisible to outsider + cascade
+delete, runs on the VM phone once 001–003 are applied + Confirm-email OFF).
+Assemble + androidTest-compile green; device run pending.
 
 - `spaces(id, type DUO|PROJECT, name, created_by)` + `space_members` +
   `notes` + `shared_tasks` + `links`. Member-only RLS on every content table.

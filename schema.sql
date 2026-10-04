@@ -1,5 +1,5 @@
 -- ============================================================================
--- DailyHub — SQLite schema (Room AppDatabase v20, `personal_note_app.db`)
+-- DailyHub — SQLite schema (Room AppDatabase v21, `personal_note_app.db`)
 -- ============================================================================
 -- Source: app/src/main/java/com/moltrax/personalnoteapp/data/local/db/
 --   AppDatabase.kt, Converters.kt, entity/*.kt, dao/*.kt
@@ -12,7 +12,7 @@
 --   Double (inside JSON)   -> REAL in JSON payload, never a column
 --   Nullable Kotlin field  -> nullable column, except JSON lists (NOT NULL '[]')
 --
--- History (19 migrations 1->20, see AppDatabase.kt):
+-- History (20 migrations 1->21, see AppDatabase.kt):
 --   1->2  tasks.linkedWorkoutId added
 --   2->3  food_entries created            (later dropped in 15->16)
 --   3->4  vault_entries.salt added        (table later dropped in 4->5)
@@ -34,6 +34,8 @@
 --           workout_sessions.workoutId, workout_sessions.taskId
 --   19->20 task_category_cross_ref created + backfilled from tasks.category
 --           (legacy tasks.category column kept one release as read-fallback)
+--   20->21 shared-spaces offline cache (spaces, space_members, shared_notes,
+--           shared_tasks, space_links); new feature, empty start, no backfill
 --
 -- Dropped tables (intentionally absent below): vault_entries, food_entries,
 -- body_weight_entries. Do NOT reintroduce without a new migration.
@@ -93,6 +95,62 @@ CREATE TABLE IF NOT EXISTS task_category_cross_ref (
 
 CREATE INDEX IF NOT EXISTS index_task_category_cross_ref_taskId ON task_category_cross_ref (taskId);
 CREATE INDEX IF NOT EXISTS index_task_category_cross_ref_categoryName ON task_category_cross_ref (categoryName);
+
+-- ----------------------------------------------------------------------------
+-- Shared-spaces offline cache (dao: SpaceDao, v21) — read-model mirrors of
+-- Supabase content. Server is truth; rows are replaced on every fetch.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS spaces (
+    id          TEXT    NOT NULL PRIMARY KEY,
+    type        TEXT    NOT NULL,             -- DUO | PROJECT
+    name        TEXT,
+    createdBy   TEXT,
+    createdAt   TEXT    NOT NULL,             -- ISO instant (server format)
+    updatedAt   TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS space_members (
+    spaceId   TEXT    NOT NULL,
+    userId    TEXT    NOT NULL,
+    role      TEXT    NOT NULL,               -- owner | member
+    joinedAt  TEXT    NOT NULL,
+    PRIMARY KEY (spaceId, userId)
+);
+
+CREATE TABLE IF NOT EXISTS shared_notes (
+    id        TEXT    NOT NULL PRIMARY KEY,
+    spaceId   TEXT    NOT NULL,
+    author    TEXT,
+    title     TEXT,
+    bodyMd    TEXT,
+    updatedAt TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS index_shared_notes_spaceId ON shared_notes (spaceId);
+
+CREATE TABLE IF NOT EXISTS shared_tasks (
+    id        TEXT    NOT NULL PRIMARY KEY,
+    spaceId   TEXT    NOT NULL,
+    title     TEXT    NOT NULL,
+    isDone    INTEGER NOT NULL,
+    assignee  TEXT,
+    dueAt     INTEGER,
+    sortOrder INTEGER NOT NULL,
+    updatedAt TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS index_shared_tasks_spaceId ON shared_tasks (spaceId);
+
+CREATE TABLE IF NOT EXISTS space_links (
+    id        TEXT    NOT NULL PRIMARY KEY,
+    spaceId   TEXT    NOT NULL,
+    url       TEXT    NOT NULL,
+    title     TEXT,
+    createdBy TEXT,
+    createdAt TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS index_space_links_spaceId ON space_links (spaceId);
 
 -- ----------------------------------------------------------------------------
 -- categories: CategoryEntity (dao: CategoryDao)
