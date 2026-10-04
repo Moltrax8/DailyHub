@@ -6,11 +6,13 @@
 --
 -- One schema for Duo + Projects: spaces(type DUO|PROJECT) + space_members
 -- serves both (Phase 6 adds project extensions on top, no second system).
+--
+-- ORDER MATTERS: tables first, then helper functions, then policies
+-- (Postgres validates function bodies and policy expressions at CREATE).
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- spaces: a Duo hub or a project container. Personal tasks are NEVER moved
--- here automatically — sharing is always an explicit per-object copy.
+-- 1. Tables.
 -- ----------------------------------------------------------------------------
 create table if not exists public.spaces (
   id         uuid primary key default gen_random_uuid(),
@@ -20,10 +22,53 @@ create table if not exists public.spaces (
   created_at timestamptz not null default now()
 );
 
-alter table public.spaces enable row level security;
+create table if not exists public.space_members (
+  space_id  uuid not null references public.spaces (id) on delete cascade,
+  user_id   uuid not null references public.profiles (id) on delete cascade,
+  role      text not null default 'member' check (role in ('owner', 'member')),
+  joined_at timestamptz not null default now(),
+  primary key (space_id, user_id)
+);
 
--- Helper: is the caller a member of the space?
--- (SECURITY DEFINER so RLS on space_members does not recurse infinitely.)
+create table if not exists public.notes (
+  id         uuid primary key default gen_random_uuid(),
+  space_id   uuid not null references public.spaces (id) on delete cascade,
+  author     uuid references public.profiles (id) on delete set null,
+  title      text,
+  body_md    text,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.shared_tasks (
+  id         uuid primary key default gen_random_uuid(),
+  space_id   uuid not null references public.spaces (id) on delete cascade,
+  title      text not null,
+  is_done    boolean not null default false,
+  assignee   uuid references public.profiles (id) on delete set null,
+  due_at     bigint,
+  sort_order bigint not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.links (
+  id         uuid primary key default gen_random_uuid(),
+  space_id   uuid not null references public.spaces (id) on delete cascade,
+  url        text not null,
+  title      text,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.spaces enable row level security;
+alter table public.space_members enable row level security;
+alter table public.notes enable row level security;
+alter table public.shared_tasks enable row level security;
+alter table public.links enable row level security;
+
+-- ----------------------------------------------------------------------------
+-- 2. Membership helpers (SECURITY DEFINER so RLS on space_members
+-- does not recurse infinitely).
+-- ----------------------------------------------------------------------------
 create or replace function public.is_space_member(space uuid)
 returns boolean
 language sql
@@ -37,7 +82,6 @@ as $$
   );
 $$;
 
--- Helper: is the caller an owner of the space?
 create or replace function public.is_space_owner(space uuid)
 returns boolean
 language sql
@@ -51,6 +95,9 @@ as $$
   );
 $$;
 
+-- ----------------------------------------------------------------------------
+-- 3. spaces policies.
+-- ----------------------------------------------------------------------------
 -- Members see their spaces.
 drop policy if exists "members see spaces" on public.spaces;
 create policy "members see spaces"
@@ -80,18 +127,8 @@ create policy "creator deletes spaces"
   using (created_by = auth.uid());
 
 -- ----------------------------------------------------------------------------
--- space_members: exactly one membership system for Duo + Projects.
+-- 4. space_members policies.
 -- ----------------------------------------------------------------------------
-create table if not exists public.space_members (
-  space_id  uuid not null references public.spaces (id) on delete cascade,
-  user_id   uuid not null references public.profiles (id) on delete cascade,
-  role      text not null default 'member' check (role in ('owner', 'member')),
-  joined_at timestamptz not null default now(),
-  primary key (space_id, user_id)
-);
-
-alter table public.space_members enable row level security;
-
 drop policy if exists "members see membership" on public.space_members;
 create policy "members see membership"
   on public.space_members for select
@@ -124,42 +161,8 @@ create policy "leave or owners kick"
   using (user_id = auth.uid() or public.is_space_owner(space_id));
 
 -- ----------------------------------------------------------------------------
--- notes / shared_tasks / links: MVP content. Member-only on every operation.
+-- 5. Content policies: member-only on every operation.
 -- ----------------------------------------------------------------------------
-create table if not exists public.notes (
-  id         uuid primary key default gen_random_uuid(),
-  space_id   uuid not null references public.spaces (id) on delete cascade,
-  author     uuid references public.profiles (id) on delete set null,
-  title      text,
-  body_md    text,
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.shared_tasks (
-  id         uuid primary key default gen_random_uuid(),
-  space_id   uuid not null references public.spaces (id) on delete cascade,
-  title      text not null,
-  is_done    boolean not null default false,
-  assignee   uuid references public.profiles (id) on delete set null,
-  due_at     bigint,
-  sort_order bigint not null default 0,
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.links (
-  id         uuid primary key default gen_random_uuid(),
-  space_id   uuid not null references public.spaces (id) on delete cascade,
-  url        text not null,
-  title      text,
-  created_by uuid references public.profiles (id) on delete set null,
-  created_at timestamptz not null default now()
-);
-
-alter table public.notes enable row level security;
-alter table public.shared_tasks enable row level security;
-alter table public.links enable row level security;
-
--- One member-only policy per operation per table (9 total, same shape).
 drop policy if exists "members read notes" on public.notes;
 create policy "members read notes" on public.notes for select
   to authenticated using (public.is_space_member(space_id));
