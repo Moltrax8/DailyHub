@@ -58,7 +58,20 @@ Legacy `tasks.category` dual-written as read-fallback.
 - Tests: v19→v20 migration test, global vs per-category ordering tests,
   multi-instance widget test.
 
-## Phase 3 — Managed account foundation (Supabase)
+## Phase 3 — Managed account foundation (Supabase) — CODE DONE, needs SQL + device run
+
+No new SDK: Supabase over the existing Retrofit/OkHttp stack (supabase-kt
+3.8.0 needs Kotlin 2.4 metadata + browser 1.10.0 → would force a
+compiler/AGP cascade, so raw GoTrue/PostgREST/Storage REST instead).
+`SupabaseModule` (URL+anon key from git-ignored local.properties),
+`SupabaseTokenStore` (encrypted), `SupabaseAuthService` (REST sessions +
+transparent refresh), `ProfileRepository` (profiles + avatar upload),
+`SupabaseProfile` + `isValidUsername` (JVM-tested), Auth screen (email →
+username steps) + AppNavHost entry (offline stays fully usable).
+Tests: `SupabaseModelsTest` 5/5 + `UsernameValidationTest` 3/3 JVM green;
+`SupabaseProfileE2ETest` prepared (signup→profile→avatar→signout, runs on
+the VM phone once `001_phase3_profiles.sql` is applied + Confirm-email OFF).
+Assemble + androidTest-compile green; device run pending.
 
 - Deps: `supabase-kt` (Auth/Postgrest/Realtime/Storage) + `di/SupabaseModule`
   (URL + anon key from git-ignored `local.properties`, never committed).

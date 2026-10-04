@@ -10,8 +10,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -23,6 +28,8 @@ import com.moltrax.personalnoteapp.FeatureFlags
 import com.moltrax.personalnoteapp.MainActivity
 import com.moltrax.personalnoteapp.ui.SyncViewModel
 import com.moltrax.personalnoteapp.ui.components.SyncBanner
+import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthScreen
+import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthViewModel
 import com.moltrax.personalnoteapp.ui.screen.auth.LoginScreen
 import com.moltrax.personalnoteapp.ui.screen.focus.FocusScreen
 import com.moltrax.personalnoteapp.ui.screen.home.HomeScreen
@@ -33,6 +40,7 @@ import com.moltrax.personalnoteapp.ui.screen.workout.LiveWorkoutScreen
 import com.moltrax.personalnoteapp.ui.screen.workout.WorkoutDetailScreen
 import com.moltrax.personalnoteapp.ui.screen.workout.WorkoutScreen
 import com.moltrax.personalnoteapp.ui.screen.workout.WorkoutSummaryScreen
+import com.moltrax.personalnoteapp.data.remote.supabase.SessionState
 
 @Composable
 fun AppNavHost(
@@ -61,6 +69,25 @@ fun AppNavHost(
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+    }
+
+    // Managed-account entry (Phase 3): without a session the app opens the Auth
+    // screen (v2 startDestination rule, applied after async session restore).
+    // Auth is an entry point, not a lock: backing out lands Home and the app
+    // stays fully usable offline; after an explicit sign-out we land on Auth.
+    if (FeatureFlags.SUPABASE_ENABLED) {
+        val gateVm: SupabaseAuthViewModel = hiltViewModel()
+        val session by gateVm.sessionState.collectAsStateWithLifecycle()
+        var redirected by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { gateVm.restore() }
+        LaunchedEffect(session) {
+            if (session is SessionState.SignedIn) {
+                redirected = false
+            } else if (!redirected) {
+                redirected = true
+                nav.navigate(SupabaseAuth) { launchSingleTop = true }
+            }
         }
     }
 
@@ -98,6 +125,7 @@ fun AppNavHost(
             popExitTransition = { fadeOut(fast) },
         ) {
             composable<Login>         { LoginScreen(nav) }
+            composable<SupabaseAuth>  { SupabaseAuthScreen(nav) }
             composable<Home>          {
                 HomeScreen(
                     nav = nav,

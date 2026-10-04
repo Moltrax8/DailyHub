@@ -45,6 +45,9 @@ class AppPreferences @Inject constructor(@ApplicationContext private val context
         // The user's own ExerciseDB (RapidAPI) key for exercise demo videos.
         // When empty, demo videos stay disabled (the app still works).
         val EXERCISEDB_KEY      = stringPreferencesKey("exercisedb_key")
+
+        // Managed-account identity (Phase 3+): Supabase auth.uid, null when signed out.
+        val SUPABASE_USER_ID    = stringPreferencesKey("supabase_user_id")
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { it[Keys.THEME_MODE] ?: "system" }
@@ -106,5 +109,12 @@ class AppPreferences @Inject constructor(@ApplicationContext private val context
     suspend fun setExerciseDbKey(key: String?) = context.dataStore.edit {
         val trimmed = key?.trim().orEmpty()
         if (trimmed.isEmpty()) it.remove(Keys.EXERCISEDB_KEY) else it[Keys.EXERCISEDB_KEY] = trimmed
+    }
+
+    // Managed-account identity (Phase 3+ Supabase auth.uid); null when signed out.
+    val supabaseUserId: Flow<String?> = context.dataStore.data.map { it[Keys.SUPABASE_USER_ID]?.takeIf { it.isNotBlank() } }
+    suspend fun setSupabaseUserId(id: String?) = context.dataStore.edit {
+        val trimmed = id?.trim().orEmpty()
+        if (trimmed.isEmpty()) it.remove(Keys.SUPABASE_USER_ID) else it[Keys.SUPABASE_USER_ID] = trimmed
     }
 }

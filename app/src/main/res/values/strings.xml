@@ -290,6 +290,23 @@
     <string name="widget_filter_limit">Limit</string>
     <string name="widget_filter_clear">Varsayılana dön</string>
 
+    <!-- Supabase managed account (Phase 3+) -->
+    <string name="supabase_auth_title">Hesap</string>
+    <string name="supabase_auth_unconfigured">Supabase yapılandırılmamış (SUPABASE_URL/ANON_KEY eksik). Çevrimdışı devam edebilirsin.</string>
+    <string name="supabase_auth_create">Hesap oluştur</string>
+    <string name="supabase_auth_welcome">Tekrar hoş geldin</string>
+    <string name="supabase_auth_email">E-posta</string>
+    <string name="supabase_auth_password">Şifre</string>
+    <string name="supabase_auth_sign_up">Kaydol</string>
+    <string name="supabase_auth_sign_in">Giriş yap</string>
+    <string name="supabase_auth_have_account">Zaten hesabım var</string>
+    <string name="supabase_auth_need_account">Hesabım yok, oluştur</string>
+    <string name="supabase_auth_pick_username">Kullanıcı adını seç</string>
+    <string name="supabase_auth_username_hint">Arkadaşların seni bu isimle bulacak. 3–20 karakter, harf/rakam/_/. olsun.</string>
+    <string name="supabase_auth_username">Kullanıcı adı</string>
+    <string name="supabase_auth_continue">Devam et</string>
+    <string name="supabase_auth_offline">Çevrimdışı devam et</string>
+
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>
 

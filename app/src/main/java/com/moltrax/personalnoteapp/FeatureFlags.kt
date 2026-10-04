@@ -14,4 +14,12 @@ package com.moltrax.personalnoteapp
  */
 object FeatureFlags {
     const val DRIVE_SYNC_ENABLED = false
+
+    /**
+     * Supabase managed-account layer (Phase 3+: auth, profiles, friends, spaces,
+     * projects, GitHub, auto-update). Independent from [DRIVE_SYNC_ENABLED]:
+     * both can be on/off separately. Requires SUPABASE_URL/ANON_KEY in
+     * git-ignored local.properties (see local.properties.example).
+     */
+    const val SUPABASE_ENABLED = true
 }

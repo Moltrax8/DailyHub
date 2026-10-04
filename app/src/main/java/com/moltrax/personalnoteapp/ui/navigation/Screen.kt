@@ -3,6 +3,8 @@ package com.moltrax.personalnoteapp.ui.navigation
 import kotlinx.serialization.Serializable
 
 @Serializable object Login
+// Managed-account sign-in (Phase 3 Supabase Auth; Drive uses Login).
+@Serializable object SupabaseAuth
 @Serializable object Home
 @Serializable data class TaskDetail(val taskId: String = "new")
 @Serializable object Profile

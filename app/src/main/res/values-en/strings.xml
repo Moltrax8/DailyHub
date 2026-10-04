@@ -290,6 +290,23 @@
     <string name="widget_filter_limit">Limit</string>
     <string name="widget_filter_clear">Reset to default</string>
 
+    <!-- Supabase managed account (Phase 3+) -->
+    <string name="supabase_auth_title">Account</string>
+    <string name="supabase_auth_unconfigured">Supabase is not configured (missing SUPABASE_URL/ANON_KEY). You can continue offline.</string>
+    <string name="supabase_auth_create">Create account</string>
+    <string name="supabase_auth_welcome">Welcome back</string>
+    <string name="supabase_auth_email">Email</string>
+    <string name="supabase_auth_password">Password</string>
+    <string name="supabase_auth_sign_up">Sign up</string>
+    <string name="supabase_auth_sign_in">Sign in</string>
+    <string name="supabase_auth_have_account">I already have an account</string>
+    <string name="supabase_auth_need_account">No account yet, create one</string>
+    <string name="supabase_auth_pick_username">Pick a username</string>
+    <string name="supabase_auth_username_hint">Friends will find you by this name. 3–20 chars, letters/digits/_/..</string>
+    <string name="supabase_auth_username">Username</string>
+    <string name="supabase_auth_continue">Continue</string>
+    <string name="supabase_auth_offline">Continue offline</string>
+
     <!-- Profile default -->
     <string name="profile_default_name">User</string>
 

@@ -15,6 +15,11 @@ EXERCISEDB_KEY=your_exercisedb_key_here
 DRIVE_FOLDER_NAME=DailyHubBackup
 DRIVE_SCOPE=https://www.googleapis.com/auth/drive.appdata
 
+# Supabase managed account (Phases 3-9) — public anon key only, NEVER service_role.
+# Dashboard → Project Settings → Data API. Empty = Supabase features stay unavailable.
+SUPABASE_URL=https://xyzcompany.supabase.co
+SUPABASE_ANON_KEY=paste_publishable_or_anon_key_here
+
 # ── Release signing (only needed for release APK/AAB builds) ──
 # Keep the release.jks file in the project root; .gitignore already ignores *.jks.
 RELEASE_STORE_FILE=release.jks

@@ -34,6 +34,10 @@ android {
         // Inject secrets as BuildConfig fields
         buildConfigField("String", "DRIVE_FOLDER_NAME",       "\"${localProp("DRIVE_FOLDER_NAME").ifEmpty { "PersonalNoteAppBackup" }}\"")
         buildConfigField("String", "DRIVE_SCOPE",             "\"${localProp("DRIVE_SCOPE").ifEmpty { "https://www.googleapis.com/auth/drive.appdata" }}\"")
+        // Supabase (dev project): public anon key only — never put service_role here.
+        // Empty on machines without local.properties entries → Supabase stays unavailable at runtime.
+        buildConfigField("String", "SUPABASE_URL",            "\"${localProp("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY",       "\"${localProp("SUPABASE_ANON_KEY")}\"")
 
         vectorDrawables { useSupportLibrary = true }
     }
