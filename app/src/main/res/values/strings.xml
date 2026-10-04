@@ -396,7 +396,7 @@
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
-    <string name="github_connect_hint">GitHub henüz bağlı değil — bağlantı ayarlardan (Edge Function üzerinden OAuth) yapılır, token cihazda tutulmaz.</string>
+    <string name="github_connect_hint">Henüz GitHub hesabı bağlı değil — bu sürümde depolar alan bazında elle bağlanır. Token cihazda tutulmaz; canlı hareketler için depo webhook’unun Supabase fonksiyonuna bakması gerekir.</string>
     <string name="github_connected_as">%1$s olarak bağlı</string>
     <string name="github_repos">Bağlı depolar</string>
     <string name="github_link">Depo bağla</string>
@@ -406,7 +406,7 @@
     <string name="github_activity">Hareketler</string>
     <string name="github_activity_empty">Henüz hareket yok — webhook ilk olayda buraya düşer.</string>
     <string name="github_link_title">Depo bağla</string>
-    <string name="github_link_hint">Erişebildiğin depoyu yaz (ör. moltrax8/DailyHub). ID, depo sayfasının HTML\'inden veya API\'den alınır.</string>
+    <string name="github_link_hint">Erişebildiğin depoyu yaz (ör. moltrax8/DailyHub). Sayısal ID api.github.com/repos/owner/repo → “id” alanında. Yalnızca alan sahibi bağlayabilir.</string>
     <string name="github_repo_id">Depo ID (sayı)</string>
     <string name="github_repo_name">owner/repo</string>
     <string name="github_private">Özel depo</string>

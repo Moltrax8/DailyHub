@@ -49,9 +49,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pendingWidgetAction.value = intent?.getStringExtra(EXTRA_WIDGET_ACTION)
-        pendingWidgetTaskId.value = intent?.getStringExtra(EXTRA_WIDGET_TASK_ID)
-        pendingProjectSpaceId.value = intent?.getStringExtra(EXTRA_PROJECT_SPACE_ID)
+        // Supabase email-confirm deep link (dailyhub://auth/callback) just lands
+        // in the app — verification already happened server-side. It carries no
+        // widget extras, so only read them for non-deep-link launches.
+        val isAuthCallback = intent?.data?.scheme == "dailyhub"
+        if (!isAuthCallback) {
+            pendingWidgetAction.value = intent?.getStringExtra(EXTRA_WIDGET_ACTION)
+            pendingWidgetTaskId.value = intent?.getStringExtra(EXTRA_WIDGET_TASK_ID)
+            pendingProjectSpaceId.value = intent?.getStringExtra(EXTRA_PROJECT_SPACE_ID)
+        }
         enableEdgeToEdge()
         setContent {
             val language by appVm.language.collectAsStateWithLifecycle()
@@ -118,6 +124,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.data?.scheme == "dailyhub") return // auth callback: nothing to route
         pendingWidgetAction.value = intent.getStringExtra(EXTRA_WIDGET_ACTION)
         pendingWidgetTaskId.value = intent.getStringExtra(EXTRA_WIDGET_TASK_ID)
         intent.getStringExtra(EXTRA_PROJECT_SPACE_ID)?.let { pendingProjectSpaceId.value = it }

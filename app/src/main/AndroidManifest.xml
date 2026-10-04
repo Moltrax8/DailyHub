@@ -40,6 +40,21 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Supabase email-confirm redirect target. Dashboard must set
+                 Auth → URL Configuration → Site URL to dailyhub://auth/callback
+                 (and list it under Redirect URLs); otherwise confirm links fall
+                 back to localhost:3000 and die in the phone browser. The link
+                 only verifies the email server-side — the user then signs in
+                 manually in the app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="dailyhub"
+                    android:host="auth"
+                    android:path="/callback" />
+            </intent-filter>
         </activity>
 
         <!-- Notification channel setup worker -->

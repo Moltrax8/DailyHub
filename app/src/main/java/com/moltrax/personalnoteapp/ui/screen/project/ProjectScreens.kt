@@ -411,11 +411,14 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                 }
             },
             confirmButton = {
+                val repoIdLong = repoId.toLongOrNull()?.takeIf { it > 0 }
+                val nameOk = fullName.trim().matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"))
                 TextButton(
                     onClick = {
-                        vm.linkRepo(spaceId, repoId.toLong(), fullName.trim(), isPrivate) { showLink = false }
+                        val id = repoIdLong ?: return@TextButton
+                        vm.linkRepo(spaceId, id, fullName.trim(), isPrivate) { showLink = false }
                     },
-                    enabled = repoId.toLongOrNull() != null && fullName.contains("/"),
+                    enabled = repoIdLong != null && nameOk,
                 ) { Text(stringResource(R.string.action_save)) }
             },
             dismissButton = { TextButton(onClick = { showLink = false }) { Text(stringResource(R.string.action_cancel)) } },

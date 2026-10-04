@@ -49,22 +49,34 @@ class GitHubRepositoryImpl @Inject constructor(
     }
 
     override suspend fun linkRepo(spaceId: String, repoId: Long, fullName: String, private: Boolean) {
+        val name = fullName.trim()
+        require(repoId > 0) { "Enter the numeric Repo ID (from api.github.com/repos/owner/repo → id)." }
+        require(name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"))) {
+            "Enter the repo as owner/name (e.g. moltrax8/DailyHub)."
+        }
         val res = api().linkRepo(
             bearer(),
             body = buildJsonObject {
                 put("id", repoId)
                 put("space_id", spaceId)
-                put("full_name", fullName.trim())
+                put("full_name", name)
                 put("private", private)
                 put("installed_by", myId())
             },
         )
-        if (!res.isSuccessful) throw IOException("Link failed (HTTP ${res.code()}).")
+        if (!res.isSuccessful) throw IOException(linkError(res.code()))
     }
 
     override suspend fun unlinkRepo(repoId: Long) {
         val res = api().unlinkRepo(bearer(), "eq.$repoId")
         if (!res.isSuccessful) throw IOException("Unlink failed (HTTP ${res.code()}).")
+    }
+
+    private fun linkError(code: Int): String = when (code) {
+        401, 403 -> "Link denied — only a space owner can link repos (RLS)."
+        404 -> "Space not found — pull the space first, then link."
+        409 -> "Repo already linked to a space."
+        else -> "Link failed (HTTP $code)."
     }
 
     override fun observeActivity(spaceId: String): Flow<List<GithubActivity>> =

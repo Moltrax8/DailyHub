@@ -1,7 +1,9 @@
 package com.moltrax.personalnoteapp.data.remote.supabase.model
 
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -43,5 +45,26 @@ class SupabaseModelsTest {
     fun `margin triggers early refresh`() {
         assertTrue(isSessionExpired(expiresInSecs = 3600L, savedAtMs = 0L, nowMs = 3540_001L, marginSecs = 60L))
         assertFalse(isSessionExpired(expiresInSecs = 3600L, savedAtMs = 0L, nowMs = 3539_999L, marginSecs = 60L))
+    }
+
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    @Test
+    fun `confirm-on signup payload decodes without session`() {
+        // GoTrue with Confirm email ON returns a bare user object (no tokens).
+        val decoded = json.decodeFromString<GoTrueSession>(
+            """{"id":"uid-1","email":"a@gmail.com"}""",
+        )
+        assertNull(decoded.accessToken)
+        assertTrue(decoded.needsConfirmation())
+    }
+
+    @Test
+    fun `full session payload decodes with tokens`() {
+        val decoded = json.decodeFromString<GoTrueSession>(
+            """{"access_token":"at","refresh_token":"rt","expires_in":3600,"user":{"id":"uid-1"}}""",
+        )
+        assertEquals("at", decoded.accessToken)
+        assertFalse(decoded.needsConfirmation())
     }
 }

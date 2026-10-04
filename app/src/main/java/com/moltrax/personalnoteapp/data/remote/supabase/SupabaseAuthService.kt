@@ -43,7 +43,9 @@ class SupabaseAuthService @Inject constructor(
     suspend fun restore() {
         val stored = tokens.load()
         val uid = stored?.session?.user?.id
-        if (uid != null) {
+        // A stored row without a usable access token (e.g. legacy confirm-pending
+        // payload) must not count as signed in.
+        if (uid != null && !stored.session.accessToken.isNullOrBlank()) {
             _session.value = SessionState.SignedIn(uid)
             prefs.setSupabaseUserId(uid)
         } else {
@@ -58,9 +60,12 @@ class SupabaseAuthService @Inject constructor(
             val res = call.signUp(EmailCredentials(email.trim(), password))
             if (!res.isSuccessful) throw IllegalStateException(parseGoTrueError(res.code(), res.errorBody()?.string()))
             val session = res.body() ?: throw IllegalStateException(NO_SESSION)
-            // Confirm-email ON projects return a user without tokens here.
-            if (session.accessToken.isBlank()) throw IllegalStateException(CONFIRM_EMAIL)
-            onNewSession(session.accessToken, session.refreshToken, session.expiresIn, session.user?.id)
+            // Confirm-email ON projects return a bare user object (no tokens).
+            if (session.needsConfirmation()) throw IllegalStateException(CONFIRM_EMAIL)
+            onNewSession(
+                session.accessToken ?: throw IllegalStateException(NO_SESSION),
+                session.refreshToken.orEmpty(), session.expiresIn, session.user?.id,
+            )
             Unit
         }
     }
@@ -71,13 +76,16 @@ class SupabaseAuthService @Inject constructor(
             val res = call.signIn(EmailCredentials(email.trim(), password))
             if (!res.isSuccessful) throw IllegalStateException(parseGoTrueError(res.code(), res.errorBody()?.string()))
             val session = res.body() ?: throw IllegalStateException(NO_SESSION)
-            onNewSession(session.accessToken, session.refreshToken, session.expiresIn, session.user?.id)
+            onNewSession(
+                session.accessToken ?: throw IllegalStateException(NO_SESSION),
+                session.refreshToken.orEmpty(), session.expiresIn, session.user?.id,
+            )
             Unit
         }
     }
 
     suspend fun signOut() {
-        val token = tokens.load()?.let { "Bearer ${it.session.accessToken}" }
+        val token = tokens.load()?.session?.accessToken?.takeIf { it.isNotBlank() }?.let { "Bearer $it" }
         runCatching { if (token != null) api?.logout(token) }
         tokens.clear()
         prefs.setSupabaseUserId(null)
@@ -97,9 +105,10 @@ class SupabaseAuthService @Inject constructor(
      */
     suspend fun freshToken(): String? = refreshMutex.withLock {
         val stored = tokens.load() ?: return null
-        if (!tokens.isExpired()) return stored.session.accessToken
+        val current = stored.session.accessToken?.takeIf { it.isNotBlank() } ?: return null
+        if (!tokens.isExpired()) return current
         val call = api ?: return null
-        val refreshToken = stored.session.refreshToken.ifBlank { return null }
+        val refreshToken = stored.session.refreshToken?.ifBlank { null } ?: return null
         val res = runCatching { call.refresh(RefreshRequest(refreshToken)) }.getOrNull()
             ?: return null
         if (!res.isSuccessful) {
@@ -108,8 +117,9 @@ class SupabaseAuthService @Inject constructor(
             return null
         }
         val session = res.body() ?: return null
-        onNewSession(session.accessToken, session.refreshToken, session.expiresIn, session.user?.id)
-        session.accessToken
+        val access = session.accessToken ?: return null
+        onNewSession(access, session.refreshToken.orEmpty(), session.expiresIn, session.user?.id)
+        access
     }
 
     private suspend fun onNewSession(access: String, refresh: String, expiresIn: Long, uid: String?) {
@@ -129,7 +139,9 @@ class SupabaseAuthService @Inject constructor(
         const val NOT_CONFIGURED = "Supabase is not configured (missing SUPABASE_URL/ANON_KEY)."
         const val NO_SESSION = "No session returned."
         const val CONFIRM_EMAIL =
-            "Account created — confirm your email (link), then sign in. " +
-                "(Dev projects: Auth → Providers → Email → turn Confirm email OFF.)"
+            "Account created — check your email, tap the confirm link, then Sign in. " +
+                "If the link opens localhost:3000, set Supabase Auth → URL Configuration → " +
+                "Site URL to dailyhub://auth/callback (and add it to Redirect URLs). " +
+                "(Dev shortcut: Auth → Providers → Email → Confirm email OFF.)"
     }
 }
