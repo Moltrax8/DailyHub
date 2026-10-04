@@ -57,6 +57,12 @@ alter table public.messages enable row level security;
 alter table public.files enable row level security;
 alter table public.activity_feed enable row level security;
 
+-- Privileges (RLS policies alone never grant access on raw-SQL tables).
+grant select, insert, update, delete on public.events to authenticated;
+grant select, insert, delete on public.messages to authenticated;
+grant select, insert, delete on public.files to authenticated;
+grant select, insert on public.activity_feed to authenticated;
+
 -- space-files bucket: private (member-only via path = <space_id>/...).
 insert into storage.buckets (id, name, public)
 values ('space-files', 'space-files', false)

@@ -62,6 +62,14 @@ alter table public.github_activity enable row level security;
 alter table public.notification_prefs enable row level security;
 alter table public.fcm_tokens enable row level security;
 
+-- Privileges (RLS policies alone never grant access on raw-SQL tables).
+-- github_activity: read-only for members (service-role webhook writes).
+grant select, insert, update, delete on public.github_connections to authenticated;
+grant select, insert, delete on public.github_repos to authenticated;
+grant select on public.github_activity to authenticated;
+grant select, insert, update, delete on public.notification_prefs to authenticated;
+grant select, insert, update, delete on public.fcm_tokens to authenticated;
+
 -- ----------------------------------------------------------------------------
 -- 2. Policies.
 -- ----------------------------------------------------------------------------

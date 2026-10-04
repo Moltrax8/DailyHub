@@ -20,6 +20,10 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+-- Privileges first: RLS policies alone are not enough — raw-SQL tables carry
+-- no grants (Dashboard-created tables get them automatically).
+grant select, insert, update on public.profiles to authenticated;
+
 -- Everyone signed in can search by username / see display names + avatars
 -- (public identifier is the username, never the email).
 drop policy if exists "profiles readable by authenticated" on public.profiles;

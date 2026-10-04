@@ -22,6 +22,8 @@ create table if not exists public.friend_requests (
 
 alter table public.friend_requests enable row level security;
 
+grant select, insert, update, delete on public.friend_requests to authenticated;
+
 -- Parties see their own rows (both directions); nobody else sees anything.
 drop policy if exists "parties see own requests" on public.friend_requests;
 create policy "parties see own requests"
@@ -62,3 +64,5 @@ select from_id as user_id, to_id as friend_id, created_at
 union
 select to_id as user_id, from_id as friend_id, created_at
   from public.friend_requests where status = 'accepted';
+
+grant select on public.friends to authenticated;

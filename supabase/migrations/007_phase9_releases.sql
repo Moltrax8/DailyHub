@@ -23,6 +23,9 @@ create table if not exists public.app_releases (
 
 alter table public.app_releases enable row level security;
 
+-- Public read (signed-out update checks); no client writes (service role only).
+grant select on public.app_releases to anon, authenticated;
+
 -- Public read for everyone (anon included): update checks work signed-out.
 drop policy if exists "anyone reads releases" on public.app_releases;
 create policy "anyone reads releases"

@@ -44,6 +44,11 @@ alter table public.projects enable row level security;
 alter table public.project_items enable row level security;
 alter table public.comments enable row level security;
 
+-- Privileges (RLS policies alone never grant access on raw-SQL tables).
+grant select, insert, update, delete on public.projects to authenticated;
+grant select, insert, update, delete on public.project_items to authenticated;
+grant select, insert, update, delete on public.comments to authenticated;
+
 -- ----------------------------------------------------------------------------
 -- 2. Policies (member-only, same shape as Phase 5).
 -- ----------------------------------------------------------------------------

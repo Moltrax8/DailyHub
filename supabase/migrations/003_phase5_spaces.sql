@@ -65,6 +65,13 @@ alter table public.notes enable row level security;
 alter table public.shared_tasks enable row level security;
 alter table public.links enable row level security;
 
+-- Privileges (RLS policies alone never grant access on raw-SQL tables).
+grant select, insert, update, delete on public.spaces to authenticated;
+grant select, insert, update, delete on public.space_members to authenticated;
+grant select, insert, update, delete on public.notes to authenticated;
+grant select, insert, update, delete on public.shared_tasks to authenticated;
+grant select, insert, update, delete on public.links to authenticated;
+
 -- ----------------------------------------------------------------------------
 -- 2. Membership helpers (SECURITY DEFINER so RLS on space_members
 -- does not recurse infinitely).
