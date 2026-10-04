@@ -52,7 +52,12 @@ data class TaskJson(
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
     // Deprecated since v1.1 (Phase 1.2, hidden from UI): retained so old backups decode.
     val focusDurationSeconds: Int = 1500,
+    // Legacy single tag (deprecated since v1.1, kept for old backups).
     val category: String? = null,
+    // Live tag set (Phase 2): union-merged, per-link LWW positions in categoryOrders.
+    // Old backups carry only `category` → decoded as a single tag.
+    val categories: List<String> = emptyList(),
+    val categoryOrders: Map<String, Long> = emptyMap(),
     // Subtasks (checklist) — travel with the task during sync (empty in old backups)
     val subtasks: List<SubTask> = emptyList(),
     val createdAt: Long,
@@ -74,7 +79,9 @@ fun Task.toJson() = TaskJson(
     id = id, title = title, notes = notes, dueDate = dueDate, priority = priorityRaw ?: priority.name,
     isDone = isDone, isRecurring = isRecurring, intervalDays = intervalDays,
     recurrenceType = recurrenceType?.name, recurrenceDaysOfWeek = recurrenceDaysOfWeek,
-    focusDurationSeconds = focusDurationSeconds, category = category, subtasks = subtasks,
+    focusDurationSeconds = focusDurationSeconds, category = categoryNames.sorted().firstOrNull(),
+    categories = categoryNames.sorted(), categoryOrders = categoryOrders,
+    subtasks = subtasks,
     createdAt = createdAt, updatedAt = updatedAt, completedAt = completedAt, sortOrder = sortOrder,
     linkedWorkoutId = linkedWorkoutId, linkedProgramId = linkedProgramId,
     programStartIndex = programStartIndex,
@@ -88,7 +95,12 @@ fun TaskJson.toDomain() = Task(
     isDone = isDone, isRecurring = isRecurring, intervalDays = intervalDays,
     recurrenceType = recurrenceType?.let { runCatching { RecurrenceType.valueOf(it) }.getOrNull() },
     recurrenceDaysOfWeek = recurrenceDaysOfWeek,
-    focusDurationSeconds = focusDurationSeconds, category = category, subtasks = subtasks,
+    focusDurationSeconds = focusDurationSeconds,
+    category = category,
+    categoryNames = if (categories.isNotEmpty()) categories.toSet()
+        else category?.takeIf { it.isNotBlank() }?.let(::setOf).orEmpty(),
+    categoryOrders = categoryOrders,
+    subtasks = subtasks,
     createdAt = createdAt, updatedAt = updatedAt, completedAt = completedAt,
     sortOrder = sortOrder,
     linkedWorkoutId = linkedWorkoutId, linkedProgramId = linkedProgramId,

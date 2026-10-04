@@ -50,7 +50,7 @@ class NotificationReminderE2ETest {
             prefs.setSystemAlertsEnabled(true)
             svc = NotificationService(ctx)
             val scheduler = NotificationScheduler(svc, prefs)
-            repo = TaskRepositoryImpl(db.taskDao(), prefs, scheduler)
+            repo = TaskRepositoryImpl(db.taskDao(), db.taskCategoryDao(), db, prefs, scheduler)
         }
     }
 

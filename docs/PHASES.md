@@ -32,7 +32,17 @@ green on emulator (real Room → repo → scheduler → AlarmManager).
   `@Deprecated`; Room columns + Drive `TaskJson` fields retained for compat.
 - Manual `sortOrder` stays the explicit prioritization mechanism.
 
-## Phase 2 — Task flexibility (the breaking Room change)
+## Phase 2 — Task flexibility (the breaking Room change) — DONE
+
+Room v20 `task_category_cross_ref` + backfill migration (`MIGRATION_19_20`,
+`Migration19To20Test` 1/1, `TaskCategoryDaoTest` 4/4 on emulator).
+`Task.categoryNames/orders` in domain, `setTaskCategories` /
+`reorderInCategory/Global` / ANY+ALL views / untagged bucket in
+`TaskRepositoryImpl` (`TaskRepositoryTagsTest` 5/5), `TaskJson.categories` +
+`categoryOrders` with union merge (`CategoryTagsTest` 3/3 JVM), multi-select
+detail chips, Home ANY-match + untagged filter bar, per-widget `WidgetFilter`
+(title/tags/show-done/limit/matchAll), UI E2E `TaskTagUiTest` 1/1 green.
+Legacy `tasks.category` dual-written as read-fallback.
 
 - Keep both orderings: `tasks.sortOrder` (global Home list) and
   `task_category_cross_ref.sortOrder` (position inside a category).

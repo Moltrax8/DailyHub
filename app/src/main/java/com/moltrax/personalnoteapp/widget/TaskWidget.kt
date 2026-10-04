@@ -26,6 +26,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.currentState
@@ -115,7 +116,7 @@ class TaskWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         // Load data before composition, catching errors; so the widget never gets stuck in infinite
         // loading — at worst it shows an error message.
-        val state = loadState(context)
+        val state = loadState(context, id)
         // Resolve appWidgetId from glanceId so the 'Settings' button can open the config screen for this specific widget.
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         // Resolve strings for the selected language (the widget cannot use the LocalContext provider).
@@ -132,19 +133,38 @@ class TaskWidget : GlanceAppWidget() {
         }
     }
 
-    private suspend fun loadState(context: Context): UiState =
+    /**
+     * Per-instance slice (Phase 2): legacy explicit task selection wins when present
+     * (pre-filter widgets keep working); otherwise the instance's [WidgetFilter]
+     * (tags + show-done + limit + matchAll) applies. Empty filter = all open tasks.
+     */
+    private suspend fun loadState(context: Context, id: GlanceId): UiState =
         runCatching {
-            val items = entryPoint(context).taskRepository().observeAll().first()
-                .filter { !it.isDone }
-                .map { task ->
-                    TaskItem(
-                        id = task.id,
-                        title = task.title,
-                        notes = task.notes,
-                        isWorkout = task.linkedWorkoutId != null || task.linkedProgramId != null,
-                        subtasks = task.subtasks.map { SubItem(it.id, it.title, it.isDone) },
-                    )
-                }
+            val repo = entryPoint(context).taskRepository()
+            val glanceState = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
+            val legacyIds = glanceState[SELECTED_TASK_IDS]
+            val filter = WidgetFilter.load(glanceState)
+            val tasks = when {
+                !legacyIds.isNullOrEmpty() ->
+                    repo.observeAll().first().filter { it.id in legacyIds && !it.isDone }
+                filter.categoryNames.isEmpty() ->
+                    repo.observeAll().first()
+                        .filter { filter.showDone || !it.isDone }
+                        .take(filter.limit)
+                else ->
+                    repo.observeTasksForCategories(filter.categoryNames, filter.matchAll).first()
+                        .filter { filter.showDone || !it.isDone }
+                        .take(filter.limit)
+            }
+            val items = tasks.map { task ->
+                TaskItem(
+                    id = task.id,
+                    title = task.title,
+                    notes = task.notes,
+                    isWorkout = task.linkedWorkoutId != null || task.linkedProgramId != null,
+                    subtasks = task.subtasks.map { SubItem(it.id, it.title, it.isDone) },
+                )
+            }
             UiState.Content(items)
         }.getOrElse { UiState.Error }
 
@@ -167,7 +187,7 @@ class TaskWidget : GlanceAppWidget() {
                 .padding(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Header(context, appWidgetId, strings.title)
+            Header(context, appWidgetId, prefs[WidgetFilter.TITLE]?.takeIf { it.isNotBlank() } ?: strings.title)
             Spacer(GlanceModifier.height(10.dp))
 
             // Content fills the remaining space; if the undo strip exists it stays pinned at the bottom (the list does not shift).

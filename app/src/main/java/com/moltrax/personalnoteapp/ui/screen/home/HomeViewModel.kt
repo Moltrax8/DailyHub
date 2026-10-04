@@ -47,7 +47,10 @@ enum class TaskStatus { ALL, ACTIVE, DONE }
 data class TaskFilter(
     val status: TaskStatus = TaskStatus.ACTIVE,
     val priority: Priority? = null,
-    val category: String? = null,
+    // Multi-tag ANY-match filter (Phase 2); empty = no tag filtering.
+    val categories: Set<String> = emptySet(),
+    // Shows only untagged tasks; mutually exclusive with [categories].
+    val untaggedOnly: Boolean = false,
     val search: String = "",
 )
 
@@ -140,7 +143,11 @@ class HomeViewModel @Inject constructor(
             priority = savedStateHandle.get<String>(KEY_FILTER_PRIORITY)?.let {
                 runCatching { Priority.valueOf(it) }.getOrNull()
             },
-            category = savedStateHandle.get<String>(KEY_FILTER_CATEGORY),
+            // Legacy single-tag drafts (pre-Phase-2) fold into the tag set.
+            categories = savedStateHandle.get<Array<String>>(KEY_FILTER_CATEGORIES)?.toSet()
+                ?: savedStateHandle.get<String>(KEY_FILTER_CATEGORY)
+                    ?.takeIf { it.isNotBlank() }?.let(::setOf).orEmpty(),
+            untaggedOnly = savedStateHandle.get<Boolean>(KEY_FILTER_UNTAGGED) ?: false,
             search = savedStateHandle.get<String>(KEY_FILTER_SEARCH) ?: "",
         )
     )
@@ -158,7 +165,9 @@ class HomeViewModel @Inject constructor(
             }
             statusOk &&
             (filter.priority == null || task.priority == filter.priority) &&
-            (filter.category == null || task.category == filter.category) &&
+            (filter.untaggedOnly && task.categoryNames.isEmpty() ||
+                !filter.untaggedOnly && (filter.categories.isEmpty() ||
+                    filter.categories.any { sel -> task.categoryNames.any { it.equals(sel, ignoreCase = true) } })) &&
             (filter.search.isBlank() || task.title.contains(filter.search, ignoreCase = true))
         }.let { list ->
             // In the "Completed" filter tasks are sorted by completion date (newest on top);
@@ -171,7 +180,7 @@ class HomeViewModel @Inject constructor(
         // least one incomplete task. The latter is derived from tasks, so categories arriving via
         // sync (with no local category record) are visible too.
         val permanentNames = categories.filter { it.isPermanent }.map { it.name }
-        val activeNames = tasks.filter { !it.isDone }.mapNotNull { it.category?.takeIf(String::isNotBlank) }
+        val activeNames = tasks.filter { !it.isDone }.flatMap { it.categoryNames.filter(String::isNotBlank) }
         val chipNames = (permanentNames + activeNames).distinct().sortedBy { it.lowercase() }
         HomeUiState(tasks, filtered, chipNames, categories, filter)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
@@ -273,8 +282,9 @@ class HomeViewModel @Inject constructor(
         savedStateHandle[KEY_FILTER_STATUS] = f.status.name
         if (f.priority == null) savedStateHandle.remove<String>(KEY_FILTER_PRIORITY)
         else savedStateHandle[KEY_FILTER_PRIORITY] = f.priority.name
-        if (f.category == null) savedStateHandle.remove<String>(KEY_FILTER_CATEGORY)
-        else savedStateHandle[KEY_FILTER_CATEGORY] = f.category
+        if (f.categories.isEmpty()) savedStateHandle.remove<Array<String>>(KEY_FILTER_CATEGORIES)
+        else savedStateHandle[KEY_FILTER_CATEGORIES] = f.categories.toTypedArray()
+        savedStateHandle[KEY_FILTER_UNTAGGED] = f.untaggedOnly
         savedStateHandle[KEY_FILTER_SEARCH] = f.search
     }
 
@@ -306,32 +316,16 @@ class HomeViewModel @Inject constructor(
 
     /**
      * Called when the user reorders the list via drag & drop. [displayedIds] is the NEW order of the
-     * currently visible (filtered) tasks. Global positions of hidden tasks are preserved: walk the
-     * master ordered list and refill the slots occupied by visible items with the new order. Then new
-     * sortOrder values 0..n are assigned to all tasks and only changed ones are written to the database.
+     * currently visible (filtered) tasks. With exactly one tag selected the positions inside that
+     * tag are rewritten (Phase 2); otherwise the global manual order is rebuilt, preserving global
+     * positions of hidden tasks.
      */
     fun reorderTasks(displayedIds: List<String>) {
         viewModelScope.launch {
-            val master = taskRepo.getAll()              // sorted by sortOrder ASC (DAO)
-            val byId = master.associateBy { it.id }
-            val displayedSet = displayedIds.toSet()
-            val iter = displayedIds.iterator()
-            // Rebuild the master order: put the new order into visible slots, keep their own id for hidden ones.
-            // iter.hasNext() guard: if a task is concurrently deleted/added during the drag so master
-            // and displayedIds no longer match (e.g. completion from the widget), stay on its own id
-            // instead of throwing NoSuchElement.
-            val newOrderIds = master.map { if (it.id in displayedSet && iter.hasNext()) iter.next() else it.id }
-
-            val now = System.currentTimeMillis()
-            val changed = newOrderIds.mapIndexedNotNull { index, id ->
-                val task = byId[id] ?: return@mapIndexedNotNull null
-                if (task.sortOrder != index.toLong()) task.copy(sortOrder = index.toLong(), updatedAt = now)
-                else null
-            }
-            if (changed.isEmpty()) return@launch
-            changed.forEach { taskRepo.upsert(it) }
-            // Refresh the order-vector clock so this ordering is published in the sync merge.
-            taskRepo.setTaskOrderTimestamp(now)
+            val single = _filter.value.categories.singleOrNull()?.takeUnless { _filter.value.untaggedOnly }
+            val changed = if (single != null) taskRepo.reorderInCategory(single, displayedIds)
+            else taskRepo.reorderGlobal(displayedIds)
+            if (!changed) return@launch
             syncRepo.pushToDrive()
             TaskWidget.requestUpdate(context)
         }
@@ -534,7 +528,10 @@ class HomeViewModel @Inject constructor(
     companion object {
         private const val KEY_FILTER_STATUS = "home_filter_status"
         private const val KEY_FILTER_PRIORITY = "home_filter_priority"
+        // Legacy single-tag key (pre-Phase 2); read once as fallback, never written.
         private const val KEY_FILTER_CATEGORY = "home_filter_category"
+        private const val KEY_FILTER_CATEGORIES = "home_filter_categories"
+        private const val KEY_FILTER_UNTAGGED = "home_filter_untagged"
         private const val KEY_FILTER_SEARCH = "home_filter_search"
         private const val KEY_PENDING_SUMMARY = "pending_summary_id"
     }

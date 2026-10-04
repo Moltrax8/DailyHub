@@ -128,7 +128,17 @@ class SyncRepositoryImpl @Inject constructor(
         // so deletions propagate and are not resurrected from remote). Ties resolve deterministically.
         val localTasks = taskRepo.getAllForSync()
         val mergedTasks = mergeById(localTasks, remote.tasks.map { it.toDomain() }, { it.id }) { l, r ->
-            if (r.updatedAt > l.updatedAt) r else pickOnTie(l, r)
+            val w = if (r.updatedAt > l.updatedAt) r else pickOnTie(l, r)
+            // Tags union (a tag added on either side survives); per-link positions
+            // come from the row winner, missing ones fall back to the loser.
+            // Data-class equality makes the loser pick safe: identical rows merge identically.
+            val o = if (w == r) l else r
+            val names = w.categoryNames + o.categoryNames
+            w.copy(
+                category = names.sorted().firstOrNull(),
+                categoryNames = names,
+                categoryOrders = o.categoryOrders + w.categoryOrders,
+            )
         }
         // List-order vector: adopt the peer's vector when it is newer (without touching row
         // timestamps — order info travels in the vector and does not pollute row LWW); otherwise

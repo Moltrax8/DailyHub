@@ -3,6 +3,7 @@ package com.moltrax.personalnoteapp.data.repository
 import androidx.room.withTransaction
 import com.moltrax.personalnoteapp.data.local.db.AppDatabase
 import com.moltrax.personalnoteapp.data.local.db.dao.CategoryDao
+import com.moltrax.personalnoteapp.data.local.db.dao.TaskCategoryDao
 import com.moltrax.personalnoteapp.data.local.db.dao.TaskDao
 import com.moltrax.personalnoteapp.data.local.db.entity.CategoryEntity
 import com.moltrax.personalnoteapp.data.local.db.entity.toDomain
@@ -18,6 +19,7 @@ import javax.inject.Singleton
 class CategoryRepositoryImpl @Inject constructor(
     private val dao: CategoryDao,
     private val taskDao: TaskDao,
+    private val xrefDao: TaskCategoryDao,
     private val db: AppDatabase,
 ) : CategoryRepository {
 
@@ -57,8 +59,9 @@ class CategoryRepositoryImpl @Inject constructor(
             val existing = dao.getByName(old) ?: return@withTransaction
 
             val now = System.currentTimeMillis()
-            // Move linked tasks to the new name
+            // Move linked tasks to the new name (legacy column + xref links together)
             taskDao.reassignCategory(old, new, now)
+            xrefDao.renameCategoryLinks(old, new)
 
             // If the target name already exists keep/promote permanence, otherwise create it live
             // with the old entry's permanence (or if it is a tombstone).
@@ -77,6 +80,7 @@ class CategoryRepositoryImpl @Inject constructor(
         db.withTransaction {
             val now = System.currentTimeMillis()
             taskDao.clearCategory(name, now)
+            xrefDao.clearCategoryLinks(name)
             // Move to trash: the record is kept, hidden from visible lists, propagated via sync.
             dao.getByName(name)?.let { dao.upsert(it.copy(isDeleted = true)) }
         }

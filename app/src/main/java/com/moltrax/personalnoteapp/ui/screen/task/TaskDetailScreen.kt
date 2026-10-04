@@ -147,19 +147,19 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 }
             }
 
-            // Category — pick from existing ones or create a new one
+            // Categories — multi-select tags (Phase 2); zero tags allowed (untracked bucket).
             Text(stringResource(R.string.task_category), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
-                    selected = state.category.isBlank(),
-                    onClick = { vm.selectCategory(null) },
+                    selected = state.categories.isEmpty(),
+                    onClick = { vm.clearCategories() },
                     label = { Text(stringResource(R.string.task_none)) },
                 )
                 categories.forEach { cat ->
                     FilterChip(
-                        selected = state.category == cat.name,
-                        onClick = { vm.selectCategory(cat.name) },
+                        selected = state.categories.any { it.equals(cat.name, ignoreCase = true) },
+                        onClick = { vm.toggleCategory(cat.name) },
                         label = { Text(cat.name) },
                         leadingIcon = if (cat.isPermanent) {
                             { Icon(Icons.Default.PushPin, contentDescription = stringResource(R.string.task_permanent),

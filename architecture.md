@@ -20,7 +20,7 @@ Related artefacts in this repo:
 
 Personal productivity hub:
 
-- **Tasks** — title, notes, due date, category, manual order (drag-and-drop), subtask checklist, rich recurrence (daily/weekly/monthly/interval), links to workouts/programs. (Priority chips and focus-timer duration were hidden from the UI in v1.1 / Phase 1.2; the fields stay in Room/Drive for compat. Manual `sortOrder` is the explicit prioritization.)
+- **Tasks** — title, notes, due date, multi-tag categories (multi-select chips, ANY-match filter bar, untagged bucket, per-category manual order), manual order (drag-and-drop), subtask checklist, rich recurrence (daily/weekly/monthly/interval), links to workouts/programs. (Priority chips and focus-timer duration were hidden from the UI in v1.1 / Phase 1.2; the fields stay in Room/Drive for compat. Manual `sortOrder` is the explicit prioritization.)
 - **Calendar** — agenda view over task due dates. Implemented as the `CalendarContent` composable (`ui/screen/calendar/CalendarScreen.kt` + `CalendarViewModel`), embedded as a sub-tab inside the Home Tasks tab. There is no standalone Calendar navigation route.
 - **Workouts** — program groups → workouts → exercises → planned sets; live session logging; session summary; exercise library with demo media (GIF/video, cached offline); weightlifting / bodyweight / duration / cardio exercise types.
 - **Focus timer** — per-task countdown (`FocusScreen` + `FocusTimerViewModel`).
@@ -193,9 +193,9 @@ Repositories (interfaces in `domain/repository`, impls in `data/repository`): `T
 
 ## 7. Data layer — local
 
-### 7.1 Room (`personal_note_app.db`, v19, `exportSchema=false`)
+### 7.1 Room (`personal_note_app.db`, v20, `exportSchema=false`)
 
-Entities/DAOs (7 tables, 4 DAOs — `WorkoutDao` covers groups, workouts, exercises-link rows and sessions):
+Entities/DAOs (8 tables, 5 DAOs — `WorkoutDao` covers groups, workouts, exercises-link rows and sessions):
 
 | Table | Entity | DAO highlights |
 |---|---|---|
@@ -206,6 +206,7 @@ Entities/DAOs (7 tables, 4 DAOs — `WorkoutDao` covers groups, workouts, exerci
 | `workout_exercises` | `WorkoutExerciseEntity(FK workoutId CASCADE, plannedSetsJson TEXT, type)` | ordered `orderIndex`; `getReferencedExerciseIds()` for orphan-media GC |
 | `exercises` | `ExerciseEntity` | `getAll()` ordered `name`, `search()` (`name`/`bodyPart LIKE`), `getByBodyPart()`, `getBodyParts()` distinct ordered |
 | `workout_sessions` | `WorkoutSessionEntity(loggedExercisesJson TEXT, taskId, isDeleted)` | visible queries filter tombstones ordered `startedAt DESC` (`getSessionsRaw()` for sync); `softDeleteSession()`; `getLatestSessionForTask()` for task→summary deep-link; `replaceSessionsAtomic()` for sync merge |
+| `task_category_cross_ref` | `TaskCategoryCrossRef(taskId, categoryName, sortOrder, addedAt)` | per-category positions (`TaskCategoryDao`); `getUntagged()`; rename absorbs conflicts; backfilled from `tasks.category` in 19→20 |
 
 `Converters` serialises `List<String>`, `List<Int>` (weekly days), `List<SubTask>` with kotlinx-serialization. Planned/logged sets are serialised via `WorkoutJsonCodec` and inside `WorkoutEntities.kt` / `WorkoutSessionEntity.kt` (`PlannedSetJson` / `LoggedSetJson` / `LoggedExerciseJson`, `ignoreUnknownKeys=true` for forward compat). Unknown `Priority`/`ExerciseType` names persist verbatim via `priorityRaw`/`typeRaw` and round-trip without coercion.
 

@@ -57,4 +57,8 @@ interface TaskDao {
     // When a category is deleted: clear the category of linked tasks.
     @Query("UPDATE tasks SET category = NULL, updatedAt = :now WHERE category = :name COLLATE NOCASE")
     suspend fun clearCategory(name: String, now: Long)
+
+    /** Bumps updatedAt so category reorderings propagate via sync (Phase 2). */
+    @Query("UPDATE tasks SET updatedAt = :now WHERE id IN (:ids)")
+    suspend fun touchUpdated(ids: List<String>, now: Long)
 }

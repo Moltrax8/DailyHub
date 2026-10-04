@@ -47,6 +47,7 @@
     <string name="empty_all">No tasks yet</string>
     <string name="empty_active">No pending tasks 🎉</string>
     <string name="categories_all">All categories</string>
+    <string name="categories_untagged">Untagged</string>
     <string name="undo">Undo</string>
     <string name="task_completed">Task completed</string>
     <string name="workout_completed">Workout completed</string>
@@ -278,10 +279,16 @@
     <string name="exercise_demo_desc">Exercise demo</string>
 
     <!-- Widget config -->
-    <string name="widget_config_title">Choose tasks to show in this widget</string>
-    <string name="widget_config_desc">You can select multiple tasks. If none is selected, all tasks are shown.</string>
+    <string name="widget_config_title">This widget\'s filter</string>
+    <string name="widget_config_desc">Each widget can show a different slice. With no tags selected, all tasks are shown.</string>
     <string name="widget_show_all">Show all</string>
     <string name="widget_no_pending">No pending tasks yet.</string>
+    <string name="widget_filter_title">Title (optional)</string>
+    <string name="widget_filter_tags">Tags</string>
+    <string name="widget_filter_show_done">Show completed</string>
+    <string name="widget_filter_match_all">Match all (AND)</string>
+    <string name="widget_filter_limit">Limit</string>
+    <string name="widget_filter_clear">Reset to default</string>
 
     <!-- Profile default -->
     <string name="profile_default_name">User</string>

@@ -442,7 +442,7 @@ private fun TaskFilterBar(
             }
         }
 
-        // Category filter (only visible when tasks with a category exist)
+        // Category filter: multi-select ANY-match (Phase 2) + untagged bucket.
         if (categories.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Row(
@@ -450,14 +450,32 @@ private fun TaskFilterBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
-                    selected = filter.category == null,
-                    onClick = { onFilterChange(filter.copy(category = null)) },
+                    selected = filter.categories.isEmpty() && !filter.untaggedOnly,
+                    onClick = { onFilterChange(filter.copy(categories = emptySet(), untaggedOnly = false)) },
                     label = { Text(stringResource(R.string.categories_all)) },
                 )
+                FilterChip(
+                    selected = filter.untaggedOnly,
+                    onClick = {
+                        onFilterChange(filter.copy(
+                            untaggedOnly = !filter.untaggedOnly,
+                            categories = emptySet(),
+                        ))
+                    },
+                    label = { Text(stringResource(R.string.categories_untagged)) },
+                )
                 categories.forEach { cat ->
+                    val selected = filter.categories.any { it.equals(cat, ignoreCase = true) }
                     FilterChip(
-                        selected = filter.category == cat,
-                        onClick = { onFilterChange(filter.copy(category = if (filter.category == cat) null else cat)) },
+                        selected = selected,
+                        onClick = {
+                            val next = if (selected) {
+                                filter.categories.filterNot { it.equals(cat, ignoreCase = true) }.toSet()
+                            } else {
+                                filter.categories + cat
+                            }
+                            onFilterChange(filter.copy(categories = next, untaggedOnly = false))
+                        },
                         label = { Text(cat) },
                     )
                 }

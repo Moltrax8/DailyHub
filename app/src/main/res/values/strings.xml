@@ -47,6 +47,7 @@
     <string name="empty_all">Henüz görev yok</string>
     <string name="empty_active">Bekleyen görev yok 🎉</string>
     <string name="categories_all">Tüm kategoriler</string>
+    <string name="categories_untagged">Etiketsiz</string>
     <string name="undo">Geri Al</string>
     <string name="task_completed">Görev tamamlandı</string>
     <string name="workout_completed">Antrenman tamamlandı</string>
@@ -278,10 +279,16 @@
     <string name="exercise_demo_desc">Egzersiz demosu</string>
 
     <!-- Widget yapılandırma -->
-    <string name="widget_config_title">Bu widget\'ta gösterilecek görevleri seç</string>
-    <string name="widget_config_desc">Birden fazla görev seçebilirsin. Hiçbiri seçilmezse tüm görevler gösterilir.</string>
+    <string name="widget_config_title">Bu widget\'ın filtresi</string>
+    <string name="widget_config_desc">Her widget farklı bir dilim gösterebilir. Etiket seçilmezse tüm görevler gösterilir.</string>
     <string name="widget_show_all">Tümünü göster</string>
     <string name="widget_no_pending">Henüz bekleyen görev yok.</string>
+    <string name="widget_filter_title">Başlık (isteğe bağlı)</string>
+    <string name="widget_filter_tags">Etiketler</string>
+    <string name="widget_filter_show_done">Tamamlananları göster</string>
+    <string name="widget_filter_match_all">Tümüyle eşleş (AND)</string>
+    <string name="widget_filter_limit">Limit</string>
+    <string name="widget_filter_clear">Varsayılana dön</string>
 
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>

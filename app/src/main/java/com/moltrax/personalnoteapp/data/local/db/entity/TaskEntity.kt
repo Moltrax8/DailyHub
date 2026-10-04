@@ -77,7 +77,9 @@ fun Task.toEntity() = TaskEntity(
     recurrenceType = recurrenceType?.name,
     recurrenceDaysOfWeek = recurrenceDaysOfWeek,
     focusDurationSeconds = focusDurationSeconds,
-    category = category,
+    // Legacy column dual-write: deterministic primary tag for old readers
+    // (widget/sync fallbacks); the live set travels via xref (see TaskRepositoryImpl).
+    category = categoryNames.sorted().firstOrNull(),
     subtasks = subtasks,
     createdAt = createdAt,
     updatedAt = updatedAt,

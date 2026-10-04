@@ -14,19 +14,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,29 +47,33 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.moltrax.personalnoteapp.domain.model.Task
-import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
+import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Multi-task selection screen opened via the gear button in the widget. It runs transparent and in a
- * separate task from the main app (manifest: taskAffinity="", singleInstance, excludeFromRecents). Taps therefore
- * do not open MainActivity; it looks like a lightweight dialog. On confirm or dismiss,
- * it removes its own task via [finishAndRemoveTask] and returns directly to the device home screen.
+ * Per-widget filter screen opened via the gear button in the widget (Phase 2).
+ * Runs transparent in a separate task (manifest: taskAffinity="",
+ * singleInstance, excludeFromRecents); confirm/dismiss returns to home.
  *
- * Note: Mandatory setup was removed (no android:configure in the appwidget-provider); when the widget is
- * dropped on the home screen this screen does NOT open and shows all tasks by default.
+ * Each widget instance keeps its own [WidgetFilter] in Glance state: title,
+ * tag multi-select (ANY-match, or ALL-match via the toggle), show-done switch
+ * and result limit. Saving clears any legacy per-task ID selection.
+ *
+ * Note: Mandatory setup was removed (no android:configure in the
+ * appwidget-provider); a freshly dropped widget shows all open tasks.
  */
 @AndroidEntryPoint
 class TaskWidgetConfigActivity : ComponentActivity() {
 
     @Inject lateinit var taskRepo: TaskRepository
+    @Inject lateinit var categoryRepo: CategoryRepository
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
@@ -76,15 +90,15 @@ class TaskWidgetConfigActivity : ComponentActivity() {
             return
         }
 
-        // Set up the dialog after loading the existing selection (for later editing).
         lifecycleScope.launch {
-            val initial = loadExistingSelection()
+            val initial = loadExistingFilter()
+            val tags = availableTags()
             setContent {
                 AppTheme {
                     ConfigDialog(
-                        taskRepo = taskRepo,
-                        initialSelected = initial,
-                        onSave = ::applySelection,
+                        allTags = tags,
+                        initial = initial,
+                        onSave = ::applyFilter,
                         onDismiss = ::dismiss,
                     )
                 }
@@ -95,12 +109,21 @@ class TaskWidgetConfigActivity : ComponentActivity() {
     /** Close the screen and return directly to the home screen by removing its own task. */
     private fun dismiss() = finishAndRemoveTask()
 
-    private suspend fun loadExistingSelection(): Set<String> = runCatching {
+    private suspend fun loadExistingFilter(): WidgetFilter = runCatching {
         val glanceId = GlanceAppWidgetManager(this).getGlanceIdBy(appWidgetId)
-        getAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId)[TaskWidget.SELECTED_TASK_IDS]
-    }.getOrNull() ?: emptySet()
+        WidgetFilter.load(getAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId))
+    }.getOrNull() ?: WidgetFilter()
 
-    private fun applySelection(ids: Set<String>) {
+    /** Permanent categories + tags currently used by open tasks (same source as Home chips). */
+    private suspend fun availableTags(): List<String> = runCatching {
+        val permanent = categoryRepo.observeAll().first()
+            .filter { it.isPermanent }.map { it.name }
+        val used = taskRepo.observeAll().first()
+            .filter { !it.isDone }.flatMap { it.categoryNames }
+        (permanent + used).distinct().sortedBy { it.lowercase() }
+    }.getOrDefault(emptyList())
+
+    private fun applyFilter(filter: WidgetFilter) {
         lifecycleScope.launch {
             val glanceId = GlanceAppWidgetManager(this@TaskWidgetConfigActivity)
                 .getGlanceIdBy(appWidgetId)
@@ -111,9 +134,9 @@ class TaskWidgetConfigActivity : ComponentActivity() {
                 glanceId,
             ) { prefs ->
                 prefs.toMutablePreferences().apply {
-                    // Empty selection = default (all tasks). We remove the key entirely.
-                    if (ids.isEmpty()) remove(TaskWidget.SELECTED_TASK_IDS)
-                    else this[TaskWidget.SELECTED_TASK_IDS] = ids
+                    // The tag filter replaces the legacy per-task ID selection.
+                    remove(TaskWidget.SELECTED_TASK_IDS)
+                    WidgetFilter.save(this, filter)
                 }
             }
 
@@ -125,14 +148,16 @@ class TaskWidgetConfigActivity : ComponentActivity() {
 
 @Composable
 private fun ConfigDialog(
-    taskRepo: TaskRepository,
-    initialSelected: Set<String>,
-    onSave: (Set<String>) -> Unit,
+    allTags: List<String>,
+    initial: WidgetFilter,
+    onSave: (WidgetFilter) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val tasks by taskRepo.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
-    val openTasks = tasks.filter { !it.isDone }
-    val selected = remember { mutableStateListOf<String>().apply { addAll(initialSelected) } }
+    var title by remember { mutableStateOf(initial.title) }
+    val tags = remember { mutableStateListOf<String>().apply { addAll(initial.categoryNames) } }
+    var showDone by remember { mutableStateOf(initial.showDone) }
+    var matchAll by remember { mutableStateOf(initial.matchAll) }
+    var limit by remember { mutableIntStateOf(initial.limit) }
 
     // Transparent dim (scrim): closes on outside tap → returns to the home screen.
     androidx.compose.foundation.layout.Box(
@@ -160,18 +185,21 @@ private fun ConfigDialog(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Text(
-                    text = stringResource(R.string.widget_config_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.widget_filter_title)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { onSave(selected.toSet()) }) { Text(stringResource(R.string.action_save)) }
-                    OutlinedButton(onClick = { onSave(emptySet()) }) { Text(stringResource(R.string.widget_show_all)) }
-                }
-
-                if (openTasks.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.widget_filter_tags),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (allTags.isEmpty()) {
                     Text(
                         text = stringResource(R.string.widget_no_pending),
                         style = MaterialTheme.typography.bodyMedium,
@@ -179,19 +207,59 @@ private fun ConfigDialog(
                     )
                 } else {
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 360.dp),
+                        modifier = Modifier.heightIn(max = 180.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(openTasks) { task ->
-                            TaskOption(
-                                task = task,
-                                checked = task.id in selected,
+                        items(allTags) { tag ->
+                            TagOption(
+                                name = tag,
+                                checked = tags.any { it.equals(tag, ignoreCase = true) },
                                 onToggle = {
-                                    if (task.id in selected) selected.remove(task.id)
-                                    else selected.add(task.id)
+                                    val existing = tags.firstOrNull { it.equals(tag, ignoreCase = true) }
+                                    if (existing != null) tags.remove(existing) else tags.add(tag)
                                 },
                             )
                         }
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = showDone, onCheckedChange = { showDone = it })
+                    Text(
+                        text = stringResource(R.string.widget_filter_show_done),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = matchAll, onCheckedChange = { matchAll = it })
+                    Text(
+                        text = stringResource(R.string.widget_filter_match_all),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.widget_filter_limit),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = { limit = (limit - 1).coerceAtLeast(1) },
+                        modifier = Modifier.size(36.dp),
+                    ) { Icon(Icons.Default.Remove, contentDescription = null) }
+                    Text(text = limit.toString(), style = MaterialTheme.typography.bodyLarge)
+                    IconButton(
+                        onClick = { limit = (limit + 1).coerceAtMost(WidgetFilter.MAX_LIMIT) },
+                        modifier = Modifier.size(36.dp),
+                    ) { Icon(Icons.Default.Add, contentDescription = null) }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = {
+                        onSave(WidgetFilter(title.trim(), tags.toSet(), showDone, limit, matchAll))
+                    }) { Text(stringResource(R.string.action_save)) }
+                    OutlinedButton(onClick = { onSave(WidgetFilter()) }) {
+                        Text(stringResource(R.string.widget_filter_clear))
                     }
                 }
             }
@@ -200,7 +268,7 @@ private fun ConfigDialog(
 }
 
 @Composable
-private fun TaskOption(task: Task, checked: Boolean, onToggle: () -> Unit) {
+private fun TagOption(name: String, checked: Boolean, onToggle: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle),
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -212,7 +280,7 @@ private fun TaskOption(task: Task, checked: Boolean, onToggle: () -> Unit) {
         ) {
             Checkbox(checked = checked, onCheckedChange = { onToggle() })
             Text(
-                text = task.title,
+                text = name,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 8.dp),

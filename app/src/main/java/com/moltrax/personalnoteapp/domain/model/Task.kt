@@ -21,7 +21,16 @@ data class Task(
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
     @Deprecated("Hidden from UI since v1.1 (Phase 1.2); kept for Room/Drive compat.")
     val focusDurationSeconds: Int = 1500,
+    // Legacy single-tag column (dual-written, read-fallback only). The live tag set is
+    // [categoryNames], backed by task_category_cross_ref (Phase 2, Room v20).
+    @Deprecated("Use categoryNames; kept as legacy read-fallback.")
     val category: String? = null,
+    // Live tag set (Phase 2). Empty = untagged bucket. Display casing preserved;
+    // all matching compares NOCASE.
+    val categoryNames: Set<String> = emptySet(),
+    // Per-tag positions for sync (tag -> sortOrder inside that tag). Missing entries
+    // are appended on write. Carried through Drive merge (LWW per-link order).
+    val categoryOrders: Map<String, Long> = emptyMap(),
     // Checklist items under the parent task. Stored embedded with the task.
     val subtasks: List<SubTask> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),

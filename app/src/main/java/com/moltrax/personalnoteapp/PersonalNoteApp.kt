@@ -63,7 +63,8 @@ class PersonalNoteApp : Application(), Configuration.Provider {
                 .map { tasks ->
                     tasks.joinToString("|") { t ->
                         "${t.id}:${t.isDone}:${t.title}:${t.notes}:${t.sortOrder}:" +
-                            "${t.dueDate}:${t.category}:${t.linkedWorkoutId}:${t.linkedProgramId}:" +
+                            "${t.dueDate}:${t.categoryNames.sorted().joinToString(",")}:" +
+                            "${t.linkedWorkoutId}:${t.linkedProgramId}:" +
                             t.subtasks.joinToString(",") { "${it.id}=${it.isDone}=${it.title}" }
                     }
                 }

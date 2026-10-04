@@ -42,7 +42,8 @@ data class TaskDetailState(
     val recurrenceType: RecurrenceType = RecurrenceType.DAILY,
     val recurrenceDaysOfWeek: List<Int> = emptyList(),
     val focusDurationSeconds: Int = 1500,
-    val category: String = "",
+    // Multi-tag set (Phase 2). Replaces the legacy single `category` (kept in domain/Room for compat).
+    val categories: Set<String> = emptySet(),
     val subtasks: List<SubTask> = emptyList(),
     val linkedWorkoutId: String? = null,
     val linkedProgramId: String? = null,
@@ -85,7 +86,10 @@ class TaskDetailViewModel @Inject constructor(
             } ?: RecurrenceType.DAILY,
             recurrenceDaysOfWeek = savedStateHandle.get<IntArray>(KEY_DAYS)?.toList() ?: emptyList(),
             focusDurationSeconds = savedStateHandle.get<Int>(KEY_FOCUS) ?: 1500,
-            category = savedStateHandle.get<String>(KEY_CATEGORY).orEmpty(),
+            categories = savedStateHandle.get<Array<String>>(KEY_CATEGORIES)?.toSet()
+                // Legacy single-tag drafts (pre-Phase-2 process-death restore).
+                ?: savedStateHandle.get<String>(KEY_CATEGORY)?.takeIf { it.isNotBlank() }?.let(::setOf)
+                .orEmpty(),
             subtasks = savedStateHandle.get<String>(KEY_SUBTASKS)?.let {
                 runCatching { json.decodeFromString<List<SubTask>>(it) }.getOrDefault(emptyList())
             } ?: emptyList(),
@@ -107,7 +111,7 @@ class TaskDetailViewModel @Inject constructor(
         savedStateHandle[KEY_REC_TYPE] = s.recurrenceType.name
         savedStateHandle[KEY_DAYS] = s.recurrenceDaysOfWeek.toIntArray()
         savedStateHandle[KEY_FOCUS] = s.focusDurationSeconds
-        savedStateHandle[KEY_CATEGORY] = s.category
+        savedStateHandle[KEY_CATEGORIES] = s.categories.toTypedArray()
         savedStateHandle[KEY_SUBTASKS] = json.encodeToString(s.subtasks)
         if (s.linkedWorkoutId == null) savedStateHandle.remove<String>(KEY_LINK_W) else savedStateHandle[KEY_LINK_W] = s.linkedWorkoutId
         if (s.linkedProgramId == null) savedStateHandle.remove<String>(KEY_LINK_P) else savedStateHandle[KEY_LINK_P] = s.linkedProgramId
@@ -124,19 +128,35 @@ class TaskDetailViewModel @Inject constructor(
     val categories: StateFlow<List<Category>> = categoryRepo.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Selects an existing category or clears the selection (null). */
-    fun selectCategory(name: String?) {
-        _state.update { it.copy(category = name?.trim().orEmpty()) }
+    /** Toggles one tag on the task (multi-select, Phase 2). */
+    fun toggleCategory(name: String) {
+        val n = name.trim()
+        if (n.isBlank()) return
+        _state.update {
+            it.copy(categories = if (it.categories.any { c -> c.equals(n, ignoreCase = true) }) {
+                it.categories.filterNot { c -> c.equals(n, ignoreCase = true) }.toSet()
+            } else {
+                it.categories + n
+            })
+        }
         persist(_state.value)
     }
 
-    /** Creates a new category (may be permanent) and selects it on the task. */
+    /** Clears all tags (untagged bucket). */
+    fun clearCategories() {
+        _state.update { it.copy(categories = emptySet()) }
+        persist(_state.value)
+    }
+
+    /** Creates a new category (may be permanent) and tags the task with it. */
     fun createCategory(name: String, isPermanent: Boolean) {
         val n = name.trim()
         if (n.isBlank()) return
         viewModelScope.launch {
             categoryRepo.ensureExists(n, isPermanent)
-            _state.update { it.copy(category = n) }
+            _state.update { s ->
+                s.copy(categories = if (s.categories.any { it.equals(n, ignoreCase = true) }) s.categories else s.categories + n)
+            }
             persist(_state.value)
         }
     }
@@ -157,7 +177,9 @@ class TaskDetailViewModel @Inject constructor(
                             ?: if (t.intervalDays != null) RecurrenceType.INTERVAL else RecurrenceType.DAILY,
                         recurrenceDaysOfWeek = t.recurrenceDaysOfWeek,
                         focusDurationSeconds = t.focusDurationSeconds,
-                        category = t.category ?: "",
+                        categories = t.categoryNames.ifEmpty {
+                            t.category?.takeIf { it.isNotBlank() }?.let(::setOf).orEmpty()
+                        },
                         subtasks = t.subtasks,
                         linkedWorkoutId = t.linkedWorkoutId,
                         linkedProgramId = t.linkedProgramId,
@@ -251,7 +273,7 @@ class TaskDetailViewModel @Inject constructor(
                 recurrenceType = if (s.isRecurring) s.recurrenceType else null,
                 recurrenceDaysOfWeek = if (s.isRecurring && s.recurrenceType == RecurrenceType.WEEKLY) s.recurrenceDaysOfWeek else emptyList(),
                 focusDurationSeconds = s.focusDurationSeconds,
-                category = s.category.takeIf { it.isNotBlank() },
+                categoryNames = s.categories,
                 subtasks = s.subtasks,
                 // Single-workout and whole-program links are mutually exclusive.
                 linkedWorkoutId = if (s.linkedProgramId != null) null else s.linkedWorkoutId,
@@ -271,9 +293,9 @@ class TaskDetailViewModel @Inject constructor(
                     if (group.currentIndex != start) workoutRepo.upsertGroup(group.copy(currentIndex = start))
                 }
             }
-            // Category lifecycle: record the selected category (a temporary one is created if missing),
-            // then clean up old temporary categories left orphaned by a category change.
-            task.category?.let { categoryRepo.ensureExists(it) }
+            // Category lifecycle: record the selected tags (temporary ones are created if missing),
+            // then clean up old temporary categories left orphaned by a tag change.
+            s.categories.forEach { categoryRepo.ensureExists(it) }
             categoryRepo.cleanupTemporary()
             syncRepo.pushToDrive()
             TaskWidget.requestUpdate(context)
@@ -293,6 +315,8 @@ class TaskDetailViewModel @Inject constructor(
         private const val KEY_REC_TYPE = "task_rec_type"
         private const val KEY_DAYS = "task_days"
         private const val KEY_FOCUS = "task_focus"
+        private const val KEY_CATEGORIES = "task_categories"
+        // Legacy single-tag key (pre-Phase 2); read once as fallback, never written.
         private const val KEY_CATEGORY = "task_category"
         private const val KEY_SUBTASKS = "task_subtasks"
         private const val KEY_LINK_W = "task_link_w"
