@@ -36,6 +36,10 @@ class SettingsViewModel @Inject constructor(
     val reminderMinutes = prefs.reminderMinutes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 60)
     val systemAlertsEnabled = prefs.systemAlertsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     val lastSyncAt     = prefs.lastSyncAt.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    // Automatic update checks (Phase 9, opt-in, default OFF).
+    val autoUpdate     = prefs.autoUpdate.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setAutoUpdate(v: Boolean) = viewModelScope.launch { prefs.setAutoUpdate(v) }
 
     /** Saved birth date (LocalDate), or null when not picked yet. */
     val birthDate = prefs.birthDate

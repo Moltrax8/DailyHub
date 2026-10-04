@@ -183,7 +183,23 @@ androidTest-compile green; device run pending.
 - `events`, `messages` (Realtime), `files` (Storage `space-files`),
   `activity_feed`. Same RLS + Room-cache pattern as Phase 5.
 
-## Phase 9 — Automatic update (opt-in, default OFF)
+## Phase 9 — Automatic update (opt-in, default OFF) — CODE DONE, needs SQL + console + device run
+
+`007_phase9_releases.sql` (public-read `app_releases`, service-role writes
+only; run in dashboard SQL editor). Edge Function `github-release-webhook`
+(HMAC, release/published → tag-derived version code, APK asset URL, upsert;
+deploy + Releases webhook, reuses the shared webhook secret).
+App: raw-OkHttp Realtime client (phoenix postgres_changes INSERT, heartbeat,
+backoff reconnect — also future-proofs Phase 8 chat), `UpdateRepository`
+(startup single Supabase check + live subscription + APK stream download),
+`auto_update` opt-in setting (default OFF), prompt dialog with progress,
+unknown-sources gate, system installer via FileProvider. versionCode scheme
+aligned to tags (v1.0 retrofitted as 10000; plain integer comparison).
+Tests: `AppReleaseTest` 3/3 + `RealtimeClientTest` 3/3 JVM green (fixed:
+org.json is an Android stub on JVM → kotlinx in prod code; wrong v12
+expectation); `SupabaseUpdateE2ETest` prepared (public-row read + decision,
+runs on the VM phone once 007 is applied and a release is published).
+Assemble + androidTest-compile green; device run pending.
 
 Goal: users get new GitHub releases without the app polling GitHub.
 

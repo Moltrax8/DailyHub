@@ -46,6 +46,10 @@ class AppPreferences @Inject constructor(@ApplicationContext private val context
         // When empty, demo videos stay disabled (the app still works).
         val EXERCISEDB_KEY      = stringPreferencesKey("exercisedb_key")
 
+        // Automatic update checks (Phase 9). Opt-in, disabled by default:
+        // the user explicitly enables GitHub-release notices here.
+        val AUTO_UPDATE         = booleanPreferencesKey("auto_update")
+
         // Managed-account identity (Phase 3+): Supabase auth.uid, null when signed out.
         val SUPABASE_USER_ID    = stringPreferencesKey("supabase_user_id")
     }
@@ -117,4 +121,8 @@ class AppPreferences @Inject constructor(@ApplicationContext private val context
         val trimmed = id?.trim().orEmpty()
         if (trimmed.isEmpty()) it.remove(Keys.SUPABASE_USER_ID) else it[Keys.SUPABASE_USER_ID] = trimmed
     }
+
+    // Automatic update checks (Phase 9, opt-in, default OFF).
+    val autoUpdate: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_UPDATE] ?: false }
+    suspend fun setAutoUpdate(v: Boolean) = context.dataStore.edit { it[Keys.AUTO_UPDATE] = v }
 }

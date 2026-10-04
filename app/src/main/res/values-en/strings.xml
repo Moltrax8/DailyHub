@@ -327,6 +327,19 @@
     <string name="social_reject">Reject</string>
     <string name="social_cancel">Cancel</string>
 
+    <!-- Automatic updates (Phase 9, opt-in) -->
+    <string name="settings_section_updates">Updates</string>
+    <string name="settings_auto_update">Automatic update checks</string>
+    <string name="settings_auto_update_desc">When on, the app tracks GitHub releases via Supabase (no polling, instant notice). Default: off.</string>
+    <string name="update_available_title">New version available</string>
+    <string name="update_available_body">%1$s is out (installed: %2$s). Download and install it?</string>
+    <string name="update_download">Download &amp; install</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_install_prompt">Allow installs from unknown sources, then try again.</string>
+    <string name="update_open_settings">Open settings</string>
+    <string name="update_failed">Update failed.</string>
+
     <!-- Shared spaces (Phase 5+) -->
     <string name="action_refresh">Refresh</string>
     <string name="spaces_duo">Duo</string>

@@ -1,0 +1,37 @@
+package com.moltrax.personalnoteapp.domain.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+/**
+ * One row of Supabase `app_releases` (Phase 9). Written only by the
+ * github-release-webhook function; read publicly, pushed via Realtime.
+ */
+@Serializable
+data class AppRelease(
+    val id: String = "",
+    @SerialName("version_name") val versionName: String,
+    @SerialName("version_code") val versionCode: Int,
+    @SerialName("apk_url") val apkUrl: String,
+    val notes: String? = null,
+    @SerialName("published_at") val publishedAt: String = "",
+)
+
+/**
+ * Tag → version code, mirroring the webhook function exactly
+ * (major*10000 + minor*100 + patch; null when unparsable/overflowing).
+ * Since v1.1 the app's own versionCode follows this scheme
+ * (v1.0 retrofitted as 10000), so plain integer comparison decides updates.
+ */
+fun versionCodeFromTag(tag: String): Int? {
+    val m = Regex("""^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?""").find(tag.trim()) ?: return null
+    val major = m.groupValues[1].toIntOrNull() ?: return null
+    val minor = m.groupValues.getOrNull(2)?.takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
+    val patch = m.groupValues.getOrNull(3)?.takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
+    if (major > 200) return null
+    return major * 10000 + minor * 100 + patch
+}
+
+/** True when the release is strictly newer than the installed build. */
+fun isUpdateAvailable(release: AppRelease, installedCode: Int): Boolean =
+    release.versionCode > installedCode

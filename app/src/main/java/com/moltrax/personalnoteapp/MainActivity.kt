@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.ui.AppViewModel
+import com.moltrax.personalnoteapp.ui.components.UpdatePrompt
 import com.moltrax.personalnoteapp.ui.i18n.localizedConfiguration
 import com.moltrax.personalnoteapp.ui.i18n.localizedFor
 import com.moltrax.personalnoteapp.ui.navigation.AppNavHost
@@ -89,6 +90,8 @@ class MainActivity : ComponentActivity() {
                             pendingProjectId = pendingProjectSpaceId.value,
                             onProjectConsumed = { pendingProjectSpaceId.value = null },
                         )
+                        // Opt-in auto-update prompt (Phase 9): renders nothing when off.
+                        UpdatePrompt()
                         if (isSwitchingLanguage) {
                             Column(
                                 modifier = Modifier

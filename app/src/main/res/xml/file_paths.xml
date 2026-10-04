@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shared-file viewer (Phase 8): downloaded space files land in cache/shared. -->
+<!-- Self-update APKs (Phase 9): staged in cache/updates for the installer. -->
 <paths>
     <cache-path name="shared" path="shared/" />
+    <cache-path name="updates" path="updates/" />
 </paths>

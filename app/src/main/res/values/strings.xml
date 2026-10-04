@@ -327,6 +327,19 @@
     <string name="social_reject">Reddet</string>
     <string name="social_cancel">Vazgeç</string>
 
+    <!-- Automatic updates (Phase 9, opt-in) -->
+    <string name="settings_section_updates">Güncellemeler</string>
+    <string name="settings_auto_update">Otomatik güncelleme kontrolü</string>
+    <string name="settings_auto_update_desc">Açıkken uygulama GitHub sürümlerini Supabase üzerinden izler (yoklama yok, anlık bildirim). Varsayılan: kapalı.</string>
+    <string name="update_available_title">Yeni sürüm var</string>
+    <string name="update_available_body">%1$s yayında (kurulu: %2$s). İndirip kurulsun mu?</string>
+    <string name="update_download">İndir ve kur</string>
+    <string name="update_later">Sonra</string>
+    <string name="update_downloading">İndiriliyor… %1$d%%</string>
+    <string name="update_install_prompt">Bilinmeyen kaynaklardan kuruluma izin verildikten sonra tekrar dene.</string>
+    <string name="update_open_settings">Ayarları aç</string>
+    <string name="update_failed">Güncelleme başarısız oldu.</string>
+
     <!-- Shared spaces (Phase 5+) -->
     <string name="action_refresh">Yenile</string>
     <string name="spaces_duo">Duo</string>

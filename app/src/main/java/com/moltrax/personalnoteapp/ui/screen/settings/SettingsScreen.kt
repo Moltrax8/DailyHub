@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -165,6 +166,17 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+
+            // --- Automatic updates (opt-in GitHub release notices, Phase 9) ---
+            SettingsSection(title = stringResource(R.string.settings_section_updates), icon = Icons.Filled.SystemUpdate) {
+                val autoUpdate by vm.autoUpdate.collectAsStateWithLifecycle()
+                SettingsSwitchRow(
+                    title = stringResource(R.string.settings_auto_update),
+                    subtitle = stringResource(R.string.settings_auto_update_desc),
+                    checked = autoUpdate,
+                    onCheckedChange = { vm.setAutoUpdate(it) },
+                )
             }
 
             // --- Exercise demo videos (the user's own RapidAPI key) ---
