@@ -49,7 +49,7 @@ interface SupabaseDbApi {
     suspend fun updateProfile(
         @Header("Authorization") bearer: String,
         @Query("id") idEq: String,
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<Unit>
 
     // ---- Phase 4: friends -------------------------------------------------
@@ -111,7 +111,7 @@ interface SupabaseDbApi {
     suspend fun createSpace(
         @Header("Authorization") bearer: String,
         @Header("Prefer") prefer: String = "return=representation",
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<List<Space>>
 
     @PATCH("spaces")
@@ -157,7 +157,7 @@ interface SupabaseDbApi {
     suspend fun createNote(
         @Header("Authorization") bearer: String,
         @Header("Prefer") prefer: String = "return=representation",
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<List<SharedNote>>
 
     @PATCH("notes")
@@ -209,7 +209,7 @@ interface SupabaseDbApi {
     suspend fun createLink(
         @Header("Authorization") bearer: String,
         @Header("Prefer") prefer: String = "return=representation",
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<List<SpaceLink>>
 
     @DELETE("links")
@@ -270,7 +270,7 @@ interface SupabaseDbApi {
     suspend fun createComment(
         @Header("Authorization") bearer: String,
         @Header("Prefer") prefer: String = "return=representation",
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<List<ProjectComment>>
 
     @DELETE("comments")
@@ -366,7 +366,7 @@ interface SupabaseDbApi {
     suspend fun sendMessage(
         @Header("Authorization") bearer: String,
         @Header("Prefer") prefer: String = "return=representation",
-        @Body body: Map<String, String?>,
+        @Body body: kotlinx.serialization.json.JsonObject,
     ): Response<List<SpaceMessage>>
 
     @DELETE("messages")

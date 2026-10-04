@@ -45,7 +45,7 @@ class SupabaseProfileE2ETest {
         assumeTrue("Supabase keys missing", url.isNotBlank() && key.isNotBlank())
 
         val ctx: Context = ApplicationProvider.getApplicationContext()
-        val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+        val json = Json { ignoreUnknownKeys = true; isLenient = true }
         val http = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 chain.proceed(chain.request().newBuilder().header("apikey", key).build())

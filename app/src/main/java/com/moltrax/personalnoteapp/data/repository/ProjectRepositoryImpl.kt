@@ -66,7 +66,14 @@ class ProjectRepositoryImpl @Inject constructor(
         val me = myId()
         val token = bearer()
         val space = checked(
-            api().createSpace(token, body = mapOf("type" to "PROJECT", "name" to name.trim(), "created_by" to me)),
+            api().createSpace(
+                token,
+                body = buildJsonObject {
+                    put("type", "PROJECT")
+                    put("name", name.trim())
+                    put("created_by", me)
+                },
+            ),
             "Project space create failed",
         ).first()
         checked(api().addMember(token, body = mapOf("space_id" to space.id, "user_id" to me, "role" to "owner")), "Join failed")
@@ -191,10 +198,13 @@ class ProjectRepositoryImpl @Inject constructor(
         val created = checked(
             api().createComment(
                 bearer(),
-                body = mapOf(
-                    "space_id" to spaceId, "ref_type" to refType, "ref_id" to refId,
-                    "author" to myId(), "body_md" to clean,
-                ),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("ref_type", refType)
+                    put("ref_id", refId)
+                    put("author", myId())
+                    put("body_md", clean)
+                },
             ),
             "Comment create failed",
         ).first()

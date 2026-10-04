@@ -36,10 +36,11 @@ object SupabaseModule {
         anonKey = BuildConfig.SUPABASE_ANON_KEY,
     )
 
+    // NOTE: explicitNulls stays true (the default): PostgREST needs explicit
+    // JSON nulls, and kotlinx NPEs on null map values when it is false.
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
-        explicitNulls = false
     }
 
     /** apikey header on every Supabase call; user tokens travel per-call (they rotate). */

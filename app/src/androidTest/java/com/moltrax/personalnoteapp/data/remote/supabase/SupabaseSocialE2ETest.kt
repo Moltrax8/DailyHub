@@ -30,7 +30,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @RunWith(AndroidJUnit4::class)
 class SupabaseSocialE2ETest {
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private data class Actor(val uid: String, val token: String, val db: SupabaseDbApi)
 

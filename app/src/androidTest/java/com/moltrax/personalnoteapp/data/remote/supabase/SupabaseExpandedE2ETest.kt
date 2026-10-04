@@ -32,7 +32,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @RunWith(AndroidJUnit4::class)
 class SupabaseExpandedE2ETest {
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private data class Actor(val uid: String, val bearer: String, val db: SupabaseDbApi)
 
@@ -79,7 +79,12 @@ class SupabaseExpandedE2ETest {
 
     private suspend fun makeDuo(a: Actor, b: Actor): String {
         val space = a.db.createSpace(
-            a.bearer, body = mapOf("type" to "DUO", "name" to null, "created_by" to a.uid),
+            a.bearer,
+            body = buildJsonObject {
+                put("type", "DUO")
+                put("name", null as String?)
+                put("created_by", a.uid)
+            },
         ).body()!!.first()
         val spaceId = space.id
         assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)
@@ -97,7 +102,14 @@ class SupabaseExpandedE2ETest {
 
             // Chat round-trip.
             assertTrue(
-                a.db.sendMessage(a.bearer, body = mapOf("space_id" to spaceId, "author" to a.uid, "body" to "hi")).isSuccessful
+                a.db.sendMessage(
+                    a.bearer,
+                    body = buildJsonObject {
+                        put("space_id", spaceId)
+                        put("author", a.uid)
+                        put("body", "hi")
+                    },
+                ).isSuccessful
             )
             val bMsgs = b.db.spaceMessages(b.bearer, "eq.$spaceId").body()!!
             assertEquals(1, bMsgs.size)

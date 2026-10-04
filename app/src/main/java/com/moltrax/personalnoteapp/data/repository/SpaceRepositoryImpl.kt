@@ -115,7 +115,14 @@ class SpaceRepositoryImpl @Inject constructor(
         val token = bearer()
         // Explicit create (accepted friendship is the invite — no dangling invites).
         val space = checked(
-            api().createSpace(token, body = mapOf("type" to "DUO", "name" to name, "created_by" to me)),
+            api().createSpace(
+                token,
+                body = buildJsonObject {
+                    put("type", "DUO")
+                    put("name", name)
+                    put("created_by", me)
+                },
+            ),
             "Duo hub create failed",
         ).first()
         checked(api().addMember(token, body = mapOf("space_id" to space.id, "user_id" to me, "role" to "owner")), "Join failed")
@@ -190,7 +197,12 @@ class SpaceRepositoryImpl @Inject constructor(
         val note = checked(
             api().createNote(
                 bearer(),
-                body = mapOf("space_id" to spaceId, "author" to me, "title" to title, "body_md" to bodyMd),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("author", me)
+                    put("title", title)
+                    put("body_md", bodyMd)
+                },
             ),
             "Note create failed",
         ).first()
@@ -239,7 +251,11 @@ class SpaceRepositoryImpl @Inject constructor(
         val link = checked(
             api().createLink(
                 bearer(),
-                body = mapOf("space_id" to spaceId, "url" to trimmed, "title" to title?.takeIf { it.isNotBlank() }),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("url", trimmed)
+                    put("title", title?.takeIf { it.isNotBlank() })
+                },
             ),
             "Link create failed",
         ).first()
@@ -293,7 +309,11 @@ class SpaceRepositoryImpl @Inject constructor(
         require(clean.isNotBlank()) { "Message required." }
         val res = api().sendMessage(
             bearer(),
-            body = mapOf("space_id" to spaceId, "author" to myId(), "body" to clean),
+            body = buildJsonObject {
+                put("space_id", spaceId)
+                put("author", myId())
+                put("body", clean)
+            },
         )
         if (!res.isSuccessful) throw IOException("Send failed (HTTP ${res.code()}).")
         pullExtra(spaceId)

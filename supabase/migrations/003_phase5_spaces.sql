@@ -105,12 +105,14 @@ $$;
 -- ----------------------------------------------------------------------------
 -- 3. spaces policies.
 -- ----------------------------------------------------------------------------
--- Members see their spaces.
+-- Members see their spaces. The creator exception covers the INSERT …
+-- SELECT round-trip of return=representation: a just-created space has no
+-- members yet, so without it creation could never return its row.
 drop policy if exists "members see spaces" on public.spaces;
 create policy "members see spaces"
   on public.spaces for select
   to authenticated
-  using (public.is_space_member(id));
+  using (public.is_space_member(id) or created_by = auth.uid());
 
 -- Anyone signed in can create a space (they become a member via members insert).
 drop policy if exists "users create spaces" on public.spaces;

@@ -32,7 +32,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @RunWith(AndroidJUnit4::class)
 class SupabaseGithubE2ETest {
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private data class Actor(val uid: String, val bearer: String, val db: SupabaseDbApi)
 
@@ -84,7 +84,12 @@ class SupabaseGithubE2ETest {
 
             // Project space for the links to hang on.
             val space = a.db.createSpace(
-                a.bearer, body = mapOf("type" to "PROJECT", "name" to "GH", "created_by" to a.uid),
+                a.bearer,
+                body = buildJsonObject {
+                    put("type", "PROJECT")
+                    put("name", "GH")
+                    put("created_by", a.uid)
+                },
             ).body()!!.first()
             val spaceId = space.id
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)

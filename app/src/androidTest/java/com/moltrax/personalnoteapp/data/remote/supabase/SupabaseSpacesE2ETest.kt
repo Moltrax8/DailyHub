@@ -6,6 +6,8 @@ import com.moltrax.personalnoteapp.data.remote.supabase.model.EmailCredentials
 import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
@@ -29,7 +31,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @RunWith(AndroidJUnit4::class)
 class SupabaseSpacesE2ETest {
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private data class Actor(val uid: String, val bearer: String, val db: SupabaseDbApi)
 
@@ -85,7 +87,11 @@ class SupabaseSpacesE2ETest {
             // A creates a Duo hub with B.
             val created = a.db.createSpace(
                 a.bearer,
-                body = mapOf("type" to "DUO", "name" to null, "created_by" to a.uid),
+                body = buildJsonObject {
+                    put("type", "DUO")
+                    put("name", null as String?)
+                    put("created_by", a.uid)
+                },
             )
             assertTrue("create space: HTTP ${created.code()}", created.isSuccessful)
             val spaceId = created.body()!!.first().id
@@ -95,7 +101,12 @@ class SupabaseSpacesE2ETest {
             // A adds a note; B reads it.
             val note = a.db.createNote(
                 a.bearer,
-                body = mapOf("space_id" to spaceId, "author" to a.uid, "title" to "Hi", "body_md" to "hello"),
+                body = buildJsonObject {
+                    put("space_id", spaceId)
+                    put("author", a.uid)
+                    put("title", "Hi")
+                    put("body_md", "hello")
+                },
             )
             assertTrue("create note: HTTP ${note.code()}", note.isSuccessful)
             val bNotes = b.db.spaceNotes(b.bearer, "eq.$spaceId")

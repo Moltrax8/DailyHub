@@ -33,7 +33,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 @RunWith(AndroidJUnit4::class)
 class SupabaseProjectsE2ETest {
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private data class Actor(val uid: String, val bearer: String, val db: SupabaseDbApi)
 
@@ -92,7 +92,12 @@ class SupabaseProjectsE2ETest {
 
             // A creates a PROJECT space + project row, adds B as member.
             val space = a.db.createSpace(
-                a.bearer, body = mapOf("type" to "PROJECT", "name" to "E2E", "created_by" to a.uid),
+                a.bearer,
+                body = buildJsonObject {
+                    put("type", "PROJECT")
+                    put("name", "E2E")
+                    put("created_by", a.uid)
+                },
             ).body()!!.first()
             val spaceId = space.id
             assertTrue(a.db.addMember(a.bearer, body = mapOf("space_id" to spaceId, "user_id" to a.uid, "role" to "owner")).isSuccessful)
@@ -119,7 +124,13 @@ class SupabaseProjectsE2ETest {
             assertTrue(
                 a.db.createComment(
                     a.bearer,
-                    body = mapOf("space_id" to spaceId, "ref_type" to "project_item", "ref_id" to item.id, "author" to a.uid, "body_md" to "nice"),
+                    body = buildJsonObject {
+                        put("space_id", spaceId)
+                        put("ref_type", "project_item")
+                        put("ref_id", item.id)
+                        put("author", a.uid)
+                        put("body_md", "nice")
+                    },
                 ).isSuccessful
             )
 
