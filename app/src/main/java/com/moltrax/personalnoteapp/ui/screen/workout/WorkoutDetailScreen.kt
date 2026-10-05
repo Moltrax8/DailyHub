@@ -150,14 +150,13 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
     ) { padding ->
         if (group == null) {
             // Show a not-found + back affordance instead of an endless spinner for an invalid/deleted groupId.
-            // (Fixed text to avoid touching res; owned-files: ui/** only.)
             Column(
                 Modifier.fillMaxSize().padding(padding).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    "Program not found",
+                    stringResource(R.string.workout_program_not_found),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -249,7 +248,7 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                             modifier = Modifier.fillMaxWidth(),
                             enabled = workout.exercises.isNotEmpty(),
                         ) {
-                            Icon(Icons.Default.PlayArrow, null)
+                            Icon(Icons.Default.PlayArrow, stringResource(R.string.workout_start))
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.workout_start))
                         }

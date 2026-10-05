@@ -2,6 +2,7 @@ package com.moltrax.personalnoteapp.ui.screen.social
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -198,7 +199,7 @@ fun FriendRequestsScreen(nav: NavController, vm: SocialViewModel = hiltViewModel
                 title = { Text(stringResource(R.string.social_requests_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -261,7 +262,7 @@ fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel 
                 title = { Text(username) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -272,7 +273,13 @@ fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel 
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (profile == null) {
-                Text(stringResource(R.string.social_not_found))
+                if (state.busy) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    Text(stringResource(R.string.social_not_found))
+                }
                 return@Column
             }
             ProfileRow(profile = profile)
@@ -280,7 +287,7 @@ fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel 
             if (mine != null && mine != profile.id) {
                 when (vm.statusOf(profile.id)) {
                     null -> Button(onClick = { vm.send(profile.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null)
+                        Icon(Icons.Default.PersonAdd, contentDescription = stringResource(R.string.social_add))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.social_add))
                     }
@@ -289,7 +296,7 @@ fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel 
                         onClick = { vm.removeFriend(profile.id) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(Icons.Default.PersonRemove, contentDescription = null)
+                        Icon(Icons.Default.PersonRemove, contentDescription = stringResource(R.string.social_remove))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.social_remove))
                     }

@@ -223,7 +223,7 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
                 title = { Text(stringResource(R.string.projects_board)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -232,7 +232,7 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
                     }
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more))
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(

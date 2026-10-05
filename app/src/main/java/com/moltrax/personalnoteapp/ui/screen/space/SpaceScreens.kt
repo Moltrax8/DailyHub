@@ -57,6 +57,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -103,7 +104,7 @@ fun DuoHubScreen(
                     maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -305,8 +306,9 @@ private fun MembersTab(
                     Column(Modifier.weight(1f)) {
                         Text(
                             socialVm.displayNameOf(member.userId) +
-                                if (member.userId == social.myId) " (you)" else "",
+                                if (member.userId == social.myId) stringResource(R.string.spaces_you_suffix) else "",
                             style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             stringResource(
@@ -629,7 +631,7 @@ private fun FeedTab(state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDeta
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
-                        entry.createdAt,
+                        feedTime(entry.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -639,14 +641,33 @@ private fun FeedTab(state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDeta
     }
 }
 
+/** Locale-aware range formatter (composition locale, so it follows the app language). */
+@Composable
 private fun fmtRange(startMs: Long, endMs: Long?): String {
-    val fmt = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.getDefault())
+    val locale = LocalConfiguration.current.locales[0]
+    val fmt = remember(locale) { java.text.SimpleDateFormat("d MMM HH:mm", locale) }
     val start = fmt.format(java.util.Date(startMs))
     return if (endMs == null) start else "$start → ${fmt.format(java.util.Date(endMs))}"
 }
 
+/** Locale-aware feed timestamp: parses the ISO instant, falls back to the raw value. */
+@Composable
+private fun feedTime(iso: String): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val fmt = remember(locale) { java.text.SimpleDateFormat("d MMM HH:mm", locale) }
+    return remember(iso, fmt) {
+        runCatching {
+            val instant = runCatching { java.time.Instant.parse(iso) }.getOrNull()
+                ?: java.time.OffsetDateTime.parse(iso).toInstant()
+            fmt.format(java.util.Date.from(instant))
+        }.getOrNull() ?: iso
+    }
+}
+
+@Composable
 private fun kbLabel(bytes: Long): String =
-    if (bytes < 1024) "$bytes B" else "${bytes / 1024} KB"
+    if (bytes < 1024) stringResource(R.string.spaces_file_size_bytes, bytes)
+    else stringResource(R.string.spaces_file_size_kb, bytes / 1024)
 
 private fun contentName(context: android.content.Context, uri: android.net.Uri): String? =
     runCatching {

@@ -240,9 +240,8 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             }
                         }
                         if (state.weeklyError) {
-                                // Fixed text to avoid touching res (owned-files: ui/** only).
                             Text(
-                                "Select at least one day",
+                                stringResource(R.string.task_weekly_error),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -264,8 +263,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             isError = state.intervalError,
                             supportingText = if (state.intervalError) {
-                            // Fixed text to avoid touching res (owned-files: ui/** only).
-                                { Text("Enter a positive number of days", color = MaterialTheme.colorScheme.error) }
+                                { Text(stringResource(R.string.task_interval_error), color = MaterialTheme.colorScheme.error) }
                             } else null,
                         )
                     }

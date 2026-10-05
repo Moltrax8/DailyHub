@@ -42,11 +42,11 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
     }
 
     // On a linked task, finishing the counter routes to the completion screen on Home.
-    // (Fixed text to avoid touching res; owned-files: ui/** only.)
+    val linkedNoticeText = stringResource(R.string.focus_linked_notice)
     LaunchedEffect(linkedNotice) {
         if (linkedNotice) {
             snackbarHostState.showSnackbar(
-                "This task is linked to a workout — complete it from Home to log your sets.",
+                linkedNoticeText,
                 duration = SnackbarDuration.Long,
             )
             vm.consumeLinkedNotice()
@@ -97,7 +97,9 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
             Spacer(Modifier.height(48.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedButton(onClick = { vm.reset() }) { Icon(Icons.Default.Refresh, null) }
+                OutlinedButton(onClick = { vm.reset() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.focus_reset))
+                }
                 Button(
                     onClick = { if (state.isRunning) vm.pause() else vm.start() },
                     modifier = Modifier.size(72.dp),

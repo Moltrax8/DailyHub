@@ -62,6 +62,14 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
         val exercises = session?.loggedExercises ?: emptyList()
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (exercises.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.workout_no_exercises),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             itemsIndexed(exercises) { _, ex ->
                 val cached = exercisesById[ex.exerciseId]
                 ExerciseLogCard(
