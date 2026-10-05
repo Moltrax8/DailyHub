@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -131,7 +132,8 @@ private fun GroupCard(
     com.moltrax.personalnoteapp.ui.components.DhCard(onClick = onTap) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(group.name, style = MaterialTheme.typography.titleMedium)
+                Text(group.name, style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     stringResource(R.string.workout_count, group.workouts.size) +
                         " · " + stringResource(R.string.workout_exercise_count, exerciseCount) +

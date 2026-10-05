@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -361,7 +360,8 @@ private fun ManageCategoriesSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding()
+                .padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.permanent_categories), style = MaterialTheme.typography.titleMedium,
@@ -554,7 +554,7 @@ private fun TaskList(
                     dragHandle = {
                         IconButton(
                             onClick = {},
-                            modifier = Modifier.size(36.dp).draggableHandle(
+                            modifier = Modifier.draggableHandle(
                                 onDragStopped = { onReorder(ordered.map { it.id }) },
                             ),
                         ) {

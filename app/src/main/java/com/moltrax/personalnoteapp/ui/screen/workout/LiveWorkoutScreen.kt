@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,7 +47,8 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(session?.workoutName ?: stringResource(R.string.live_workout_title)) },
+                title = { Text(session?.workoutName ?: stringResource(R.string.live_workout_title),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = { nav.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
                 actions = {
@@ -60,6 +62,14 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
         val exercises = session?.loggedExercises ?: emptyList()
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (exercises.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.workout_no_exercises),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             itemsIndexed(exercises) { _, ex ->
                 val cached = exercisesById[ex.exerciseId]
                 ExerciseLogCard(

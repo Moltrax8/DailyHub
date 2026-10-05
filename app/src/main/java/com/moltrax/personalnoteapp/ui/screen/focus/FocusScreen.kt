@@ -3,7 +3,9 @@ package com.moltrax.personalnoteapp.ui.screen.focus
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -17,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -39,11 +42,11 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
     }
 
     // On a linked task, finishing the counter routes to the completion screen on Home.
-    // (Fixed text to avoid touching res; owned-files: ui/** only.)
+    val linkedNoticeText = stringResource(R.string.focus_linked_notice)
     LaunchedEffect(linkedNotice) {
         if (linkedNotice) {
             snackbarHostState.showSnackbar(
-                "This task is linked to a workout — complete it from Home to log your sets.",
+                linkedNoticeText,
                 duration = SnackbarDuration.Long,
             )
             vm.consumeLinkedNotice()
@@ -56,15 +59,17 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.task?.title ?: stringResource(R.string.focus_title)) },
+                title = { Text(state.task?.title ?: stringResource(R.string.focus_title),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = { vm.pause(); nav.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize().padding(padding)
+                .verticalScroll(rememberScrollState()).padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -92,7 +97,9 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
             Spacer(Modifier.height(48.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedButton(onClick = { vm.reset() }) { Icon(Icons.Default.Refresh, null) }
+                OutlinedButton(onClick = { vm.reset() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.focus_reset))
+                }
                 Button(
                     onClick = { if (state.isRunning) vm.pause() else vm.start() },
                     modifier = Modifier.size(72.dp),

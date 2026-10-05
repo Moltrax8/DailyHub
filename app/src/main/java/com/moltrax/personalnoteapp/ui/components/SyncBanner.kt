@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
@@ -98,10 +99,12 @@ private fun SyncBannerContent(
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             if (isError) {
-                TextButton(onClick = { showDetail = true }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                TextButton(onClick = { showDetail = true }, contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.sync_detail), style = MaterialTheme.typography.labelSmall, color = color)
                 }
-                TextButton(onClick = onSync, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                TextButton(onClick = onSync, contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.action_retry), style = MaterialTheme.typography.labelSmall, color = color)
                 }
             }

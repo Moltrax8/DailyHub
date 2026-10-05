@@ -190,6 +190,7 @@
     <string name="workout_new_workout">New Workout</string>
     <string name="workout_workout_name_hint">Workout name (e.g. Chest Day)</string>
     <string name="workout_program_fallback">Program</string>
+    <string name="workout_program_not_found">Program not found</string>
     <string name="workout_add_workout">Add workout</string>
     <string name="workout_no_workouts">No workouts yet.\nAdd one with the + at the bottom right.</string>
     <string name="workout_add_exercise">Add exercise</string>
@@ -256,7 +257,9 @@
     <string name="recurrence_interval">Day interval</string>
     <string name="task_which_days">Which days?</string>
     <string name="task_no_days_hint">If no day is selected, the task repeats weekly based on its own day.</string>
+    <string name="task_weekly_error">Select at least one day</string>
     <string name="task_every_n_days">Every how many days</string>
+    <string name="task_interval_error">Enter a positive number of days</string>
     <string name="task_recurring_hint">A recurring task is not deleted when completed; its due date automatically moves to the next cycle.</string>
     <string name="task_focus_duration">Focus duration: %1$d min</string>
     <string name="task_focus_optional">Focus time (optional)</string>
@@ -274,7 +277,6 @@
     <string name="task_remove_subtask">Remove subtask</string>
     <string name="task_new_subtask">New subtask</string>
     <string name="task_select_day_error">Select at least one day</string>
-    <string name="task_interval_error">Enter a positive number of days</string>
     <string name="task_section_core">Core details</string>
     <string name="task_section_schedule">Scheduling</string>
     <string name="task_section_advanced">Advanced options</string>
@@ -432,6 +434,9 @@
     <string name="spaces_leave">Leave hub</string>
     <string name="spaces_role_owner">owner</string>
     <string name="spaces_role_member">member</string>
+    <string name="spaces_you_suffix"> (you)</string>
+    <string name="spaces_file_size_bytes">%1$d B</string>
+    <string name="spaces_file_size_kb">%1$d KB</string>
 
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projects</string>
@@ -496,6 +501,8 @@
     <!-- Focus play/pause -->
     <string name="focus_play">Start</string>
     <string name="focus_pause">Pause</string>
+    <string name="focus_reset">Reset</string>
+    <string name="focus_linked_notice">This task is linked to a workout — complete it from Home to log your sets.</string>
 
     <!-- Priority -->
     <string name="task_priority">Priority</string>

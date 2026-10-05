@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -168,13 +169,15 @@ fun ProfileScreen(
                                 status.displayName,
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                             IconButton(onClick = { showNameEditor = true }) {
                                 Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.profile_edit_name_title), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         headerUsername?.takeIf { it.isNotBlank() }?.let {
-                            Text("@$it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("@$it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         if (signedIn) {
                             Text(

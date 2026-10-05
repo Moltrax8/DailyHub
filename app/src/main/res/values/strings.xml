@@ -190,6 +190,7 @@
     <string name="workout_new_workout">Yeni Antrenman</string>
     <string name="workout_workout_name_hint">Antrenman adı (örn. Göğüs Günü)</string>
     <string name="workout_program_fallback">Program</string>
+    <string name="workout_program_not_found">Program bulunamadı</string>
     <string name="workout_add_workout">Antrenman ekle</string>
     <string name="workout_no_workouts">Henüz antrenman yok.\nSağ alttaki + ile ekle.</string>
     <string name="workout_add_exercise">Hareket ekle</string>
@@ -256,7 +257,9 @@
     <string name="recurrence_interval">Gün aralığı</string>
     <string name="task_which_days">Hangi günler?</string>
     <string name="task_no_days_hint">Gün seçilmezse görevin kendi gününe göre haftalık tekrar eder.</string>
+    <string name="task_weekly_error">En az bir gün seç</string>
     <string name="task_every_n_days">Kaç günde bir</string>
+    <string name="task_interval_error">Pozitif bir gün sayısı gir</string>
     <string name="task_recurring_hint">Tekrarlayan görev tamamlandığında silinmez; bitiş tarihi otomatik olarak bir sonraki döngüye taşınır.</string>
     <string name="task_focus_duration">Odak süresi: %1$d dk</string>
     <string name="task_focus_optional">Odak süresi (opsiyonel)</string>
@@ -274,7 +277,6 @@
     <string name="task_remove_subtask">Alt görevi sil</string>
     <string name="task_new_subtask">Yeni alt görev</string>
     <string name="task_select_day_error">En az bir gün seç</string>
-    <string name="task_interval_error">Pozitif bir gün sayısı gir</string>
     <string name="task_section_core">Temel bilgiler</string>
     <string name="task_section_schedule">Zamanlama</string>
     <string name="task_section_advanced">Gelişmiş seçenekler</string>
@@ -432,6 +434,9 @@
     <string name="spaces_leave">Hub\'dan ayrıl</string>
     <string name="spaces_role_owner">sahip</string>
     <string name="spaces_role_member">üye</string>
+    <string name="spaces_you_suffix"> (siz)</string>
+    <string name="spaces_file_size_bytes">%1$d B</string>
+    <string name="spaces_file_size_kb">%1$d KB</string>
 
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projeler</string>
@@ -496,6 +501,8 @@
     <!-- Odak oynat/duraklat -->
     <string name="focus_play">Başlat</string>
     <string name="focus_pause">Duraklat</string>
+    <string name="focus_reset">Sıfırla</string>
+    <string name="focus_linked_notice">Bu görev bir antrenmana bağlı — setlerini kaydetmek için onu Ana Sayfa\'dan tamamla.</string>
 
     <!-- Öncelik -->
     <string name="task_priority">Öncelik</string>
