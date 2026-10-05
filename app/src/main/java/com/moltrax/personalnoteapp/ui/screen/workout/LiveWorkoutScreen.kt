@@ -50,7 +50,7 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
                 title = { Text(session?.workoutName ?: stringResource(R.string.live_workout_title),
                     maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = { nav.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } },
                 actions = {
                     TextButton(onClick = {
                         vm.finishSession { sessionId -> finishedSessionId = sessionId }

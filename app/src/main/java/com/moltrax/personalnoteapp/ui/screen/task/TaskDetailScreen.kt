@@ -65,7 +65,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 title = { Text(stringResource(if (state.isNew) R.string.task_new else R.string.task_edit)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
                     }
                 },
                 actions = {

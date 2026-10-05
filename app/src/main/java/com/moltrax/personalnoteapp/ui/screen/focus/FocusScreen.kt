@@ -62,7 +62,7 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
                 title = { Text(state.task?.title ?: stringResource(R.string.focus_title),
                     maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = { vm.pause(); nav.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
