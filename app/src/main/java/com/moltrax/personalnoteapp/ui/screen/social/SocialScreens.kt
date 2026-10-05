@@ -245,6 +245,12 @@ fun FriendRequestsScreen(nav: NavController, vm: SocialViewModel = hiltViewModel
 @Composable
 fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    // This screen gets its own ViewModel instance (empty search results), so
+    // resolve the profile here instead of relying on the caller's results.
+    LaunchedEffect(username) {
+        vm.refresh()
+        vm.search(username)
+    }
     val profile = state.results.firstOrNull { it.username.equals(username, ignoreCase = true) }
         ?: state.friends.firstOrNull { it.username.equals(username, ignoreCase = true) }
 

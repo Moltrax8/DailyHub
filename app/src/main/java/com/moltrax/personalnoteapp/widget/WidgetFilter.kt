@@ -18,6 +18,8 @@ data class WidgetFilter(
     val showDone: Boolean = false,
     val limit: Int = DEFAULT_LIMIT,
     val matchAll: Boolean = false,
+    /** Space (hub/project) id whose shared todos this widget shows. Blank = personal tasks. */
+    val spaceId: String = "",
 ) {
     companion object {
         const val DEFAULT_LIMIT = 20
@@ -28,6 +30,7 @@ data class WidgetFilter(
         val SHOW_DONE = booleanPreferencesKey("widget_filter_show_done")
         val LIMIT = intPreferencesKey("widget_filter_limit")
         val MATCH_ALL = booleanPreferencesKey("widget_filter_match_all")
+        val SPACE_ID = stringPreferencesKey("widget_filter_space_id")
 
         fun load(prefs: Preferences): WidgetFilter = WidgetFilter(
             title = prefs[TITLE].orEmpty(),
@@ -35,6 +38,7 @@ data class WidgetFilter(
             showDone = prefs[SHOW_DONE] ?: false,
             limit = (prefs[LIMIT] ?: DEFAULT_LIMIT).coerceIn(1, MAX_LIMIT),
             matchAll = prefs[MATCH_ALL] ?: false,
+            spaceId = prefs[SPACE_ID].orEmpty(),
         )
 
         fun save(mutable: MutablePreferences, filter: WidgetFilter) {
@@ -43,6 +47,7 @@ data class WidgetFilter(
             mutable[SHOW_DONE] = filter.showDone
             mutable[LIMIT] = filter.limit.coerceIn(1, MAX_LIMIT)
             mutable[MATCH_ALL] = filter.matchAll
+            if (filter.spaceId.isBlank()) mutable.remove(SPACE_ID) else mutable[SPACE_ID] = filter.spaceId
         }
     }
 }

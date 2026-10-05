@@ -63,6 +63,7 @@ data class GithubPublicRepo(
     @SerialName("full_name") val fullName: String,
     val private: Boolean = false,
     val description: String? = null,
+    val fork: Boolean = false,
 )
 
 /** First event slice (workflow_failed arrives later). */

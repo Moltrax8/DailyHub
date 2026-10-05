@@ -291,6 +291,9 @@
     <string name="widget_filter_match_all">Tümüyle eşleş (AND)</string>
     <string name="widget_filter_limit">Limit</string>
     <string name="widget_filter_clear">Varsayılana dön</string>
+    <string name="widget_filter_space">Hub veya proje (depo bazında)</string>
+    <string name="widget_filter_space_none">Henüz hub yok — önce uygulamadan katıl veya oluştur.</string>
+    <string name="widget_filter_space_all">Tüm görevler (kişisel)</string>
 
     <!-- Supabase managed account (Phase 3+) -->
     <string name="supabase_auth_title">Hesap</string>
@@ -404,6 +407,9 @@
     <string name="projects_empty_desc">Projeler ortak çalışma alanlarıdır: iş takibi için pano, not ve sohbet için hub ve bağlı GitHub depoları. Başlamak için bir tane oluştur.</string>
     <string name="projects_open">Aç</string>
     <string name="projects_new_hint">Proje; görev panosu ve işbirliği hub\'ı olan ortak bir çalışma alanıdır.</string>
+    <string name="projects_delete">Projeyi sil</string>
+    <string name="projects_delete_title">Bu proje silinsin mi?</string>
+    <string name="projects_delete_confirm">Proje, panosu, hub içeriği ve bağlantıları herkes için silinir. Bu işlem geri alınamaz.</string>
     <string name="projects_untitled">Başlıksız proje</string>
     <string name="projects_new">Yeni proje</string>
     <string name="projects_name">Proje adı</string>
@@ -432,6 +438,8 @@
     <string name="github_browse_user">GitHub kullanıcı adı</string>
     <string name="github_browse_fetch">Getir</string>
     <string name="github_browse_empty">Bu kullanıcıda herkese açık depo yok.</string>
+    <string name="github_hide_forks">Fork\'ları gizle</string>
+    <string name="github_fork_badge">fork</string>
     <string name="github_activity">Hareketler</string>
     <string name="github_activity_empty">Henüz hareket yok — webhook ilk olayda buraya düşer.</string>
     <string name="github_link_title">Depo bağla</string>

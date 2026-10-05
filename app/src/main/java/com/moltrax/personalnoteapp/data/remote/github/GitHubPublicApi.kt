@@ -19,5 +19,7 @@ interface GitHubPublicApi {
         @Path("username") username: String,
         @Query("per_page") perPage: Int = 100,
         @Query("sort") sort: String = "updated",
+        /** owner = theirs only (no member/collab repos); forks filtered client-side. */
+        @Query("type") type: String = "owner",
     ): Response<List<GithubPublicRepo>>
 }

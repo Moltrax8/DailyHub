@@ -139,9 +139,6 @@ class SupabaseAuthService @Inject constructor(
         const val NOT_CONFIGURED = "Supabase is not configured (missing SUPABASE_URL/ANON_KEY)."
         const val NO_SESSION = "No session returned."
         const val CONFIRM_EMAIL =
-            "Account created — check your email, tap the confirm link, then Sign in. " +
-                "If the link opens localhost:3000, set Supabase Auth → URL Configuration → " +
-                "Site URL to dailyhub://auth/callback (and add it to Redirect URLs). " +
-                "(Dev shortcut: Auth → Providers → Email → Confirm email OFF.)"
+            "Account created — check your email, tap the confirm link, then come back and Sign in."
     }
 }

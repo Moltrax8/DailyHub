@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.widget.TaskWidget
 import com.moltrax.personalnoteapp.worker.RescheduleNotificationsWorker
@@ -26,6 +27,7 @@ class PersonalNoteApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var taskRepository: TaskRepository
+    @Inject lateinit var spaceRepository: SpaceRepository
 
     // Lightweight process-lifetime scope: listens to the task flow and refreshes the widget.
     private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -71,6 +73,18 @@ class PersonalNoteApp : Application(), Configuration.Provider {
                 .debounce(500)
                 .distinctUntilChanged()
                 .drop(1) // first emission is the current state; do not update needlessly at launch
+                .collect { TaskWidget.requestUpdate(this@PersonalNoteApp) }
+        }
+        // Same for repo-wise widgets: hub renames/membership changes re-render.
+        // (Shared-todo toggles refresh instantly from ToggleSpaceTaskAction itself.)
+        widgetScope.launch {
+            spaceRepository.observeSpaces()
+                .map { spaces ->
+                    spaces.joinToString("|") { "${it.id}:${it.name}:${it.updatedAt}" }
+                }
+                .debounce(500)
+                .distinctUntilChanged()
+                .drop(1)
                 .collect { TaskWidget.requestUpdate(this@PersonalNoteApp) }
         }
     }

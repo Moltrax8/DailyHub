@@ -90,6 +90,7 @@ class TaskWidget : GlanceAppWidget() {
         fun notificationService(): NotificationService
         fun notificationScheduler(): NotificationScheduler
         fun appPreferences(): AppPreferences
+        fun spaceRepository(): com.moltrax.personalnoteapp.domain.repository.SpaceRepository
     }
 
     /** A single subtask (checklist) row in the widget; tapping toggles its completion state. */
@@ -103,13 +104,17 @@ class TaskWidget : GlanceAppWidget() {
         val isWorkout: Boolean,
         // Checklist items under the task (embedded), also listed in the widget.
         val subtasks: List<SubItem>,
-    )
+        // Repo/hub mode: shared todo from a space; toggling runs ToggleSpaceTaskAction.
+        val spaceId: String? = null,
+    ) {
+        val isSpace: Boolean get() = spaceId != null
+    }
 
     /** Fixed strings shown in the widget, resolved for the selected language (widget is not Compose). */
     private data class WidgetStrings(val title: String, val error: String, val empty: String, val undo: String)
 
     private sealed interface UiState {
-        data class Content(val tasks: List<TaskItem>) : UiState
+        data class Content(val tasks: List<TaskItem>, val titleOverride: String? = null) : UiState
         data object Error : UiState
     }
 
@@ -140,10 +145,12 @@ class TaskWidget : GlanceAppWidget() {
      */
     private suspend fun loadState(context: Context, id: GlanceId): UiState =
         runCatching {
-            val repo = entryPoint(context).taskRepository()
+            val ep = entryPoint(context)
             val glanceState = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
-            val legacyIds = glanceState[SELECTED_TASK_IDS]
             val filter = WidgetFilter.load(glanceState)
+            if (filter.spaceId.isNotBlank()) return@runCatching loadSpaceState(ep, filter)
+            val repo = ep.taskRepository()
+            val legacyIds = glanceState[SELECTED_TASK_IDS]
             val tasks = when {
                 !legacyIds.isNullOrEmpty() ->
                     repo.observeAll().first().filter { it.id in legacyIds && !it.isDone }
@@ -168,6 +175,30 @@ class TaskWidget : GlanceAppWidget() {
             UiState.Content(items)
         }.getOrElse { UiState.Error }
 
+    /** Repo/hub mode: shared todos of one space (hub/project), title defaults to the space name. */
+    private suspend fun loadSpaceState(
+        ep: TaskWidgetEntryPoint,
+        filter: WidgetFilter,
+    ): UiState {
+        val spaces = ep.spaceRepository()
+        val spaceName = spaces.observeSpaces().first()
+            .firstOrNull { it.id == filter.spaceId }?.name?.takeIf { it.isNotBlank() }
+        val tasks = spaces.observeTasks(filter.spaceId).first()
+            .filter { filter.showDone || !it.isDone }
+            .take(filter.limit)
+        val items = tasks.map { t ->
+            TaskItem(
+                id = t.id,
+                title = t.title,
+                notes = t.assignee?.takeIf { it.isNotBlank() }?.let { "@$it" },
+                isWorkout = false,
+                subtasks = emptyList(),
+                spaceId = filter.spaceId,
+            )
+        }
+        return UiState.Content(items, titleOverride = spaceName)
+    }
+
     @Composable
     private fun WidgetRoot(context: Context, state: UiState, appWidgetId: Int, strings: WidgetStrings) {
         val size = LocalSize.current
@@ -187,7 +218,13 @@ class TaskWidget : GlanceAppWidget() {
                 .padding(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Header(context, appWidgetId, prefs[WidgetFilter.TITLE]?.takeIf { it.isNotBlank() } ?: strings.title)
+            Header(
+                context,
+                appWidgetId,
+                prefs[WidgetFilter.TITLE]?.takeIf { it.isNotBlank() }
+                    ?: (state as? UiState.Content)?.titleOverride
+                    ?: strings.title,
+            )
             Spacer(GlanceModifier.height(10.dp))
 
             // Content fills the remaining space; if the undo strip exists it stays pinned at the bottom (the list does not shift).
@@ -348,10 +385,16 @@ class TaskWidget : GlanceAppWidget() {
      */
     @Composable
     private fun TaskRow(context: Context, item: TaskItem) {
-        // For workout-linked tasks, checking does not complete directly: it opens the set/rep/weight screen in the app.
-        // Other tasks complete instantly from the widget as usual.
+        // Repo/hub todos toggle server-side; workout-linked tasks open the set/rep screen;
+        // other tasks complete instantly. All without opening the app.
         val checkAction: androidx.glance.action.Action =
-            if (item.isWorkout) actionStartActivity(workoutCompleteIntent(context, item.id))
+            if (item.isSpace) actionRunCallback<ToggleSpaceTaskAction>(
+                actionParametersOf(
+                    ToggleSpaceTaskAction.spaceIdKey to (item.spaceId.orEmpty()),
+                    ToggleSpaceTaskAction.taskIdKey to item.id,
+                ),
+            )
+            else if (item.isWorkout) actionStartActivity(workoutCompleteIntent(context, item.id))
             else actionRunCallback<CompleteTaskAction>(
                 actionParametersOf(CompleteTaskAction.taskIdKey to item.id),
             )

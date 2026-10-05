@@ -3,6 +3,7 @@ package com.moltrax.personalnoteapp.ui.screen.project
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,10 +23,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -206,6 +210,8 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
     var showAdd by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<ProjectItem?>(null) }
     var mainTab by remember { mutableIntStateOf(0) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(spaceId) { vm.openProject(spaceId); vm.loadGitHub(spaceId) }
     val board = groupBoardItems(state.items)
@@ -222,6 +228,17 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
                 actions = {
                     IconButton(onClick = { nav.navigate(DuoHub(spaceId)) }) {
                         Icon(Icons.Default.Hub, contentDescription = stringResource(R.string.projects_open_hub))
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.projects_delete)) },
+                                onClick = { showMenu = false; showDelete = true },
+                            )
+                        }
                     }
                 },
             )
@@ -278,6 +295,21 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
             spaceId = spaceId,
             item = item,
             onDismiss = { selected = null },
+        )
+    }
+
+    if (showDelete) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text(stringResource(R.string.projects_delete_title)) },
+            text = { Text(stringResource(R.string.projects_delete_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDelete = false
+                    vm.deleteProject(spaceId) { nav.popBackStack() }
+                }) { Text(stringResource(R.string.projects_delete)) }
+            },
+            dismissButton = { TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -560,11 +592,23 @@ private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: 
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (browse.repos.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(
+                            checked = browse.hideForks,
+                            onCheckedChange = { vm.toggleHideForks() },
+                        )
+                        Text(
+                            stringResource(R.string.github_hide_forks),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(browse.repos, key = { it.id }) { repo ->
+                    items(browse.visibleRepos, key = { it.id }) { repo ->
                         val checked = repo.id in browse.selectedIds
                         Row(
                             modifier = Modifier.fillMaxWidth().clickable { vm.toggleBrowseRepo(repo.id) },
@@ -583,6 +627,13 @@ private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: 
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 2,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                                if (repo.fork) {
+                                    Text(
+                                        stringResource(R.string.github_fork_badge),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }

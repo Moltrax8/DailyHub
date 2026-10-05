@@ -233,9 +233,14 @@ class ProjectViewModel @Inject constructor(
         val trackedIds: Set<Long> = emptySet(),
         /** Checkbox state; Save links newly checked + unlinks newly unchecked. */
         val selectedIds: Set<Long> = emptySet(),
+        /** Forks hidden by default — most users only track their own repos. */
+        val hideForks: Boolean = true,
         val busy: Boolean = false,
         val error: String? = null,
-    )
+    ) {
+        val visibleRepos: List<GithubPublicRepo> =
+            if (hideForks) repos.filter { !it.fork } else repos
+    }
 
     private val _browse = MutableStateFlow(RepoBrowseUiState())
     val browseState: StateFlow<RepoBrowseUiState> = _browse.asStateFlow()
@@ -267,6 +272,10 @@ class ProjectViewModel @Inject constructor(
             val sel = if (id in it.selectedIds) it.selectedIds - id else it.selectedIds + id
             it.copy(selectedIds = sel)
         }
+    }
+
+    fun toggleHideForks() {
+        _browse.update { it.copy(hideForks = !it.hideForks) }
     }
 
     fun applyBrowseRepos(spaceId: String, onDone: () -> Unit = {}) {

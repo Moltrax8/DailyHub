@@ -291,6 +291,9 @@
     <string name="widget_filter_match_all">Match all (AND)</string>
     <string name="widget_filter_limit">Limit</string>
     <string name="widget_filter_clear">Reset to default</string>
+    <string name="widget_filter_space">Hub or project (repo-wise)</string>
+    <string name="widget_filter_space_none">No hubs yet — join or create one in the app first.</string>
+    <string name="widget_filter_space_all">All tasks (personal)</string>
 
     <!-- Supabase managed account (Phase 3+) -->
     <string name="supabase_auth_title">Account</string>
@@ -404,6 +407,9 @@
     <string name="projects_empty_desc">Projects are shared workspaces: a board for tracking work, a hub for notes and chat, and linked GitHub repos. Create one to get started.</string>
     <string name="projects_open">Open</string>
     <string name="projects_new_hint">A project is a shared workspace with a task board and a collaboration hub.</string>
+    <string name="projects_delete">Delete project</string>
+    <string name="projects_delete_title">Delete this project?</string>
+    <string name="projects_delete_confirm">The project, its board, hub content and links are removed for everyone. This cannot be undone.</string>
     <string name="projects_untitled">Untitled project</string>
     <string name="projects_new">New project</string>
     <string name="projects_name">Project name</string>
@@ -432,6 +438,8 @@
     <string name="github_browse_user">GitHub username</string>
     <string name="github_browse_fetch">Fetch</string>
     <string name="github_browse_empty">No public repos found for this user.</string>
+    <string name="github_hide_forks">Hide forks</string>
+    <string name="github_fork_badge">fork</string>
     <string name="github_activity">Activity</string>
     <string name="github_activity_empty">No activity yet — the webhook drops the first event here.</string>
     <string name="github_link_title">Link repo</string>
