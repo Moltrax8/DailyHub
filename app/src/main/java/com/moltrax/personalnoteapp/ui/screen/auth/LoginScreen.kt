@@ -109,7 +109,8 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
 
             Spacer(Modifier.height(24.dp))
 
-            Text(stringResource(R.string.app_name), fontSize = 28.sp, fontWeight = FontWeight.Bold,
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground)
 
             Spacer(Modifier.height(8.dp))

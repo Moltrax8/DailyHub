@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -212,7 +211,8 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.home_title), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold,
+                Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
                 val pending = state.allTasks.count { !it.isDone }
                 if (pending > 0) Badge(containerColor = AppColors.AccentGlow,
@@ -605,7 +605,7 @@ fun TaskItem(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .padding(end = 6.dp)
-                                .background(AppColors.AccentGlow, RoundedCornerShape(6.dp))
+                                .background(AppColors.AccentGlow, MaterialTheme.shapes.small)
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null,

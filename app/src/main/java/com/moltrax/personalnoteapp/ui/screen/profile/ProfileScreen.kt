@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cake
@@ -161,7 +160,7 @@ fun ProfileScreen(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     ),
-                    shape = RoundedCornerShape(6.dp),
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Filled.Logout, contentDescription = null)
@@ -261,17 +260,17 @@ private fun StatusPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(SoloColors.Panel)
-            .border(1.dp, SoloColors.PanelEdge.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+            .border(1.dp, SoloColors.PanelEdge.copy(alpha = 0.55f), MaterialTheme.shapes.medium)
             .padding(16.dp),
     ) {
         if (title != null) {
             Text(
                 "⟦ $title ⟧",
+                style = MaterialTheme.typography.labelMedium,
                 color = SoloColors.Neon,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
                 letterSpacing = 2.sp,
             )
             Spacer(Modifier.height(10.dp))
@@ -318,14 +317,14 @@ private fun HunterHeaderPanel(
             Column(Modifier.weight(1f)) {
                 // Tapping the name opens it too; the pencil icon next to it also opens the edit dialog.
                 Row(
-                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onEditName),
+                    modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onEditName),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         status.displayName,
+                        style = MaterialTheme.typography.titleLarge,
                         color = SoloColors.TextBright,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
                         modifier = Modifier.weight(1f, fill = false),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
@@ -341,8 +340,8 @@ private fun HunterHeaderPanel(
                 username?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         "@$it",
+                        style = MaterialTheme.typography.labelMedium,
                         color = SoloColors.TextDim,
-                        fontSize = 13.sp,
                     )
                 }
             }
@@ -369,7 +368,7 @@ private fun SettingsPanel(
             icon = { Icon(Icons.Filled.Cake, contentDescription = null, tint = SoloColors.Neon) },
             title = stringResource(R.string.profile_birthdate),
             subtitle = birthDate?.format(dateFmt) ?: stringResource(R.string.profile_not_selected_tap),
-            trailing = { age?.let { Text(stringResource(R.string.profile_age_value, it), color = SoloColors.Neon, fontSize = 13.sp) } },
+            trailing = { age?.let { Text(stringResource(R.string.profile_age_value, it), style = MaterialTheme.typography.labelMedium, color = SoloColors.Neon) } },
             onClick = onPickDate,
         )
     }
@@ -386,7 +385,7 @@ private fun SettingRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -394,8 +393,8 @@ private fun SettingRow(
         icon()
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = SoloColors.TextBright, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(subtitle, color = SoloColors.TextDim, fontSize = 12.sp)
+            Text(title, style = MaterialTheme.typography.titleSmall, color = SoloColors.TextBright, fontWeight = FontWeight.Medium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = SoloColors.TextDim)
         }
         Spacer(Modifier.width(8.dp))
         trailing()

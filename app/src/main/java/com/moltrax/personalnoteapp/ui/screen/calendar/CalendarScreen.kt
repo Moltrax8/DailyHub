@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -196,16 +195,16 @@ private fun DayCell(
         modifier = modifier
             .aspectRatio(1f)
             .padding(3.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(if (isSelected) AppColors.AccentGlow else androidx.compose.ui.graphics.Color.Transparent)
-            .then(if (isToday) Modifier.border(1.dp, AppColors.Accent, RoundedCornerShape(10.dp)) else Modifier)
+            .then(if (isToday) Modifier.border(1.dp, AppColors.Accent, MaterialTheme.shapes.small) else Modifier)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 day.toString(),
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) AppColors.Accent else MaterialTheme.colorScheme.onBackground,
             )
@@ -247,7 +246,7 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
                 onClick = { onTap(task) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

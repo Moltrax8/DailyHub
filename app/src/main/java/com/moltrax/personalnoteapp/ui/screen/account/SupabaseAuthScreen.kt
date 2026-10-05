@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -106,7 +105,7 @@ private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
     Text(
         if (state.signUpMode) stringResource(R.string.supabase_auth_create)
         else stringResource(R.string.supabase_auth_welcome),
-        fontSize = 22.sp,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
     )
     OutlinedTextField(
@@ -152,7 +151,7 @@ private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
 private fun UsernameForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
     Text(
         stringResource(R.string.supabase_auth_pick_username),
-        fontSize = 22.sp,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
     )
     Text(
