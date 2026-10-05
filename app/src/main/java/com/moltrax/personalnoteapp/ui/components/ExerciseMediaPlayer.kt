@@ -171,7 +171,7 @@ private fun rememberGifImageLoader(exerciseDbKey: String): ImageLoader {
 }
 
 /** Plays the real video in a loop with Media3 ExoPlayer; releases it when the component is disposed. */
-@OptIn(UnstableApi::class)
+@UnstableApi
 @Composable
 private fun ExoVideoPlayer(uri: Uri, modifier: Modifier) {
     val context = LocalContext.current

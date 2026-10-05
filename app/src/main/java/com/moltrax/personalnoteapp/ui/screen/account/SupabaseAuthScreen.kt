@@ -102,8 +102,7 @@ private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
     Text(
         if (state.signUpMode) stringResource(R.string.supabase_auth_create)
         else stringResource(R.string.supabase_auth_welcome),
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.headlineSmall,
     )
     OutlinedTextField(
         value = state.email,
@@ -148,8 +147,7 @@ private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
 private fun UsernameForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
     Text(
         stringResource(R.string.supabase_auth_pick_username),
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.headlineSmall,
     )
     Text(
         stringResource(R.string.supabase_auth_username_hint),

@@ -21,7 +21,6 @@ import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.json.WorkoutJsonCodec
 import com.moltrax.personalnoteapp.domain.model.WorkoutGroup
 import com.moltrax.personalnoteapp.ui.navigation.WorkoutDetail
-import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +87,6 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
             ) { Icon(Icons.Default.Add, stringResource(R.string.workout_new_program)) }
         },
         snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = { BottomNavBar(nav) }
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -106,9 +104,13 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
             }
             if (groups.isEmpty()) {
                 item {
-                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.workout_no_programs), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    com.moltrax.personalnoteapp.ui.components.DhEmptyState(
+                        icon = Icons.Filled.FitnessCenter,
+                        title = stringResource(R.string.workout_no_programs),
+                        description = stringResource(R.string.workout_empty_desc),
+                        actionLabel = stringResource(R.string.workout_new_program),
+                        onAction = { showAddDialog = true },
+                    )
                 }
             }
         }
@@ -123,21 +125,22 @@ private fun GroupCard(
     onDelete: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    Card(
-        onClick = onTap,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.FitnessCenter, null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(12.dp))
+    var showDelete by remember { mutableStateOf(false) }
+    val exerciseCount = group.workouts.sumOf { it.exercises.size }
+    val totalSets = group.workouts.sumOf { w -> w.exercises.sumOf { it.plannedSets.size } }
+    com.moltrax.personalnoteapp.ui.components.DhCard(onClick = onTap) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(group.name, style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.workout_count, group.workouts.size),
+                Text(
+                    stringResource(R.string.workout_count, group.workouts.size) +
+                        " · " + stringResource(R.string.workout_exercise_count, exerciseCount) +
+                        " · " + stringResource(R.string.workout_set_count, totalSets),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            TextButton(onClick = onTap) { Text(stringResource(R.string.projects_open)) }
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Filled.MoreHoriz, stringResource(R.string.cd_more))
@@ -149,10 +152,20 @@ private fun GroupCard(
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_delete)) },
-                        onClick = { menuOpen = false; onDelete() },
+                        onClick = { menuOpen = false; showDelete = true },
                     )
                 }
             }
         }
+    }
+    if (showDelete) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.workout_delete_title),
+            message = stringResource(R.string.workout_delete_confirm, group.name),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { showDelete = false; onDelete() },
+            onDismiss = { showDelete = false },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
     }
 }

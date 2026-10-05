@@ -490,11 +490,11 @@ class TaskWidget : GlanceAppWidget() {
         )
     }
 
-    /** Extra tones specific to the widget (dark/neon complements of the general [AppColors] palette). */
+    /** Widget tones aligned with the DailyHub graphite/slate design language. */
     private object WidgetColors {
-        val Bg   = androidx.compose.ui.graphics.Color(0xFF0B0B12) // outer container background
-        val Card = androidx.compose.ui.graphics.Color(0xFF1B1B26) // task card background
-        val Chip = androidx.compose.ui.graphics.Color(0xFF22222E) // plain icon button background
+        val Bg   = androidx.compose.ui.graphics.Color(0xFF111318) // outer container background
+        val Card = androidx.compose.ui.graphics.Color(0xFF20242E) // task card background
+        val Chip = androidx.compose.ui.graphics.Color(0xFF262B37) // plain icon button background
     }
 
     companion object {

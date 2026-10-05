@@ -33,7 +33,6 @@ import com.moltrax.personalnoteapp.ui.components.ExerciseMediaPlayer
 import com.moltrax.personalnoteapp.ui.components.ExerciseThumb
 import com.moltrax.personalnoteapp.ui.i18n.label
 import com.moltrax.personalnoteapp.ui.navigation.LiveWorkout
-import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,7 +143,6 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                 Icon(Icons.Default.Add, stringResource(R.string.workout_add_workout))
             }
         },
-        bottomBar = { BottomNavBar(nav) },
     ) { padding ->
         if (group == null) {
             // Show a not-found + back affordance instead of an endless spinner for an invalid/deleted groupId.

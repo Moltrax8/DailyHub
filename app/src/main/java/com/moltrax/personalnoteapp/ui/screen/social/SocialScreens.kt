@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +47,6 @@ import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import com.moltrax.personalnoteapp.ui.navigation.FriendRequests
 import com.moltrax.personalnoteapp.ui.navigation.UserProfile
 import com.moltrax.personalnoteapp.ui.navigation.DuoHub
-import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 import com.moltrax.personalnoteapp.ui.screen.space.SpaceRow
 import com.moltrax.personalnoteapp.ui.screen.space.SpaceViewModel
 
@@ -64,7 +64,6 @@ fun SocialGraphScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.social_title)) }) },
-        bottomBar = { BottomNavBar(nav) },
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -197,7 +196,7 @@ fun FriendRequestsScreen(nav: NavController, vm: SocialViewModel = hiltViewModel
                 title = { Text(stringResource(R.string.social_requests_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -260,7 +259,7 @@ fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel 
                 title = { Text(username) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -301,19 +300,13 @@ fun UserProfileScreen(username: String, nav: NavController, vm: SocialViewModel 
 
 @Composable
 private fun ProfileRow(profile: SupabaseProfile, action: @Composable () -> Unit = {}, onClick: () -> Unit = {}) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(profile.username, style = MaterialTheme.typography.bodyLarge)
-                profile.displayName?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            action()
-        }
+    com.moltrax.personalnoteapp.ui.components.DhCard(onClick = onClick) {
+        com.moltrax.personalnoteapp.ui.components.DhUserRow(
+            displayName = profile.displayName?.takeIf { it.isNotBlank() } ?: profile.username,
+            username = profile.username,
+            photoUrl = profile.avatarUrl,
+            trailing = action,
+        )
     }
 }
 
@@ -325,27 +318,18 @@ private fun RequestRow(
     onReject: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    com.moltrax.personalnoteapp.ui.components.DhCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 title,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
             if (incoming) {
-                IconButton(onClick = onAccept) {
-                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.social_accept))
-                }
-                IconButton(onClick = onReject) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.social_reject))
-                }
+                TextButton(onClick = onAccept) { Text(stringResource(R.string.social_accept)) }
+                TextButton(onClick = onReject) { Text(stringResource(R.string.social_reject)) }
             } else {
-                IconButton(onClick = onCancel) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.social_cancel))
-                }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.social_cancel)) }
             }
         }
     }

@@ -28,6 +28,7 @@ import com.moltrax.personalnoteapp.FeatureFlags
 import com.moltrax.personalnoteapp.MainActivity
 import com.moltrax.personalnoteapp.ui.SyncViewModel
 import com.moltrax.personalnoteapp.ui.components.SyncBanner
+import com.moltrax.personalnoteapp.ui.shell.DailyHubScaffold
 import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthScreen
 import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthViewModel
 import com.moltrax.personalnoteapp.ui.screen.auth.LoginScreen
@@ -113,10 +114,13 @@ fun AppNavHost(
     // Scaffolds own the top inset (each screen applies its own topBar/windowInsets);
     // we don't add statusBarsPadding from outside here — avoids double top spacing.
     // Global sync banner above all tabs: takes space when visible, no space at all when Idle.
+    // Root navigation chrome lives in DailyHubScaffold (never in a feature screen).
+    DailyHubScaffold(nav = nav) { contentModifier ->
     Column(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .then(contentModifier)
     ) {
         if (FeatureFlags.DRIVE_SYNC_ENABLED) {
             SyncBanner()
@@ -164,5 +168,6 @@ fun AppNavHost(
             composable<Projects>      { ProjectsScreen(nav) }
             composable<ProjectDetail> { entry -> ProjectDetailScreen(entry.toRoute<ProjectDetail>().spaceId, nav) }
         }
+    }
     }
 }

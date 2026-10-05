@@ -3,6 +3,7 @@ package com.moltrax.personalnoteapp.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -32,6 +33,8 @@ class TaskTagUiTest {
 
     @Test
     fun createTaggedTask_chipAppearsAndFiltersIt() {
+        dismissLoginIfPresent()
+
         val stamp = (System.currentTimeMillis() % 100000).toString()
         val title = "UiTask$stamp"
         val tag = "UiTag$stamp"
@@ -69,5 +72,19 @@ class TaskTagUiTest {
         compose.onNodeWithText("All categories").performScrollTo()
         compose.onNodeWithText("All categories").performClick()
         compose.onNodeWithText(title).assertIsDisplayed()
+    }
+
+    /**
+     * With Drive sync enabled the app starts on Login; debug builds cannot
+     * sign in (debug SHA-1 unregistered), so tests continue offline.
+     */
+    private fun dismissLoginIfPresent() {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("New task").fetchSemanticsNodes().isNotEmpty() ||
+                compose.onAllNodesWithText("Continue offline").fetchSemanticsNodes().isNotEmpty()
+        }
+        if (compose.onAllNodesWithText("Continue offline").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("Continue offline").performClick()
+        }
     }
 }

@@ -64,7 +64,6 @@ import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.groupBoardItems
 import com.moltrax.personalnoteapp.ui.navigation.DuoHub
 import com.moltrax.personalnoteapp.ui.navigation.ProjectDetail
-import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 
 private val COLUMNS = listOf(
     ProjectStatus.IDEA to "Idea",
@@ -82,7 +81,6 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.projects_title)) }) },
-        bottomBar = { BottomNavBar(nav) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreate = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
@@ -222,7 +220,7 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
                 title = { Text(stringResource(R.string.projects_board)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -243,7 +241,6 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
                 },
             )
         },
-        bottomBar = { BottomNavBar(nav) },
         floatingActionButton = {
             if (mainTab == 0) {
                 FloatingActionButton(onClick = { showAdd = true }) {
@@ -253,10 +250,15 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = mainTab) {
-                Tab(selected = mainTab == 0, onClick = { mainTab = 0 }, text = { Text(stringResource(R.string.projects_board)) })
-                Tab(selected = mainTab == 1, onClick = { mainTab = 1 }, text = { Text(stringResource(R.string.projects_github)) })
-            }
+            com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
+                options = listOf(
+                    stringResource(R.string.projects_board),
+                    stringResource(R.string.projects_github),
+                ),
+                selectedIndex = mainTab,
+                onSelect = { mainTab = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
             if (mainTab == 0) {
                 BoardTab(vm = vm, spaceId = spaceId, state = state, board = board,
                     onAdd = { showAdd = true }, onSelect = { selected = it })
@@ -327,34 +329,47 @@ private fun BoardTab(
     state.error?.let {
         Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
     }
-    Row(
-        Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        COLUMNS.forEachIndexed { idx, (status, label) ->
-            BoardColumn(
-                label = label,
-                items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }]
-                    .orEmpty(),
-                leftLabel = COLUMNS.getOrNull(idx - 1)?.second,
-                rightLabel = COLUMNS.getOrNull(idx + 1)?.second,
-                advanced = status == ProjectStatus.FINISHED,
-                onMoveLeft = { item ->
-                    if (idx > 0) vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
-                },
-                onMoveRight = { item ->
-                    if (idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
-                },
-                onToggleAdvanced = { item, checked ->
-                    // Checkbox = advance one stage; unchecking in Finished moves it back.
-                    if (checked && idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
-                    else if (!checked && status == ProjectStatus.FINISHED && idx > 0) {
-                        vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
+    // Mobile-first board: vertical status sections with a "Move to" status
+    // picker per card (accessible, no tiny arrow buttons). Wide screens get
+    // the same sections in a horizontal scroll row via adaptive layout below.
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth >= 840.dp
+        if (wide) {
+            Row(
+                Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                COLUMNS.forEach { (status, label) ->
+                    androidx.compose.foundation.layout.Box(Modifier.width(300.dp)) {
+                        BoardSection(
+                            label = label,
+                            items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }].orEmpty(),
+                            current = status,
+                            onMove = { item, target -> vm.moveItem(spaceId, item, target) },
+                            onTap = onSelect,
+                            onDelete = { vm.deleteItem(spaceId, it.id) },
+                        )
                     }
-                },
-                onTap = onSelect,
-                onDelete = { vm.deleteItem(spaceId, it.id) },
-            )
+                }
+            }
+        } else {
+            LazyColumn(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                COLUMNS.forEach { (status, label) ->
+                    item(key = status.name) {
+                        BoardSection(
+                            label = label,
+                            items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }].orEmpty(),
+                            current = status,
+                            onMove = { item, target -> vm.moveItem(spaceId, item, target) },
+                            onTap = onSelect,
+                            onDelete = { vm.deleteItem(spaceId, it.id) },
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -653,49 +668,55 @@ private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: 
 }
 
 @Composable
-private fun BoardColumn(
+private fun BoardSection(
     label: String,
     items: List<ProjectItem>,
-    leftLabel: String?,
-    rightLabel: String?,
-    advanced: Boolean,
-    onMoveLeft: (ProjectItem) -> Unit,
-    onMoveRight: (ProjectItem) -> Unit,
-    onToggleAdvanced: (ProjectItem, Boolean) -> Unit,
+    current: ProjectStatus,
+    onMove: (ProjectItem, ProjectStatus) -> Unit,
     onTap: (ProjectItem) -> Unit,
     onDelete: (ProjectItem) -> Unit,
 ) {
-    Column(modifier = Modifier.width(250.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.titleSmall)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text(
+                items.size.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (items.isEmpty()) {
-            Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("--", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         }
         items.forEach { item ->
             Card(Modifier.fillMaxWidth().clickable { onTap(item) }) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    androidx.compose.material3.Checkbox(
-                        checked = advanced,
-                        onCheckedChange = { onToggleAdvanced(item, it) },
-                    )
-                    Text(item.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { onMoveLeft(item) }, enabled = leftLabel != null) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = leftLabel ?: label,
-                            modifier = Modifier,
-                        )
+                    Column(Modifier.weight(1f)) {
+                        Text(item.title, style = MaterialTheme.typography.titleSmall)
+                        item.bodyMd?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                        }
                     }
-                    IconButton(onClick = { onMoveRight(item) }, enabled = rightLabel != null) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = rightLabel ?: label,
-                        )
-                    }
-                    IconButton(onClick = { onDelete(item) }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    Box {
+                        var expanded by remember { mutableStateOf(false) }
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.projects_move_to, label))
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            COLUMNS.filter { it.first != current }.forEach { (target, targetLabel) ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.projects_move_to, targetLabel)) },
+                                    onClick = { expanded = false; onMove(item, target) },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_delete)) },
+                                onClick = { expanded = false; onDelete(item) },
+                            )
+                        }
                     }
                 }
             }

@@ -29,8 +29,27 @@
     <string name="unit_m">m</string>
 
     <!-- Login -->
-    <string name="login_subtitle">Sign in with your Google account</string>
+    <string name="login_subtitle">Your personal workspace for tasks, workouts, and projects</string>
     <string name="login_button">Sign in with Google</string>
+    <string name="login_offline_title">Works offline</string>
+    <string name="login_offline_desc">All core features run on-device with no account.</string>
+    <string name="login_sync_title">Optional sync</string>
+    <string name="login_sync_desc">Sign in to enable backup and cross-device sync.</string>
+    <string name="login_continue_offline">Continue offline</string>
+    <string name="login_access_msg">Sign-in requires access: message @Moltrax on Telegram to request it.</string>
+    <string name="login_access_action">Message on Telegram</string>
+    <string name="workout_exercise_count">%1$d exercises</string>
+    <string name="workout_set_count">%1$d sets</string>
+    <string name="workout_empty_desc">Create your first program or import one from a JSON file.</string>
+    <string name="workout_delete_title">Delete program?</string>
+    <string name="workout_delete_confirm">“%1$s” will be permanently deleted. This cannot be undone.</string>
+    <string name="spaces_overview">Overview</string>
+    <string name="spaces_plan">Plan</string>
+    <string name="spaces_discuss">Discuss</string>
+    <string name="spaces_library">Library</string>
+    <string name="spaces_people">People</string>
+    <string name="spaces_overview_summary">%1$d tasks (%2$d open) · %3$d notes · %4$d files</string>
+    <string name="projects_move_to">Move to %1$s</string>
     <string name="login_drive_permission_error">Drive permission error: %1$s</string>
 
     <!-- Home -->
@@ -52,6 +71,7 @@
     <string name="task_completed">Task completed</string>
     <string name="workout_completed">Workout completed</string>
     <string name="task_badge_done">Completed</string>
+    <string name="task_badge_workout">Workout</string>
     <string name="workout_summary_title">Workout Result</string>
     <string name="workout_summary_empty">No data recorded for this session.</string>
     <string name="workout_summary_no_logged">No sets entered</string>
@@ -109,7 +129,12 @@
 
     <!-- Profile -->
     <string name="profile_sign_out">Sign Out</string>
-    <string name="profile_panel_profile">PROFILE</string>
+    <string name="profile_sign_out_confirm">Sign out? The app keeps working offline.</string>
+    <string name="profile_panel_profile">Profile</string>
+    <string name="profile_panel_account">Account</string>
+    <string name="profile_account_subtitle">Managed account and social identity</string>
+    <string name="profile_info_subtitle">Personal information</string>
+    <string name="profile_tap_avatar_hint">Tap to change photo when signed in</string>
     <string name="cd_profile_photo">Profile photo</string>
     <string name="profile_edit_name_title">Edit name</string>
     <string name="profile_name_label">Display name</string>
@@ -121,6 +146,11 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_appearance_desc">Choose light, dark, or system theme.</string>
+    <string name="settings_appearance_system">System</string>
+    <string name="settings_appearance_light">Light</string>
+    <string name="settings_appearance_dark">Dark</string>
     <string name="settings_section_language">Language</string>
     <string name="settings_language_desc">Choose the app language. The change applies instantly, no restart needed.</string>
     <string name="settings_section_notifications">Notifications</string>
@@ -243,6 +273,11 @@
     <string name="task_subtasks">Subtasks</string>
     <string name="task_remove_subtask">Remove subtask</string>
     <string name="task_new_subtask">New subtask</string>
+    <string name="task_select_day_error">Select at least one day</string>
+    <string name="task_interval_error">Enter a positive number of days</string>
+    <string name="task_section_core">Core details</string>
+    <string name="task_section_schedule">Scheduling</string>
+    <string name="task_section_advanced">Advanced options</string>
     <string name="task_add_subtask">Add subtask</string>
 
     <!-- Calendar -->

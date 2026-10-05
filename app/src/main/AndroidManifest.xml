@@ -11,12 +11,8 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Gallery selection is done with the modern Photo Picker (PickVisualMedia); it needs no permission.
-         The media permissions below are kept only for possible direct MediaStore access. -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <!-- Gallery/avatar selection uses the system Photo Picker (PickVisualMedia),
+         which needs no media permissions — none are declared. -->
 
     <application
         android:name=".PersonalNoteApp"

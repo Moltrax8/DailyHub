@@ -111,20 +111,20 @@ fun CalendarContent(
 @Composable
 private fun MonthHeader(month: YearMonth, onPrev: () -> Unit, onNext: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val locale = LocalConfiguration.current.locales[0]
-        IconButton(onClick = onPrev) {
+        IconButton(onClick = onPrev, modifier = Modifier.size(40.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.calendar_prev_month),
-                tint = MaterialTheme.colorScheme.onBackground)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val label = "${month.month.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.uppercase() }} ${month.year}"
         Text(label, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-        IconButton(onClick = onNext) {
+            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+        IconButton(onClick = onNext, modifier = Modifier.size(40.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.calendar_next_month),
-                tint = MaterialTheme.colorScheme.onBackground)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -191,27 +191,40 @@ private fun DayCell(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val shape = MaterialTheme.shapes.small
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .padding(3.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (isSelected) AppColors.AccentGlow else androidx.compose.ui.graphics.Color.Transparent)
-            .then(if (isToday) Modifier.border(1.dp, AppColors.Accent, RoundedCornerShape(10.dp)) else Modifier)
+            .clip(shape)
+            .background(
+                when {
+                    isSelected -> MaterialTheme.colorScheme.primaryContainer
+                    else -> androidx.compose.ui.graphics.Color.Transparent
+                }
+            )
+            .then(
+                if (isToday && !isSelected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape)
+                else Modifier
+            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 day.toString(),
-                fontSize = 14.sp,
-                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) AppColors.Accent else MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onBackground,
             )
             // Small dot when there are tasks.
             Box(
                 Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape)
-                    .background(if (hasTasks) AppColors.Accent else androidx.compose.ui.graphics.Color.Transparent)
+                    .background(
+                        if (hasTasks) MaterialTheme.colorScheme.primary
+                        else androidx.compose.ui.graphics.Color.Transparent
+                    )
             )
         }
     }
@@ -227,7 +240,7 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
     // Time label depends on the composition locale; recreated when the language changes.
     val dayTimeFmt = remember(locale) { SimpleDateFormat("HH:mm", locale) }
     Text(header, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onBackground)
 
     if (tasks.isEmpty()) {
@@ -242,16 +255,12 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(tasks, key = { it.id }) { task ->
-            Card(
-                onClick = { onTap(task) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.moltrax.personalnoteapp.ui.components.DhCard(onClick = { onTap(task) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(task.title, fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface)
+                        Text(task.title, style = MaterialTheme.typography.titleSmall,
+                            color = if (task.isDone) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.onSurface)
                         task.dueDate?.let {
                             Text(dayTimeFmt.format(Date(it)),
                                 style = MaterialTheme.typography.labelSmall,
@@ -265,7 +274,7 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
                     }
                     if (task.isRecurring) {
                         Icon(Icons.Default.Repeat, contentDescription = stringResource(R.string.cd_recurring),
-                            modifier = Modifier.size(18.dp), tint = AppColors.Accent)
+                            modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

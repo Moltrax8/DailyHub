@@ -48,8 +48,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.Category
 import com.moltrax.personalnoteapp.domain.model.ExerciseType
@@ -195,13 +193,11 @@ fun HomeScreen(
         floatingActionButton = {
             // FAB only on the Tasks tab (add new task); hidden on the Calendar tab.
             if (homeTab == 0) {
-                FloatingActionButton(onClick = { nav.navigate(TaskDetail("new")) },
-                    containerColor = AppColors.Accent) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.home_new_task), tint = MaterialTheme.colorScheme.onPrimary)
+                FloatingActionButton(onClick = { nav.navigate(TaskDetail("new")) }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.home_new_task))
                 }
             }
         },
-        bottomBar = { BottomNavBar(nav) }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             // The sync banner is now global (in AppNavHost, above all tabs).
@@ -212,26 +208,36 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.home_title), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
-                val pending = state.allTasks.count { !it.isDone }
-                if (pending > 0) Badge(containerColor = AppColors.AccentGlow,
-                    contentColor = AppColors.Accent) { Text(stringResource(R.string.home_pending_badge, pending)) }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.home_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    val pending = state.allTasks.count { !it.isDone }
+                    Text(
+                        if (pending > 0) stringResource(R.string.home_pending_badge, pending)
+                        else stringResource(R.string.empty_all),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (homeTab == 0) {
                     IconButton(onClick = { showManageCategories = true }) {
                         Icon(Icons.Default.Category, contentDescription = stringResource(R.string.home_manage_categories),
-                            tint = MaterialTheme.colorScheme.onBackground)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
-            // Tasks / Calendar sub-tabs (the old Calendar tab was moved here).
-            TabRow(selectedTabIndex = homeTab, containerColor = MaterialTheme.colorScheme.background) {
-                Tab(selected = homeTab == 0, onClick = { homeTab = 0 },
-                    text = { Text(stringResource(R.string.tab_tasks)) })
-                Tab(selected = homeTab == 1, onClick = { homeTab = 1 },
-                    text = { Text(stringResource(R.string.tab_calendar)) })
-            }
+            // Tasks / Calendar sibling views as a compact segmented control.
+            com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
+                options = listOf(stringResource(R.string.tab_tasks), stringResource(R.string.tab_calendar)),
+                selectedIndex = homeTab,
+                onSelect = { homeTab = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
+            Spacer(Modifier.height(8.dp))
 
             if (homeTab == 0) {
                 TaskFilterBar(
@@ -563,6 +569,7 @@ private fun TaskList(
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 fun TaskItem(
     task: Task,
     onToggle: () -> Unit,
@@ -574,80 +581,105 @@ fun TaskItem(
     // Due-date formatter depends on the composition locale; recreated when the language changes.
     val locale = LocalConfiguration.current.locales[0]
     val taskDueFmt = remember(locale) { SimpleDateFormat("d MMM HH:mm", locale) }
+    val overdue = !task.isDone && task.dueDate != null && task.dueDate < System.currentTimeMillis()
+    val dueToday = !task.isDone && task.dueDate != null && !overdue &&
+        java.text.SimpleDateFormat("yyyyMMdd", locale).format(Date(task.dueDate)) ==
+        java.text.SimpleDateFormat("yyyyMMdd", locale).format(Date(System.currentTimeMillis()))
     Card(
         onClick = onTap,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = if (task.isDone) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            else MaterialTheme.colorScheme.surface,
         ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         shape = MaterialTheme.shapes.medium,
     ) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             dragHandle?.invoke()
-            if (dragHandle == null) Spacer(Modifier.width(2.dp))
+            Checkbox(
+                checked = task.isDone,
+                onCheckedChange = { onToggle() },
+                modifier = Modifier.size(40.dp),
+            )
             Column(Modifier.weight(1f)) {
                 Text(
                     task.title,
-                    fontWeight = FontWeight.SemiBold,
+                    style = if (task.isDone) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleSmall,
                     color = if (task.isDone) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface,
+                    else MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (task.isDone) TextDecoration.LineThrough else TextDecoration.None,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Prominent "Done" badge on completed tasks (so completion is clearly visible,
-                    // especially for workout tasks).
-                    if (task.isDone) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(end = 6.dp)
-                                .background(AppColors.AccentGlow, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null,
-                                modifier = Modifier.size(12.dp), tint = AppColors.Accent)
-                            Spacer(Modifier.width(3.dp))
-                            Text(stringResource(R.string.task_badge_done),
-                                style = MaterialTheme.typography.labelSmall, color = AppColors.Accent,
-                                fontWeight = FontWeight.SemiBold)
+                val hasMeta = task.isDone || task.isRecurring || task.dueDate != null ||
+                    task.categoryNames.isNotEmpty() || task.linkedWorkoutId != null ||
+                    task.linkedProgramId != null || task.subtaskCount > 0
+                if (hasMeta) {
+                    Spacer(Modifier.height(4.dp))
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (task.isDone) {
+                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                label = stringResource(R.string.task_badge_done),
+                                container = MaterialTheme.colorScheme.secondaryContainer,
+                                icon = Icons.Default.CheckCircle,
+                            )
+                        }
+                        if (task.isRecurring) {
+                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                label = stringResource(R.string.cd_recurring),
+                                icon = Icons.Default.Repeat,
+                            )
+                        }
+                        task.dueDate?.let {
+                            val (dueLabel, dueContainer) = when {
+                                task.isDone -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.secondaryContainer)
+                                overdue -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.errorContainer)
+                                dueToday -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.primaryContainer)
+                                else -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.secondaryContainer)
+                            }
+                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                label = dueLabel,
+                                container = dueContainer,
+                                icon = Icons.Default.Schedule,
+                            )
+                        }
+                        if (task.linkedWorkoutId != null || task.linkedProgramId != null) {
+                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                label = stringResource(R.string.task_badge_workout),
+                                icon = Icons.Default.FitnessCenter,
+                            )
+                        }
+                        task.categoryNames.take(3).forEach { tag ->
+                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(label = tag)
+                        }
+                        if (task.subtaskCount > 0) {
+                            Text(
+                                "${task.doneSubtaskCount}/${task.subtaskCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
-                    if (task.isRecurring) {
-                        Icon(Icons.Default.Repeat, contentDescription = stringResource(R.string.cd_recurring),
-                            modifier = Modifier.size(13.dp).padding(end = 2.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    task.dueDate?.let {
-                        Text(taskDueFmt.format(Date(it)), style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                 }
-                // Subtask progress: filling bar + "x/y" counter
-                if (task.subtaskCount > 0) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        LinearProgressIndicator(
-                            progress = { task.subtaskProgress },
-                            modifier = Modifier.weight(1f).height(6.dp),
-                            color = AppColors.Accent,
-                            trackColor = AppColors.AccentGlow,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("${task.doneSubtaskCount}/${task.subtaskCount}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                // Subtask progress bar (visual only; counts already shown above).
+                if (task.subtaskCount > 0 && !task.isDone) {
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { task.subtaskProgress },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    )
                 }
             }
-            Checkbox(checked = task.isDone, onCheckedChange = { onToggle() })
-            // Focus entry removed in v1.1 (Phase 1.2): the focus timer screen stays
-            // reachable via its route, but Home no longer links to it.
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete), modifier = Modifier.size(18.dp),
-                    tint = AppColors.PriorityHigh)
+            IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.action_delete),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -915,44 +947,11 @@ private fun CompletionField(
 
 private fun formatKg(v: Double): String = if (v % 1.0 == 0.0) v.toInt().toString() else "%.1f".format(v)
 
+/**
+ * Root navigation chrome moved to [com.moltrax.personalnoteapp.ui.shell.DailyHubScaffold].
+ * Kept as a no-op for backward compatibility until all callers are migrated.
+ */
+@Deprecated("Navigation chrome lives in DailyHubScaffold; do not call from screens.")
 @Composable
 fun BottomNavBar(nav: NavController) {
-    val backStackEntry by nav.currentBackStackEntryAsState()
-    val dest = backStackEntry?.destination
-
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        // Bottom bar (5 tabs, Phase 6): Tasks · Workouts · Projects · Social · Profile.
-        // Calendar → sub-tab inside Tasks. To avoid stacking tabs on all tabs:
-        // launchSingleTop + popUpTo(Home){saveState} + restoreState.
-        NavigationBarItem(
-            selected = dest?.hasRoute<Home>() == true,
-            onClick = { nav.navigate(Home) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
-            icon = { Icon(Icons.Default.CheckCircle, null) },
-            label = { Text(stringResource(R.string.nav_tasks)) },
-        )
-        NavigationBarItem(
-            selected = dest?.hasRoute<WorkoutList>() == true,
-            onClick = { nav.navigate(WorkoutList) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
-            icon = { Icon(Icons.Default.FitnessCenter, null) },
-            label = { Text(stringResource(R.string.nav_workouts)) },
-        )
-        NavigationBarItem(
-            selected = dest?.hasRoute<Projects>() == true,
-            onClick = { nav.navigate(Projects) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
-            icon = { Icon(Icons.Default.Dashboard, null) },
-            label = { Text(stringResource(R.string.nav_projects)) },
-        )
-        NavigationBarItem(
-            selected = dest?.hasRoute<SocialGraph>() == true,
-            onClick = { nav.navigate(SocialGraph) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
-            icon = { Icon(Icons.Default.People, null) },
-            label = { Text(stringResource(R.string.nav_social)) },
-        )
-        NavigationBarItem(
-            selected = dest?.hasRoute<Profile>() == true,
-            onClick = { nav.navigate(Profile) { launchSingleTop = true; popUpTo<Home> { saveState = true }; restoreState = true } },
-            icon = { Icon(Icons.Default.Person, null) },
-            label = { Text(stringResource(R.string.nav_profile)) },
-        )
-    }
 }

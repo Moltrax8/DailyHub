@@ -64,7 +64,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 title = { Text(stringResource(if (state.isNew) R.string.task_new else R.string.task_edit)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -81,12 +81,17 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 .verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            Text(
+                stringResource(R.string.task_section_core),
+                style = MaterialTheme.typography.titleMedium,
+            )
             OutlinedTextField(
                 value = state.title,
                 onValueChange = { vm.update { copy(title = it) } },
                 label = { Text(stringResource(R.string.task_title_field)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = MaterialTheme.shapes.small,
             )
             OutlinedTextField(
                 value = state.notes,
@@ -94,6 +99,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                 label = { Text(stringResource(R.string.task_notes_field)) },
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 maxLines = 5,
+                shape = MaterialTheme.shapes.small,
             )
 
             // Subtasks (Checklist)
@@ -105,8 +111,15 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
             )
 
             // Due Date & Time (Deadline) — empty means no reminder/penalty kicks in
-            Text(stringResource(R.string.task_deadline), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.task_section_schedule),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            com.moltrax.personalnoteapp.ui.components.DhCard {
+                Text(
+                    stringResource(R.string.task_deadline),
+                    style = MaterialTheme.typography.titleSmall,
+                )
             val deadlineText = state.dueDate?.let { deadlineFmt.format(Date(it)) }
                 ?: stringResource(R.string.task_deadline_unset)
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -146,6 +159,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                     Text(stringResource(R.string.task_time))
                 }
             }
+            } // end schedule card
 
             // Categories — multi-select tags (Phase 2); zero tags allowed (untracked bucket).
             Text(stringResource(R.string.task_category), style = MaterialTheme.typography.labelLarge,
@@ -197,7 +211,12 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
             // Priority editor removed in v1.1 (Phase 1.2): manual sortOrder is the
             // explicit prioritization mechanism. Field kept in ViewModel/Room/Drive for compat.
 
-            // Recurrence (Recurring / Habit)
+            // Recurrence (Recurring / Habit) + workout link live under Advanced.
+            Text(
+                stringResource(R.string.task_section_advanced),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            com.moltrax.personalnoteapp.ui.components.DhCard {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.task_recurring), style = MaterialTheme.typography.bodyLarge)
@@ -240,7 +259,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                         if (state.weeklyError) {
                                 // Fixed text to avoid touching res (owned-files: ui/** only).
                             Text(
-                                "Select at least one day",
+                                stringResource(R.string.task_select_day_error),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -263,7 +282,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             isError = state.intervalError,
                             supportingText = if (state.intervalError) {
                             // Fixed text to avoid touching res (owned-files: ui/** only).
-                                { Text("Enter a positive number of days", color = MaterialTheme.colorScheme.error) }
+                                { Text(stringResource(R.string.task_interval_error), color = MaterialTheme.colorScheme.error) }
                             } else null,
                         )
                     }
@@ -371,6 +390,7 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                     }
                 }
             }
+            } // end advanced card
         }
 
         // Date picker (Material3). The picked date is combined with the current time component.

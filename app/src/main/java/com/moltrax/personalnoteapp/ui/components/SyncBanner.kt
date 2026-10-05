@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import com.moltrax.personalnoteapp.ui.SyncViewModel
-import com.moltrax.personalnoteapp.ui.theme.AppColors
+import com.moltrax.personalnoteapp.ui.theme.Dh
 import kotlinx.coroutines.delay
 
 /**
@@ -68,11 +68,12 @@ private fun SyncBannerContent(
         }
     }
 
+    val extra = Dh.extra
     val (text, color, isError) = when (status) {
         is SyncStatus.Syncing -> Triple(stringResource(R.string.sync_in_progress), MaterialTheme.colorScheme.primary, false)
-        is SyncStatus.Synced  -> Triple(stringResource(R.string.sync_done), AppColors.Success, false)
+        is SyncStatus.Synced  -> Triple(stringResource(R.string.sync_done), extra.success, false)
         // Error: show the full raw message (HTTP code + message + exception type), no masking
-        is SyncStatus.Error   -> Triple(status.message, AppColors.Error, true)
+        is SyncStatus.Error   -> Triple(status.message, MaterialTheme.colorScheme.error, true)
         else                  -> return
     }
 

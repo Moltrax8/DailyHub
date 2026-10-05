@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val language by appVm.language.collectAsStateWithLifecycle()
+            val themeMode by appVm.themeMode.collectAsStateWithLifecycle()
             val isSwitchingLanguage by appVm.isSwitchingLanguage.collectAsStateWithLifecycle()
 
             // Provide localized context + configuration for the selected language. When the language
@@ -84,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 LocalContext provides localizedContext,
                 LocalConfiguration provides localizedConfig,
             ) {
-                AppTheme {
+                AppTheme(themeMode = themeMode) {
                     Box(Modifier.fillMaxSize()) {
                         AppNavHost(
                             pendingWidgetAction = pendingWidgetAction.value,

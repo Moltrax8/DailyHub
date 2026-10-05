@@ -48,7 +48,7 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
             TopAppBar(
                 title = { Text(session?.workoutName ?: stringResource(R.string.live_workout_title)) },
                 navigationIcon = { IconButton(onClick = { nav.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
                 actions = {
                     TextButton(onClick = {
                         vm.finishSession { sessionId -> finishedSessionId = sessionId }
@@ -166,11 +166,11 @@ private fun WeightliftingInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
-        IconButton(onClick = {
-            val r = reps.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val r = reps.toIntOrNull() ?: return@Button
             onLog(LoggedSet(reps = r, weightKg = weight.replace(',', '.').toDoubleOrNull()))
             reps = ""; weight = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_set), style = MaterialTheme.typography.labelLarge) }
     }
 }
 
@@ -189,12 +189,12 @@ private fun BodyweightInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
-        IconButton(onClick = {
-            val r = reps.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val r = reps.toIntOrNull() ?: return@Button
             // Bodyweight: null when no added weight is entered (pure bodyweight).
             onLog(LoggedSet(reps = r, weightKg = addedWeight.replace(',', '.').toDoubleOrNull()))
             reps = ""; addedWeight = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_set), style = MaterialTheme.typography.labelLarge) }
     }
 }
 
@@ -207,11 +207,11 @@ private fun DurationInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        IconButton(onClick = {
-            val s = seconds.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val s = seconds.toIntOrNull() ?: return@Button
             onLog(LoggedSet(reps = 0, durationSeconds = s))
             seconds = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_set), style = MaterialTheme.typography.labelLarge) }
     }
 }
 
@@ -230,8 +230,8 @@ private fun CardioInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        IconButton(onClick = {
-            val min = minutes.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val min = minutes.toIntOrNull() ?: return@Button
             onLog(
                 LoggedSet(
                     reps = 0,
@@ -240,7 +240,7 @@ private fun CardioInput(onLog: (LoggedSet) -> Unit) {
                 )
             )
             minutes = ""; steps = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_entry)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_entry), style = MaterialTheme.typography.labelLarge) }
     }
 }
 

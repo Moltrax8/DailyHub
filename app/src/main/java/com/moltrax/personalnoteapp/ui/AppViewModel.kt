@@ -16,6 +16,10 @@ import javax.inject.Inject
 class AppViewModel @Inject constructor(private val prefs: AppPreferences) : ViewModel() {
     val themeMode = prefs.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, "system")
 
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch { prefs.setThemeMode(mode) }
+    }
+
     // Selected app language (default "en"). The root composition observes this; when it changes all texts
     // update instantly. Languages are Android XML resources; only the active language is kept in memory, and
     // the old language's resource references are released on change (no manual cache/unload).

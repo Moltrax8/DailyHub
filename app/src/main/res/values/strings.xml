@@ -29,8 +29,27 @@
     <string name="unit_m">m</string>
 
     <!-- Giriş -->
-    <string name="login_subtitle">Google hesabınla giriş yap</string>
+    <string name="login_subtitle">Görevler, antrenmanlar ve projeler için kişisel çalışma alanın</string>
     <string name="login_button">Google ile Giriş Yap</string>
+    <string name="login_offline_title">Çevrimdışı çalışır</string>
+    <string name="login_offline_desc">Hesap olmadan tüm temel özellikler cihazında çalışır.</string>
+    <string name="login_sync_title">İsteğe bağlı senkronizasyon</string>
+    <string name="login_sync_desc">Giriş yaparsan yedekleme ve cihazlar arası senkron açılır.</string>
+    <string name="login_continue_offline">Çevrimdışı devam et</string>
+    <string name="login_access_msg">Giriş için erişim gerekli: izin almak için Telegram\'da @Moltrax hesabına yazın.</string>
+    <string name="login_access_action">Telegram\'da yaz</string>
+    <string name="workout_exercise_count">%1$d hareket</string>
+    <string name="workout_set_count">%1$d set</string>
+    <string name="workout_empty_desc">İlk programını oluştur veya JSON dosyasından içe aktar.</string>
+    <string name="workout_delete_title">Program silinsin mi?</string>
+    <string name="workout_delete_confirm">“%1$s” kalıcı olarak silinecek. Bu işlem geri alınamaz.</string>
+    <string name="spaces_overview">Genel Bakış</string>
+    <string name="spaces_plan">Plan</string>
+    <string name="spaces_discuss">Sohbet</string>
+    <string name="spaces_library">Kütüphane</string>
+    <string name="spaces_people">Kişiler</string>
+    <string name="spaces_overview_summary">%1$d görev (%2$d açık) · %3$d not · %4$d dosya</string>
+    <string name="projects_move_to">Taşı: %1$s</string>
     <string name="login_drive_permission_error">Drive izni hatası: %1$s</string>
 
     <!-- Ana ekran -->
@@ -52,6 +71,7 @@
     <string name="task_completed">Görev tamamlandı</string>
     <string name="workout_completed">Antrenman tamamlandı</string>
     <string name="task_badge_done">Tamamlandı</string>
+    <string name="task_badge_workout">Antrenman</string>
     <string name="workout_summary_title">Antrenman Sonucu</string>
     <string name="workout_summary_empty">Bu seans için kayıtlı veri yok.</string>
     <string name="workout_summary_no_logged">Set girilmedi</string>
@@ -109,7 +129,12 @@
 
     <!-- Profil -->
     <string name="profile_sign_out">Oturumu Kapat</string>
-    <string name="profile_panel_profile">PROFİL</string>
+    <string name="profile_sign_out_confirm">Oturum kapatılsın mı? Uygulama çevrimdışı çalışmaya devam eder.</string>
+    <string name="profile_panel_profile">Profil</string>
+    <string name="profile_panel_account">Hesap</string>
+    <string name="profile_account_subtitle">Yönetilen hesap ve sosyal kimlik</string>
+    <string name="profile_info_subtitle">Kişisel bilgiler</string>
+    <string name="profile_tap_avatar_hint">Giriş yaptıysan dokunarak fotoğrafı değiştir</string>
     <string name="cd_profile_photo">Profil fotoğrafı</string>
     <string name="profile_edit_name_title">İsmi düzenle</string>
     <string name="profile_name_label">Görünen ad</string>
@@ -121,6 +146,11 @@
 
     <!-- Ayarlar -->
     <string name="settings_title">Ayarlar</string>
+    <string name="settings_section_appearance">Görünüm</string>
+    <string name="settings_appearance_desc">Açık, koyu veya sistem temasını seç.</string>
+    <string name="settings_appearance_system">Sistem</string>
+    <string name="settings_appearance_light">Açık</string>
+    <string name="settings_appearance_dark">Koyu</string>
     <string name="settings_section_language">Dil</string>
     <string name="settings_language_desc">Uygulama dilini seç. Değişiklik anında uygulanır, yeniden başlatma gerekmez.</string>
     <string name="settings_section_notifications">Bildirimler</string>
@@ -243,6 +273,11 @@
     <string name="task_subtasks">Alt Görevler</string>
     <string name="task_remove_subtask">Alt görevi sil</string>
     <string name="task_new_subtask">Yeni alt görev</string>
+    <string name="task_select_day_error">En az bir gün seç</string>
+    <string name="task_interval_error">Pozitif bir gün sayısı gir</string>
+    <string name="task_section_core">Temel bilgiler</string>
+    <string name="task_section_schedule">Zamanlama</string>
+    <string name="task_section_advanced">Gelişmiş seçenekler</string>
     <string name="task_add_subtask">Alt görev ekle</string>
 
     <!-- Takvim -->
