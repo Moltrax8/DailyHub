@@ -4,16 +4,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -126,7 +130,12 @@ fun DuoHubScreen(
                 Tab(selected = tab == TAB_FEED, onClick = { tab = TAB_FEED }, text = { Text(stringResource(R.string.spaces_feed)) })
                 Tab(selected = tab == TAB_MEMBERS, onClick = { tab = TAB_MEMBERS }, text = { Text(stringResource(R.string.spaces_members)) })
             }
-            if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+            if (state.busy) {
+                Box(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+            }
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
             }
@@ -352,7 +361,10 @@ private fun NoteDialog(onDismiss: () -> Unit, onConfirm: (String?, String?) -> U
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.spaces_new_note)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -470,7 +482,7 @@ private fun ChatTab(
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(12.dp),
+            Modifier.fillMaxWidth().imePadding().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
@@ -679,7 +691,10 @@ private fun EventDialog(onDismiss: () -> Unit, onConfirm: (String, Long, Long?) 
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.spaces_new_event)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
