@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -127,7 +128,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(group?.name ?: stringResource(R.string.workout_program_fallback)) },
+                title = { Text(group?.name ?: stringResource(R.string.workout_program_fallback),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
@@ -189,7 +191,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(workout.name, style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.weight(1f))
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                             IconButton(onClick = { showAddExerciseForWorkoutId = workout.id }) {
                                 Icon(Icons.Default.AddCircle, stringResource(R.string.workout_add_exercise),
                                     tint = MaterialTheme.colorScheme.primary)
@@ -218,7 +221,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                                         tint = MaterialTheme.colorScheme.primary)
                                     Spacer(Modifier.width(6.dp))
                                     Column(Modifier.weight(1f)) {
-                                        Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium)
+                                        Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         val planText = plannedSummary(LocalContext.current, ex.type, ex.plannedSets)
                                         if (planText != null) {
                                             Text(planText, style = MaterialTheme.typography.bodySmall,
@@ -227,7 +231,6 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                                     }
                                     IconButton(
                                         onClick = { editExercise = workout.id to ex },
-                                        modifier = Modifier.size(32.dp),
                                     ) {
                                         Icon(Icons.Default.Edit, stringResource(R.string.workout_edit_exercise),
                                             modifier = Modifier.size(16.dp),

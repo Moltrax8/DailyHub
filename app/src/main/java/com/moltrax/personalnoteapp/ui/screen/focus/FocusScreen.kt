@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,7 +59,8 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.task?.title ?: stringResource(R.string.focus_title)) },
+                title = { Text(state.task?.title ?: stringResource(R.string.focus_title),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = { vm.pause(); nav.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
             )

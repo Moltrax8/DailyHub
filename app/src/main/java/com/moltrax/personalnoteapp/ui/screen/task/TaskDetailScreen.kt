@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -118,7 +119,8 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(8.dp))
                     Text(deadlineText, modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge)
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (state.dueDate != null) {
                         IconButton(onClick = { vm.update { copy(dueDate = null) }; deadlineError = null }) {
                             Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.task_remove_deadline))
@@ -499,7 +501,7 @@ private fun SubtaskSection(
                             else MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (sub.isDone) TextDecoration.LineThrough else TextDecoration.None,
                 )
-                IconButton(onClick = { onRemove(sub.id) }, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = { onRemove(sub.id) }) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.task_remove_subtask),
                         modifier = Modifier.size(18.dp), tint = AppColors.PriorityHigh)
                 }
@@ -538,6 +540,7 @@ private fun LabeledDropdown(
             value = value,
             onValueChange = {},
             readOnly = true,
+            singleLine = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),

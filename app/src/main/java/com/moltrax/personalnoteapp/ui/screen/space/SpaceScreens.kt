@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,7 +99,8 @@ fun DuoHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.space?.name ?: stringResource(R.string.spaces_duo)) },
+                title = { Text(state.space?.name ?: stringResource(R.string.spaces_duo),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -155,6 +157,7 @@ fun DuoHubScreen(
                                         note.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.spaces_untitled),
                                         style = MaterialTheme.typography.bodyLarge,
                                         modifier = Modifier.weight(1f),
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     )
                                     IconButton(onClick = { vm.deleteNote(spaceId, note.id) }) {
                                         Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
@@ -188,6 +191,7 @@ fun DuoHubScreen(
                                     task.title,
                                     style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.weight(1f),
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
                                 IconButton(onClick = { vm.deleteSharedTask(spaceId, task.id) }) {
                                     Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
@@ -213,6 +217,7 @@ fun DuoHubScreen(
                                     Text(
                                         link.title?.takeIf { it.isNotBlank() } ?: link.url,
                                         style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     )
                                     if (!link.title.isNullOrBlank()) {
                                         Text(
@@ -522,7 +527,8 @@ private fun EventsTab(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(event.title, style = MaterialTheme.typography.bodyLarge)
+                        Text(event.title, style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             fmtRange(event.startAt, event.endAt),
                             style = MaterialTheme.typography.bodySmall,
@@ -587,7 +593,8 @@ private fun FilesTab(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(file.displayName, style = MaterialTheme.typography.bodyLarge)
+                            Text(file.displayName, style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
                                 kbLabel(file.size),
                                 style = MaterialTheme.typography.bodySmall,
@@ -776,8 +783,10 @@ fun SpaceRow(spaceName: String, typeLabel: String, onClick: () -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(spaceName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(spaceName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

@@ -549,7 +549,7 @@ private fun TaskList(
                     dragHandle = {
                         IconButton(
                             onClick = {},
-                            modifier = Modifier.size(36.dp).draggableHandle(
+                            modifier = Modifier.draggableHandle(
                                 onDragStopped = { onReorder(ordered.map { it.id }) },
                             ),
                         ) {
@@ -646,7 +646,7 @@ fun TaskItem(
             Checkbox(checked = task.isDone, onCheckedChange = { onToggle() })
             // Focus entry removed in v1.1 (Phase 1.2): the focus timer screen stays
             // reachable via its route, but Home no longer links to it.
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete), modifier = Modifier.size(18.dp),
                     tint = AppColors.PriorityHigh)
             }
