@@ -5,10 +5,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,10 +19,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,17 +91,63 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
         ) {
             if (projects.isEmpty()) {
                 item {
-                    Text(
-                        stringResource(R.string.projects_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Dashboard,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp),
+                            )
+                            Text(
+                                stringResource(R.string.projects_empty_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                stringResource(R.string.projects_empty_desc),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(onClick = { showCreate = true }) {
+                                Text(stringResource(R.string.projects_new))
+                            }
+                        }
+                    }
                 }
             }
             items(projects, key = { it.id }) { space ->
                 Card(Modifier.fillMaxWidth().clickable { nav.navigate(ProjectDetail(space.id)) }) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                        Text(space.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.projects_untitled))
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.Dashboard,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                space.name?.takeIf { it.isNotBlank() }
+                                    ?: stringResource(R.string.projects_untitled),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                stringResource(R.string.projects_open),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -112,6 +162,11 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
             title = { Text(stringResource(R.string.projects_new)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.projects_new_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },

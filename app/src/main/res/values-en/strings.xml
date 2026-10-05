@@ -316,6 +316,9 @@
     <!-- Social (Phase 4+) -->
     <string name="social_title">Friends</string>
     <string name="social_search_hint">Search username (2+ chars)</string>
+    <string name="social_find_title">Find people</string>
+    <string name="social_find_desc">Search a DailyHub username and send a friend request. Friends can open shared hubs with you.</string>
+    <string name="social_no_results">No users found — check the spelling.</string>
     <string name="social_add">Add</string>
     <string name="social_requests_pending">%1$d pending requests</string>
     <string name="social_friends">My friends</string>
@@ -362,6 +365,7 @@
     <string name="spaces_link_url">URL (https://…)</string>
     <string name="spaces_link_title">Title (optional)</string>
     <string name="spaces_section">Shared spaces</string>
+    <string name="spaces_section_desc">Hubs you belong to — open one for notes, tasks, chat and members.</string>
     <string name="spaces_none">No shared spaces yet — open a Duo hub from a friend.</string>
     <string name="spaces_open_hub">Open hub</string>
 
@@ -396,6 +400,10 @@
     <string name="nav_social">Social</string>
     <string name="projects_title">Projects</string>
     <string name="projects_empty">No projects yet — create one with +.</string>
+    <string name="projects_empty_title">No projects yet</string>
+    <string name="projects_empty_desc">Projects are shared workspaces: a board for tracking work, a hub for notes and chat, and linked GitHub repos. Create one to get started.</string>
+    <string name="projects_open">Open</string>
+    <string name="projects_new_hint">A project is a shared workspace with a task board and a collaboration hub.</string>
     <string name="projects_untitled">Untitled project</string>
     <string name="projects_new">New project</string>
     <string name="projects_name">Project name</string>

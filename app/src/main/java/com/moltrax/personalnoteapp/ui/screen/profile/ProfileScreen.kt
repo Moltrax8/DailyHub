@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Logout
@@ -109,6 +108,19 @@ fun ProfileScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.profile_panel_profile)) },
+                actions = {
+                    IconButton(onClick = { nav.navigate(Settings) }) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.settings_title),
+                        )
+                    }
+                },
+            )
+        },
         bottomBar = { BottomNavBar(nav) },
         modifier = Modifier.background(
             Brush.verticalGradient(listOf(SoloColors.BgTop, SoloColors.BgBottom)),
@@ -135,7 +147,6 @@ fun ProfileScreen(
                 birthDate = birthDate,
                 age = age,
                 onPickDate = { showDatePicker = true },
-                onOpenSettings = { nav.navigate(Settings) },
             )
             // Managed account (Phase 3+ Supabase): sign-in, friends, sign-out. Independent from Drive.
             AccountCard(nav)
@@ -348,7 +359,6 @@ private fun SettingsPanel(
     birthDate: LocalDate?,
     age: Int?,
     onPickDate: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val dateFmt = remember(locale) { DateTimeFormatter.ofPattern("d MMMM yyyy", locale) }
@@ -359,14 +369,6 @@ private fun SettingsPanel(
             subtitle = birthDate?.format(dateFmt) ?: stringResource(R.string.profile_not_selected_tap),
             trailing = { age?.let { Text(stringResource(R.string.profile_age_value, it), color = SoloColors.Neon, fontSize = 13.sp) } },
             onClick = onPickDate,
-        )
-        ThemedRowDivider()
-        SettingRow(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = null, tint = SoloColors.Neon) },
-            title = stringResource(R.string.settings_title),
-            subtitle = stringResource(R.string.profile_settings_subtitle),
-            trailing = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = SoloColors.TextDim) },
-            onClick = onOpenSettings,
         )
     }
 }
@@ -396,11 +398,4 @@ private fun SettingRow(
         Spacer(Modifier.width(8.dp))
         trailing()
     }
-}
-
-@Composable
-private fun ThemedRowDivider() {
-    Spacer(Modifier.height(10.dp))
-    HorizontalDivider(color = SoloColors.PanelEdge.copy(alpha = 0.18f))
-    Spacer(Modifier.height(10.dp))
 }

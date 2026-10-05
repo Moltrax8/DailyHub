@@ -71,6 +71,13 @@ fun SocialGraphScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
+                Text(stringResource(R.string.social_find_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.social_find_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = { vm.search(it) },
@@ -78,6 +85,15 @@ fun SocialGraphScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
+            }
+            if (state.query.trim().length >= 2 && state.results.isEmpty() && !state.busy) {
+                item {
+                    Text(
+                        stringResource(R.string.social_no_results),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             items(state.results, key = { it.id }) { profile ->
                 ProfileRow(
@@ -134,6 +150,11 @@ fun SocialGraphScreen(
             item {
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.spaces_section), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.spaces_section_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             if (spaces.isEmpty()) {
                 item {

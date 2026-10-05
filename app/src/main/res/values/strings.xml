@@ -316,6 +316,9 @@
     <!-- Social (Phase 4+) -->
     <string name="social_title">Arkadaşlar</string>
     <string name="social_search_hint">Kullanıcı adı ara (en az 2 harf)</string>
+    <string name="social_find_title">Kişi bul</string>
+    <string name="social_find_desc">DailyHub kullanıcı adı ara ve arkadaşlık isteği gönder. Arkadaşların seninle ortak hub açabilir.</string>
+    <string name="social_no_results">Kullanıcı bulunamadı — yazımı kontrol et.</string>
     <string name="social_add">Ekle</string>
     <string name="social_requests_pending">%1$d bekleyen istek</string>
     <string name="social_friends">Arkadaşlarım</string>
@@ -362,6 +365,7 @@
     <string name="spaces_link_url">URL (https://…)</string>
     <string name="spaces_link_title">Başlık (isteğe bağlı)</string>
     <string name="spaces_section">Ortak alanlar</string>
+    <string name="spaces_section_desc">Üye olduğun hub\'lar — notlar, görevler, sohbet ve üyeler için birini aç.</string>
     <string name="spaces_none">Henüz ortak alan yok — bir arkadaşından Duo aç.</string>
     <string name="spaces_open_hub">Hub\'ı aç</string>
 
@@ -396,6 +400,10 @@
     <string name="nav_social">Sosyal</string>
     <string name="projects_title">Projeler</string>
     <string name="projects_empty">Henüz proje yok — + ile oluştur.</string>
+    <string name="projects_empty_title">Henüz proje yok</string>
+    <string name="projects_empty_desc">Projeler ortak çalışma alanlarıdır: iş takibi için pano, not ve sohbet için hub ve bağlı GitHub depoları. Başlamak için bir tane oluştur.</string>
+    <string name="projects_open">Aç</string>
+    <string name="projects_new_hint">Proje; görev panosu ve işbirliği hub\'ı olan ortak bir çalışma alanıdır.</string>
     <string name="projects_untitled">Başlıksız proje</string>
     <string name="projects_new">Yeni proje</string>
     <string name="projects_name">Proje adı</string>
