@@ -3,6 +3,7 @@ package com.moltrax.personalnoteapp.ui.screen.focus
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -95,6 +96,7 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
                 Button(
                     onClick = { if (state.isRunning) vm.pause() else vm.start() },
                     modifier = Modifier.size(72.dp),
+                    shape = CircleShape,
                     contentPadding = PaddingValues(0.dp),
                 ) {
                     Icon(

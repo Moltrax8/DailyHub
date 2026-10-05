@@ -90,7 +90,11 @@ private fun ExerciseLogCard(
     // Whether the demo (GIF/video) dialog is open — triggered by the "how to" button.
     var showDemo by remember { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium,

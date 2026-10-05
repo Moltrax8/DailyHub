@@ -581,7 +581,7 @@ fun TaskItem(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             dragHandle?.invoke()

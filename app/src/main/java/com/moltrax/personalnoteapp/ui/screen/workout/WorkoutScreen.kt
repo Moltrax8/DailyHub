@@ -81,7 +81,11 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) { Icon(Icons.Default.Add, stringResource(R.string.workout_new_program)) }
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) { Icon(Icons.Default.Add, stringResource(R.string.workout_new_program)) }
         },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = { BottomNavBar(nav) }
@@ -119,7 +123,12 @@ private fun GroupCard(
     onDelete: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    Card(onClick = onTap, modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onTap,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.FitnessCenter, null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(12.dp))

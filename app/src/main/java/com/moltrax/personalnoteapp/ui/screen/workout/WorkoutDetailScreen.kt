@@ -136,7 +136,11 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddWorkoutDialog = true }) {
+            FloatingActionButton(
+                onClick = { showAddWorkoutDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 Icon(Icons.Default.Add, stringResource(R.string.workout_add_workout))
             }
         },
@@ -177,7 +181,11 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                 }
             }
             items(group.workouts, key = { it.id }) { workout ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(workout.name, style = MaterialTheme.typography.titleMedium,

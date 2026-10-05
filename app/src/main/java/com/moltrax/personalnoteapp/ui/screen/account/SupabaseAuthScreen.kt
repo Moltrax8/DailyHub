@@ -1,16 +1,21 @@
 package com.moltrax.personalnoteapp.ui.screen.account
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +91,14 @@ fun SupabaseAuthScreen(nav: NavController, vm: SupabaseAuthViewModel = hiltViewM
 
 @Composable
 private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp),
+        )
+    }
     Text(
         if (state.signUpMode) stringResource(R.string.supabase_auth_create)
         else stringResource(R.string.supabase_auth_welcome),
