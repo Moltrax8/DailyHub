@@ -299,18 +299,26 @@ private fun BoardTab(
         Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        COLUMNS.forEach { (status, label) ->
+        COLUMNS.forEachIndexed { idx, (status, label) ->
             BoardColumn(
                 label = label,
                 items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }]
                     .orEmpty(),
+                leftLabel = COLUMNS.getOrNull(idx - 1)?.second,
+                rightLabel = COLUMNS.getOrNull(idx + 1)?.second,
+                advanced = status == ProjectStatus.FINISHED,
                 onMoveLeft = { item ->
-                    val idx = COLUMNS.indexOfFirst { it.first == status }
                     if (idx > 0) vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
                 },
                 onMoveRight = { item ->
-                    val idx = COLUMNS.indexOfFirst { it.first == status }
                     if (idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
+                },
+                onToggleAdvanced = { item, checked ->
+                    // Checkbox = advance one stage; unchecking in Finished moves it back.
+                    if (checked && idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
+                    else if (!checked && status == ProjectStatus.FINISHED && idx > 0) {
+                        vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
+                    }
                 },
                 onTap = onSelect,
                 onDelete = { vm.deleteItem(spaceId, it.id) },
@@ -597,8 +605,12 @@ private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: 
 private fun BoardColumn(
     label: String,
     items: List<ProjectItem>,
+    leftLabel: String?,
+    rightLabel: String?,
+    advanced: Boolean,
     onMoveLeft: (ProjectItem) -> Unit,
     onMoveRight: (ProjectItem) -> Unit,
+    onToggleAdvanced: (ProjectItem, Boolean) -> Unit,
     onTap: (ProjectItem) -> Unit,
     onDelete: (ProjectItem) -> Unit,
 ) {
@@ -613,12 +625,23 @@ private fun BoardColumn(
                     Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = { onMoveLeft(item) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier)
-                    }
+                    androidx.compose.material3.Checkbox(
+                        checked = advanced,
+                        onCheckedChange = { onToggleAdvanced(item, it) },
+                    )
                     Text(item.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { onMoveRight(item) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    IconButton(onClick = { onMoveLeft(item) }, enabled = leftLabel != null) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = leftLabel ?: label,
+                            modifier = Modifier,
+                        )
+                    }
+                    IconButton(onClick = { onMoveRight(item) }, enabled = rightLabel != null) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = rightLabel ?: label,
+                        )
                     }
                     IconButton(onClick = { onDelete(item) }) {
                         Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
