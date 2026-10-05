@@ -59,11 +59,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val context = LocalContext.current
     // The exact-alarm permission may have changed after returning from settings; refresh on ON_RESUME.
     var exactAlarmGranted by remember { mutableStateOf(vm.canScheduleExactAlarms()) }
+    // Same for the notification permission: show live ON/OFF status under the button.
+    var notifEnabled by remember { mutableStateOf(vm.areNotificationsEnabled()) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 exactAlarmGranted = vm.canScheduleExactAlarms()
+                notifEnabled = vm.areNotificationsEnabled()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -153,6 +156,15 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.settings_notif_permission)) }
+                Text(
+                    stringResource(
+                        if (notifEnabled) R.string.settings_notif_status_on
+                        else R.string.settings_notif_status_off
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (notifEnabled) AppColors.Accent
+                            else MaterialTheme.colorScheme.error,
+                )
                 // Without the exact-alarm permission reminders may be delayed — route to the permission screen.
                 if (!exactAlarmGranted) {
                     OutlinedButton(

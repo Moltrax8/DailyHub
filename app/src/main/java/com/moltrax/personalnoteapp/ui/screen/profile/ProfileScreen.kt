@@ -23,18 +23,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.moltrax.personalnoteapp.FeatureFlags
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.data.remote.supabase.SessionState
 import com.moltrax.personalnoteapp.ui.navigation.Login
 import com.moltrax.personalnoteapp.ui.navigation.Settings
+import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthViewModel
+import com.moltrax.personalnoteapp.ui.screen.social.SocialViewModel
 import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 import com.moltrax.personalnoteapp.ui.screen.settings.SettingsViewModel
 import com.moltrax.personalnoteapp.ui.theme.AppColors
@@ -42,6 +49,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
 
 /**
  * Profile screen uses the app's shared dark/neon (purple) palette — consistent with all screens.
@@ -65,12 +73,39 @@ fun ProfileScreen(
     nav: NavController,
     vm: SettingsViewModel = hiltViewModel(),
     pvm: ProfileViewModel = hiltViewModel(),
+    authVm: SupabaseAuthViewModel = hiltViewModel(),
+    socialVm: SocialViewModel = hiltViewModel(),
 ) {
     val birthDate by vm.birthDate.collectAsStateWithLifecycle()
     val age by vm.age.collectAsStateWithLifecycle()
     val status by pvm.uiState.collectAsStateWithLifecycle()
+    val session by authVm.sessionState.collectAsStateWithLifecycle()
+    val social by socialVm.state.collectAsStateWithLifecycle()
     var showDatePicker by remember { mutableStateOf(false) }
     var showNameEditor by remember { mutableStateOf(false) }
+    val signedIn = session is SessionState.SignedIn
+    // Single identity: server avatar/username win when signed in, local otherwise.
+    val headerAvatar = social.myProfile?.avatarUrl?.takeIf { it.isNotBlank() } ?: status.photoUrl
+    val headerUsername = social.myProfile?.username?.takeIf { signedIn }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null || !signedIn) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val ext = when {
+                    mime.endsWith("png") -> "png"
+                    mime.endsWith("webp") -> "webp"
+                    else -> "jpg"
+                }
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: throw IllegalStateException("Unreadable image.")
+                socialVm.uploadMyAvatar(bytes, ext)
+            }
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -87,7 +122,15 @@ fun ProfileScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            HunterHeaderPanel(status, onEditName = { showNameEditor = true })
+            HunterHeaderPanel(
+                status = status,
+                username = headerUsername,
+                avatarUrl = headerAvatar,
+                onEditName = { showNameEditor = true },
+                onPickAvatar = if (signedIn) {
+                    { avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                } else null,
+            )
             SettingsPanel(
                 birthDate = birthDate,
                 age = age,
@@ -158,7 +201,9 @@ fun ProfileScreen(
             initialName = status.displayName,
             onDismiss = { showNameEditor = false },
             onSave = { name ->
+                // One editor writes both identities: local display name + server profile.
                 vm.setDisplayName(name)
+                if (signedIn) socialVm.setMyDisplayName(name)
                 showNameEditor = false
             },
         )
@@ -226,19 +271,26 @@ private fun StatusPanel(
 }
 
 @Composable
-private fun HunterHeaderPanel(status: ProfileUiState, onEditName: () -> Unit) {
+private fun HunterHeaderPanel(
+    status: ProfileUiState,
+    username: String?,
+    avatarUrl: String?,
+    onEditName: () -> Unit,
+    onPickAvatar: (() -> Unit)?,
+) {
     StatusPanel(title = stringResource(R.string.profile_panel_profile)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-                // Glowing circular avatar
+                // Glowing circular avatar (tap to change when signed in)
             Box(
                 Modifier
                     .size(72.dp)
                     .clip(CircleShape)
                     .background(SoloColors.NeonDeep.copy(alpha = 0.18f))
-                    .border(2.dp, SoloColors.Neon, CircleShape),
+                    .border(2.dp, SoloColors.Neon, CircleShape)
+                    .let { m -> if (onPickAvatar != null) m.clickable(onClick = onPickAvatar) else m },
                 contentAlignment = Alignment.Center,
             ) {
-                val photo = status.photoUrl
+                val photo = avatarUrl
                 if (photo != null) {
                     AsyncImage(
                         model = photo,
@@ -251,25 +303,35 @@ private fun HunterHeaderPanel(status: ProfileUiState, onEditName: () -> Unit) {
                 }
             }
             Spacer(Modifier.width(16.dp))
-            // Tapping the name opens it too; the pencil icon next to it also opens the edit dialog.
-            Row(
-                modifier = Modifier.weight(1f).clip(RoundedCornerShape(6.dp)).clickable(onClick = onEditName),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    status.displayName,
-                    color = SoloColors.TextBright,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    Icons.Filled.Edit,
-                    contentDescription = stringResource(R.string.profile_edit_name_title),
-                    tint = SoloColors.Neon,
-                    modifier = Modifier.size(18.dp),
-                )
+            Column(Modifier.weight(1f)) {
+                // Tapping the name opens it too; the pencil icon next to it also opens the edit dialog.
+                Row(
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onEditName),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        status.displayName,
+                        color = SoloColors.TextBright,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.profile_edit_name_title),
+                        tint = SoloColors.Neon,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                // Server handle, read-only (chosen at sign-up; friends find you by it).
+                username?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        "@$it",
+                        color = SoloColors.TextDim,
+                        fontSize = 13.sp,
+                    )
+                }
             }
         }
     }

@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -164,7 +167,11 @@ fun HomeScreen(
             }
         }
     }
-    LaunchedEffect(Unit) {
+    // Request the Android 13+ notification permission (needed for reminders). Re-checked on
+    // every foreground return, not just first composition: a single denial still allows a
+    // second system prompt, while a permanent denial falls through to the Snackbar rationale
+    // below, which routes to system settings.
+    fun maybeAskNotifPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             !NotificationManagerCompat.from(context).areNotificationsEnabled() &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -172,6 +179,14 @@ fun HomeScreen(
         ) {
             notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+    val notifLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(notifLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) maybeAskNotifPermission()
+        }
+        notifLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { notifLifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(

@@ -2,6 +2,7 @@ package com.moltrax.personalnoteapp.domain.repository
 
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,12 @@ interface GitHubRepository {
      */
     suspend fun linkRepo(spaceId: String, repoId: Long, fullName: String, private: Boolean)
     suspend fun unlinkRepo(repoId: Long)
+
+    /**
+     * Public repos of a GitHub username (api.github.com, no token). Only public
+     * repos are listed — private ones still go through manual ID entry.
+     */
+    suspend fun publicRepos(username: String): List<GithubPublicRepo>
 
     fun observeActivity(spaceId: String): Flow<List<GithubActivity>>
     suspend fun refreshActivity(spaceId: String)

@@ -3,6 +3,7 @@ package com.moltrax.personalnoteapp.di
 import com.moltrax.personalnoteapp.BuildConfig
 import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.data.remote.exercisedb.ExerciseDbApi
+import com.moltrax.personalnoteapp.data.remote.github.GitHubPublicApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,4 +53,13 @@ object NetworkModule {
             .build()
             .create(ExerciseDbApi::class.java)
     }
+
+    @Provides @Singleton
+    fun provideGitHubPublicApi(json: Json, http: OkHttpClient): GitHubPublicApi =
+        Retrofit.Builder()
+            .baseUrl("https://api.github.com/")
+            .client(http)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(GitHubPublicApi::class.java)
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -268,6 +269,7 @@ private fun BoardTab(
 private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
     val gh by vm.githubState.collectAsStateWithLifecycle()
     var showLink by remember { mutableStateOf(false) }
+    var showBrowse by remember { mutableStateOf(false) }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -296,6 +298,7 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                 )
+                TextButton(onClick = { showBrowse = true }) { Text(stringResource(R.string.github_browse)) }
                 TextButton(onClick = { showLink = true }) { Text(stringResource(R.string.github_link)) }
             }
         }
@@ -330,8 +333,17 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
             }
         }
         item {
-            OutlinedButton(onClick = { vm.enablePush() }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.github_enable_push))
+            OutlinedButton(
+                onClick = { vm.enablePush() },
+                enabled = !gh.busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(
+                        if (gh.pushDone) R.string.github_push_done
+                        else R.string.github_enable_push
+                    )
+                )
             }
         }
         item {
@@ -376,6 +388,9 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
         var repoId by remember { mutableStateOf("") }
         var fullName by remember { mutableStateOf("") }
         var isPrivate by remember { mutableStateOf(false) }
+        var formError by remember { mutableStateOf<String?>(null) }
+        val errId = stringResource(R.string.github_err_id)
+        val errName = stringResource(R.string.github_err_name)
         AlertDialog(
             onDismissRequest = { showLink = false },
             title = { Text(stringResource(R.string.github_link_title)) },
@@ -408,22 +423,119 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                         )
                         Text(stringResource(R.string.github_private))
                     }
+                    formError?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
                 }
             },
             confirmButton = {
-                val repoIdLong = repoId.toLongOrNull()?.takeIf { it > 0 }
-                val nameOk = fullName.trim().matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"))
                 TextButton(
                     onClick = {
-                        val id = repoIdLong ?: return@TextButton
-                        vm.linkRepo(spaceId, id, fullName.trim(), isPrivate) { showLink = false }
+                        val id = repoId.toLongOrNull()?.takeIf { it > 0 }
+                        val name = fullName.trim()
+                        formError = when {
+                            id == null -> errId
+                            !name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) -> errName
+                            else -> null
+                        }
+                        if (formError == null) {
+                            vm.linkRepo(spaceId, id!!, name, isPrivate) { showLink = false }
+                        }
                     },
-                    enabled = repoIdLong != null && nameOk,
+                    enabled = repoId.isNotBlank() && fullName.isNotBlank(),
                 ) { Text(stringResource(R.string.action_save)) }
             },
             dismissButton = { TextButton(onClick = { showLink = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
+
+    if (showBrowse) {
+        BrowseReposDialog(spaceId = spaceId, vm = vm, onDismiss = { showBrowse = false })
+    }
+}
+
+@Composable
+private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -> Unit) {
+    val browse by vm.browseState.collectAsStateWithLifecycle()
+    var username by remember { mutableStateOf(browse.username) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.github_browse_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.github_browse_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(R.string.github_browse_user)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                    )
+                    OutlinedButton(
+                        onClick = { vm.fetchBrowseRepos(spaceId, username) },
+                        enabled = !browse.busy && username.isNotBlank(),
+                    ) { Text(stringResource(R.string.github_browse_fetch)) }
+                }
+                if (browse.busy) {
+                    CircularProgressIndicator(modifier = Modifier.padding(vertical = 8.dp))
+                }
+                browse.error?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                if (!browse.busy && browse.error == null && browse.repos.isEmpty() && browse.username.isNotBlank()) {
+                    Text(
+                        stringResource(R.string.github_browse_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(browse.repos, key = { it.id }) { repo ->
+                        val checked = repo.id in browse.selectedIds
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { vm.toggleBrowseRepo(repo.id) },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = checked,
+                                onCheckedChange = { vm.toggleBrowseRepo(repo.id) },
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(repo.fullName, style = MaterialTheme.typography.bodyMedium)
+                                repo.description?.takeIf { it.isNotBlank() }?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { vm.applyBrowseRepos(spaceId) { onDismiss() } },
+                enabled = !browse.busy && browse.repos.isNotEmpty(),
+            ) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable

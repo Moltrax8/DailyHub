@@ -128,6 +128,8 @@
     <string name="settings_task_reminders_desc">Sends a reminder notification as a task\'s due time approaches.</string>
     <string name="settings_default_alert">Default Reminder Time</string>
     <string name="settings_notif_permission">Open / Manage Notification Permissions</string>
+    <string name="settings_notif_status_on">Notifications are ON — reminders can be shown.</string>
+    <string name="settings_notif_status_off">Notifications are OFF — reminders cannot be shown until you grant permission.</string>
     <string name="settings_section_sync">Synchronization</string>
     <string name="settings_last_sync">Last sync: %1$s</string>
     <string name="settings_never_synced">Not synced yet.</string>
@@ -378,6 +380,16 @@
     <string name="spaces_new_event">New event</string>
     <string name="spaces_event_time">Pick a time</string>
     <string name="spaces_event_end">Add an end</string>
+    <string name="spaces_members">Members</string>
+    <string name="spaces_members_desc">Collaborators in this hub — they share notes, tasks, links and chat. Owners can invite more.</string>
+    <string name="spaces_invite">Invite</string>
+    <string name="spaces_invite_title">Invite collaborator</string>
+    <string name="spaces_invite_hint">Enter their DailyHub username (the @handle from Profile).</string>
+    <string name="spaces_username">Username</string>
+    <string name="spaces_remove">Remove</string>
+    <string name="spaces_leave">Leave hub</string>
+    <string name="spaces_role_owner">owner</string>
+    <string name="spaces_role_member">member</string>
 
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projects</string>
@@ -403,6 +415,15 @@
     <string name="github_unlink">Unlink</string>
     <string name="github_prefs">Notification kinds</string>
     <string name="github_enable_push">Enable push notifications</string>
+    <string name="github_push_done">Push enabled on this device ✓</string>
+    <string name="github_err_id">Enter the numeric Repo ID (api.github.com/repos/owner/repo → “id”).</string>
+    <string name="github_err_name">Enter the repo as owner/name (e.g. moltrax8/DailyHub).</string>
+    <string name="github_browse">Browse repos</string>
+    <string name="github_browse_title">Track GitHub repos</string>
+    <string name="github_browse_hint">Enter a GitHub username to list public repos. Tick to track in this space, untick to stop tracking. Private repos still need manual linking.</string>
+    <string name="github_browse_user">GitHub username</string>
+    <string name="github_browse_fetch">Fetch</string>
+    <string name="github_browse_empty">No public repos found for this user.</string>
     <string name="github_activity">Activity</string>
     <string name="github_activity_empty">No activity yet — the webhook drops the first event here.</string>
     <string name="github_link_title">Link repo</string>

@@ -61,6 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.ui.screen.social.SocialViewModel
 import kotlinx.coroutines.launch
 
 private const val TAB_NOTES = 0
@@ -70,6 +71,7 @@ private const val TAB_CHAT = 3
 private const val TAB_EVENTS = 4
 private const val TAB_FILES = 5
 private const val TAB_FEED = 6
+private const val TAB_MEMBERS = 7
 
 /**
  * One Duo hub: Notes | Tasks | Links tabs + members row (Phase 5 MVP).
@@ -77,7 +79,12 @@ private const val TAB_FEED = 6
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltViewModel()) {
+fun DuoHubScreen(
+    spaceId: String,
+    nav: NavController,
+    vm: SpaceViewModel = hiltViewModel(),
+    socialVm: SocialViewModel = hiltViewModel(),
+) {
     val state by vm.detail.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(TAB_NOTES) }
     var showAdd by remember { mutableStateOf(false) }
@@ -117,6 +124,7 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
                 Tab(selected = tab == TAB_EVENTS, onClick = { tab = TAB_EVENTS }, text = { Text(stringResource(R.string.spaces_events)) })
                 Tab(selected = tab == TAB_FILES, onClick = { tab = TAB_FILES }, text = { Text(stringResource(R.string.spaces_files)) })
                 Tab(selected = tab == TAB_FEED, onClick = { tab = TAB_FEED }, text = { Text(stringResource(R.string.spaces_feed)) })
+                Tab(selected = tab == TAB_MEMBERS, onClick = { tab = TAB_MEMBERS }, text = { Text(stringResource(R.string.spaces_members)) })
             }
             if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
             state.error?.let {
@@ -216,6 +224,7 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
                 TAB_EVENTS -> EventsTab(vm = vm, spaceId = spaceId, state = state)
                 TAB_FILES -> FilesTab(vm = vm, spaceId = spaceId, state = state)
                 TAB_FEED -> FeedTab(state = state)
+                TAB_MEMBERS -> MembersTab(vm = vm, socialVm = socialVm, spaceId = spaceId, state = state, nav = nav)
             }
         }
     }
@@ -236,6 +245,102 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
             }
             else -> Unit
         }
+    }
+}
+
+/** Collaborators tab: hubs hold the whole repo crew, not just a duo. Owners invite by username. */
+@Composable
+private fun MembersTab(
+    vm: SpaceViewModel,
+    socialVm: SocialViewModel,
+    spaceId: String,
+    state: SpaceDetailUiState,
+    nav: NavController,
+) {
+    val social by socialVm.state.collectAsStateWithLifecycle()
+    var showInvite by remember { mutableStateOf(false) }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            Text(
+                stringResource(R.string.spaces_members_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { showInvite = true },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.spaces_invite)) }
+                OutlinedButton(
+                    onClick = { vm.leaveSpace(spaceId) { nav.popBackStack() } },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.spaces_leave)) }
+            }
+        }
+        items(state.members, key = { it.userId }) { member ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            socialVm.displayNameOf(member.userId) +
+                                if (member.userId == social.myId) " (you)" else "",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            stringResource(
+                                if (member.isOwner) R.string.spaces_role_owner
+                                else R.string.spaces_role_member
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (member.userId != social.myId) {
+                        IconButton(onClick = { vm.removeMember(spaceId, member.userId) }) {
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.spaces_remove))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (showInvite) {
+        var username by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showInvite = false },
+            title = { Text(stringResource(R.string.spaces_invite_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.spaces_invite_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(R.string.spaces_username)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { vm.inviteByUsername(spaceId, username) { showInvite = false } },
+                    enabled = username.isNotBlank(),
+                ) { Text(stringResource(R.string.spaces_invite)) }
+            },
+            dismissButton = { TextButton(onClick = { showInvite = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 }
 

@@ -1,9 +1,11 @@
 package com.moltrax.personalnoteapp.data.repository
 
+import com.moltrax.personalnoteapp.data.remote.github.GitHubPublicApi
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseDbApi
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
 import com.moltrax.personalnoteapp.domain.repository.GitHubRepository
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +22,7 @@ import javax.inject.Singleton
 class GitHubRepositoryImpl @Inject constructor(
     private val db: SupabaseDbApi?,
     private val auth: SupabaseAuthService,
+    private val publicApi: GitHubPublicApi,
 ) : GitHubRepository {
 
     private fun api(): SupabaseDbApi =
@@ -70,6 +73,22 @@ class GitHubRepositoryImpl @Inject constructor(
     override suspend fun unlinkRepo(repoId: Long) {
         val res = api().unlinkRepo(bearer(), "eq.$repoId")
         if (!res.isSuccessful) throw IOException("Unlink failed (HTTP ${res.code()}).")
+    }
+
+    override suspend fun publicRepos(username: String): List<GithubPublicRepo> {
+        val clean = username.trim().trimStart('@')
+        require(clean.matches(Regex("[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?"))) {
+            "Enter a GitHub username (e.g. moltrax8)."
+        }
+        val res = runCatching { publicApi.publicRepos(clean) }.getOrElse {
+            throw IOException("GitHub is unreachable — check connection.")
+        }
+        if (!res.isSuccessful) {
+            if (res.code() == 404) throw IOException("GitHub user \"$clean\" not found.")
+            if (res.code() == 403) throw IOException("GitHub rate limit hit — try again later.")
+            throw IOException("GitHub lookup failed (HTTP ${res.code()}).")
+        }
+        return res.body().orEmpty()
     }
 
     private fun linkError(code: Int): String = when (code) {

@@ -56,6 +56,15 @@ data class NotifPrefRow(
     val enabled: Boolean = true,
 )
 
+/** Public repo entry from api.github.com (no token needed for public repos). */
+@Serializable
+data class GithubPublicRepo(
+    val id: Long,
+    @SerialName("full_name") val fullName: String,
+    val private: Boolean = false,
+    val description: String? = null,
+)
+
 /** First event slice (workflow_failed arrives later). */
 fun githubActivityTitle(kind: String): String = when (kind) {
     "issue.opened" -> "Issue opened"

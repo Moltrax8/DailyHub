@@ -95,6 +95,9 @@ class ProjectRepositoryImpl @Inject constructor(
             "Project row create failed",
         )
         pullProject(spaceId)
+        // Mirror the space row too — the Projects list observes SpaceDao, and without
+        // this the new project is invisible until an unrelated pullSpace happens.
+        runCatching { spaces.pullSpace(spaceId) }
         return Space(spaceId, SpaceType.PROJECT, name.trim(), me, "", "")
     }
 

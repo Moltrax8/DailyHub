@@ -128,6 +128,8 @@
     <string name="settings_task_reminders_desc">Görev bitiş saatine yaklaşınca hatırlatma bildirimi gönderir.</string>
     <string name="settings_default_alert">Varsayılan Uyarı Süresi</string>
     <string name="settings_notif_permission">Bildirim İzinlerini Aç / Yönet</string>
+    <string name="settings_notif_status_on">Bildirimler AÇIK — hatırlatmalar gösterilebilir.</string>
+    <string name="settings_notif_status_off">Bildirimler KAPALI — izin vermeden hatırlatma gösterilemez.</string>
     <string name="settings_section_sync">Senkronizasyon</string>
     <string name="settings_last_sync">Son senkronizasyon: %1$s</string>
     <string name="settings_never_synced">Henüz senkronizasyon yapılmadı.</string>
@@ -378,6 +380,16 @@
     <string name="spaces_new_event">Yeni etkinlik</string>
     <string name="spaces_event_time">Saat seç</string>
     <string name="spaces_event_end">Bitiş de ekle</string>
+    <string name="spaces_members">Üyeler</string>
+    <string name="spaces_members_desc">Bu hub\'daki işbirlikçiler — notları, görevleri, bağlantıları ve sohbeti paylaşır. Sahipler yenilerini davet edebilir.</string>
+    <string name="spaces_invite">Davet et</string>
+    <string name="spaces_invite_title">İşbirlikçi davet et</string>
+    <string name="spaces_invite_hint">DailyHub kullanıcı adını gir (Profil\'deki @kullanıcı adı).</string>
+    <string name="spaces_username">Kullanıcı adı</string>
+    <string name="spaces_remove">Çıkar</string>
+    <string name="spaces_leave">Hub\'dan ayrıl</string>
+    <string name="spaces_role_owner">sahip</string>
+    <string name="spaces_role_member">üye</string>
 
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projeler</string>
@@ -403,6 +415,15 @@
     <string name="github_unlink">Bağlantıyı kaldır</string>
     <string name="github_prefs">Bildirim türleri</string>
     <string name="github_enable_push">Push bildirimlerini etkinleştir</string>
+    <string name="github_push_done">Bu cihazda push etkin ✓</string>
+    <string name="github_err_id">Sayısal Depo ID gir (api.github.com/repos/owner/repo → “id”).</string>
+    <string name="github_err_name">Depoyu owner/ad olarak gir (ör. moltrax8/DailyHub).</string>
+    <string name="github_browse">Depolara göz at</string>
+    <string name="github_browse_title">GitHub depolarını izle</string>
+    <string name="github_browse_hint">Herkese açık depoları listelemek için bir GitHub kullanıcı adı gir. İzlemek için işaretle, izlemeyi bırakmak için işareti kaldır. Özel depolar elle bağlanmalı.</string>
+    <string name="github_browse_user">GitHub kullanıcı adı</string>
+    <string name="github_browse_fetch">Getir</string>
+    <string name="github_browse_empty">Bu kullanıcıda herkese açık depo yok.</string>
     <string name="github_activity">Hareketler</string>
     <string name="github_activity_empty">Henüz hareket yok — webhook ilk olayda buraya düşer.</string>
     <string name="github_link_title">Depo bağla</string>
