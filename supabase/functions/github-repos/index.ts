@@ -148,6 +148,7 @@ Deno.serve(async (req: Request) => {
   }
 
   let accessToken: string = tokenRow.access_token;
+  const prevRefreshToken: string | null = tokenRow.refresh_token ?? null;
 
   // Refresh when expired or expiring within 60s.
   const expiresMs = tokenRow.expires_at ? Date.parse(tokenRow.expires_at) : NaN;
@@ -216,7 +217,7 @@ Deno.serve(async (req: Request) => {
     accessToken = refreshed.access_token;
     await admin.from("github_tokens").update({
       access_token: refreshed.access_token,
-      refresh_token: refreshed.refresh_token ?? tokenRow.refresh_token,
+      refresh_token: refreshed.refresh_token ?? prevRefreshToken,
       expires_at: refreshed.expires_at,
       scope: refreshed.scope,
       updated_at: new Date().toISOString(),
