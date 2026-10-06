@@ -171,7 +171,7 @@ private fun MonthGrid(
                             day = dayNum,
                             isToday = date == today,
                             isSelected = date == selected,
-                            hasTasks = occurrences.containsKey(date),
+                            taskCount = occurrences[date]?.size ?: 0,
                             modifier = Modifier.weight(1f),
                             onClick = { onSelect(date) },
                         )
@@ -190,7 +190,7 @@ private fun DayCell(
     day: Int,
     isToday: Boolean,
     isSelected: Boolean,
-    hasTasks: Boolean,
+    taskCount: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -221,14 +221,24 @@ private fun DayCell(
                 color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onBackground,
             )
-            // Small dot when there are tasks.
-            Box(
-                Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape)
-                    .background(
-                        if (hasTasks) MaterialTheme.colorScheme.primary
-                        else androidx.compose.ui.graphics.Color.Transparent
+            // Small dot when there are tasks, plus a count when more than one.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Box(
+                    Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape)
+                        .background(
+                            if (taskCount > 0) MaterialTheme.colorScheme.primary
+                            else androidx.compose.ui.graphics.Color.Transparent
+                        )
+                )
+                if (taskCount > 1) {
+                    Text(
+                        taskCount.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
                     )
-            )
+                }
+            }
         }
     }
 }
@@ -251,7 +261,7 @@ private fun DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Uni
     if (tasks.isEmpty()) {
         DhEmptyState(
             icon = Icons.Default.CalendarMonth,
-            title = header,
+            title = stringResource(R.string.calendar_empty_title),
             description = stringResource(R.string.calendar_no_tasks),
             actionLabel = stringResource(R.string.home_new_task),
             onAction = onAdd,

@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -62,13 +63,15 @@ fun TaskDetailScreen(
     var deadlineError by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Applies the selected due time; rejects a moment in the past with a warning
-    // (1 min tolerance: "today, current minute" counts as valid).
-    fun applyDeadline(candidate: Long) {
-        if (candidate + 60_000L < System.currentTimeMillis()) {
+    // (1 min tolerance: "today, current minute" counts as valid). Returns true when applied.
+    fun applyDeadline(candidate: Long): Boolean {
+        return if (candidate + 60_000L < System.currentTimeMillis()) {
             deadlineError = context.getString(R.string.task_past_date_error)
+            false
         } else {
             deadlineError = null
             vm.update { copy(dueDate = candidate) }
+            true
         }
     }
 
@@ -94,20 +97,40 @@ fun TaskDetailScreen(
                 .imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            // Large title field first (frictionless capture/editing).
-            OutlinedTextField(
+            // Large borderless title field first (frictionless capture/editing).
+            TextField(
                 value = state.title,
                 onValueChange = { vm.update { copy(title = it) } },
-                label = { Text(stringResource(R.string.task_title_field)) },
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.headlineSmall,
+                placeholder = { Text(stringResource(R.string.task_title_hint)) },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.titleLarge,
                 shape = MaterialTheme.shapes.small,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
             )
 
-            // Schedule: due date + reminder (read-only default from Settings) as grouped rows.
-            val deadlineText = state.dueDate?.let { deadlineFmt.format(Date(it)) }
-                ?: stringResource(R.string.task_deadline_unset)
+            // Schedule: ONE tappable due row (value opens date then time picker),
+            // then reminder (read-only default from Settings) as grouped rows.
+            val timeFmt = remember(locale) { SimpleDateFormat("HH:mm", locale) }
+            val deadlineText = state.dueDate?.let { due ->
+                val cal = Calendar.getInstance().apply { timeInMillis = due }
+                val time = timeFmt.format(Date(due))
+                fun sameDay(a: Calendar, b: Calendar) =
+                    a.get(Calendar.YEAR) == b.get(Calendar.YEAR) &&
+                        a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
+                when {
+                    sameDay(cal, Calendar.getInstance()) -> context.getString(R.string.task_due_today, time)
+                    sameDay(cal, Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }) ->
+                        context.getString(R.string.task_due_tomorrow, time)
+                    else -> deadlineFmt.format(Date(due))
+                }
+            } ?: stringResource(R.string.task_deadline_unset)
             val reminderText = if (!systemAlerts) {
                 stringResource(R.string.task_reminder_default_off)
             } else if (reminderMinutes < 60) {
@@ -149,26 +172,6 @@ fun TaskDetailScreen(
                     supporting = if (state.dueDate == null) stringResource(R.string.task_deadline_unset) else reminderText,
                     leading = { DhTonalIcon(Icons.Default.Notifications, contentDescription = null) },
                 )
-                DhDivider()
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.task_date))
-                    }
-                    OutlinedButton(
-                        onClick = { showTimePicker = true },
-                        modifier = Modifier.weight(1f),
-                        // A date is needed first for the time (otherwise we set the date at the same time).
-                    ) {
-                        Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.task_time))
-                    }
-                }
                 DhDivider()
                 DhSettingsRow(
                     title = stringResource(R.string.task_recurring),
@@ -270,8 +273,12 @@ fun TaskDetailScreen(
                 )
             }
 
-            // Tags — multi-select (Phase 2); zero tags allowed (untagged bucket).
+            // Tags — chip row of existing categories + an "Add category" chip.
+            // The name field and the "keep when empty" switch appear only while adding.
             DhSection(title = stringResource(R.string.task_category)) {
+                var addingCategory by rememberSaveable { mutableStateOf(false) }
+                var newCategory by rememberSaveable { mutableStateOf("") }
+                var newCategoryPermanent by rememberSaveable { mutableStateOf(false) }
                 FlowRow(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -297,35 +304,48 @@ fun TaskDetailScreen(
                             } else null,
                         )
                     }
+                    DhFilterChip(
+                        selected = false,
+                        onClick = { addingCategory = true },
+                        label = stringResource(R.string.task_add_category),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        },
+                    )
                 }
-                var newCategory by rememberSaveable { mutableStateOf("") }
-                var newCategoryPermanent by rememberSaveable { mutableStateOf(false) }
-                OutlinedTextField(
-                    value = newCategory,
-                    onValueChange = { newCategory = it },
-                    label = { Text(stringResource(R.string.task_new_category)) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                    singleLine = true,
-                    trailingIcon = {
-                        IconButton(
-                            onClick = {
-                                vm.createCategory(newCategory, newCategoryPermanent)
-                                newCategory = ""
-                                newCategoryPermanent = false
-                            },
-                            enabled = newCategory.isNotBlank(),
-                            modifier = Modifier.size(48.dp),
-                        ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_category)) }
-                    },
-                )
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(checked = newCategoryPermanent, onCheckedChange = { newCategoryPermanent = it })
-                    Text(
-                        stringResource(R.string.task_permanent_category_hint),
-                        style = MaterialTheme.typography.bodyMedium,
+                if (addingCategory) {
+                    OutlinedTextField(
+                        value = newCategory,
+                        onValueChange = { newCategory = it },
+                        label = { Text(stringResource(R.string.task_new_category)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                        singleLine = true,
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    vm.createCategory(newCategory, newCategoryPermanent)
+                                    newCategory = ""
+                                    newCategoryPermanent = false
+                                    addingCategory = false
+                                },
+                                enabled = newCategory.isNotBlank(),
+                                modifier = Modifier.size(48.dp),
+                            ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_category)) }
+                        },
+                    )
+                    DhSettingsRow(
+                        title = stringResource(R.string.task_keep_when_empty),
+                        trailing = {
+                            DhSwitch(
+                                checked = newCategoryPermanent,
+                                onCheckedChange = { newCategoryPermanent = it },
+                            )
+                        },
+                        onClick = { newCategoryPermanent = !newCategoryPermanent },
                     )
                 }
             }
@@ -484,7 +504,8 @@ fun TaskDetailScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         dateState.selectedDateMillis?.let { picked ->
-                            applyDeadline(mergeDate(state.dueDate, picked))
+                            // One flow: picking the date continues straight into the time picker.
+                            if (applyDeadline(mergeDate(state.dueDate, picked))) showTimePicker = true
                         }
                         showDatePicker = false
                     }) { Text(stringResource(R.string.action_ok)) }
