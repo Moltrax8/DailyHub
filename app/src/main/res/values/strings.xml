@@ -166,8 +166,14 @@
     <string name="settings_push">Drive\'a Gönder</string>
     <string name="settings_pull">Drive\'dan Al</string>
     <string name="settings_sign_out">Çıkış Yap</string>
-    <string name="reminder_minutes_before">%1$d dakika önce</string>
-    <string name="reminder_hours_before">%1$d saat önce</string>
+    <plurals name="reminder_minutes_before">
+        <item quantity="one">%1$d dakika önce</item>
+        <item quantity="other">%1$d dakika önce</item>
+    </plurals>
+    <plurals name="reminder_hours_before">
+        <item quantity="one">%1$d saat önce</item>
+        <item quantity="other">%1$d saat önce</item>
+    </plurals>
     <string name="reminder_hours_minutes_before">%1$d sa %2$d dk önce</string>
 
     <!-- İstatistikler -->
