@@ -30,6 +30,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.ui.AppViewModel
 import com.moltrax.personalnoteapp.ui.components.UpdatePrompt
+import com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus
+import com.moltrax.personalnoteapp.domain.model.parseGithubCallback
 import com.moltrax.personalnoteapp.ui.i18n.localizedConfiguration
 import com.moltrax.personalnoteapp.ui.i18n.localizedFor
 import com.moltrax.personalnoteapp.ui.navigation.AppNavHost
@@ -52,6 +54,9 @@ class MainActivity : ComponentActivity() {
         // Supabase email-confirm deep link (dailyhub://auth/callback) just lands
         // in the app — verification already happened server-side. It carries no
         // widget extras, so only read them for non-deep-link launches.
+        // The GitHub link callback (dailyhub://github-callback?code&state)
+        // goes to GitHubCallbackBus for the Projects GitHub UI to finish.
+        handleDeepLink(intent)
         val isAuthCallback = intent?.data?.scheme == "dailyhub"
         if (!isAuthCallback) {
             pendingWidgetAction.value = intent?.getStringExtra(EXTRA_WIDGET_ACTION)
@@ -125,10 +130,18 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.data?.scheme == "dailyhub") return // auth callback: nothing to route
+        handleDeepLink(intent)
+        if (intent.data?.scheme == "dailyhub") return // auth/github callback: nothing to route
         pendingWidgetAction.value = intent.getStringExtra(EXTRA_WIDGET_ACTION)
         pendingWidgetTaskId.value = intent.getStringExtra(EXTRA_WIDGET_TASK_ID)
         intent.getStringExtra(EXTRA_PROJECT_SPACE_ID)?.let { pendingProjectSpaceId.value = it }
+    }
+
+    /** Routes dailyhub:// deep links: github-callback → bus, auth → no-op. */
+    private fun handleDeepLink(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme != "dailyhub") return
+        parseGithubCallback(data.toString())?.let { GitHubCallbackBus.emit(it) }
     }
 
     companion object {
