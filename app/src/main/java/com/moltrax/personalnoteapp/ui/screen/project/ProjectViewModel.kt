@@ -8,6 +8,7 @@ import com.moltrax.personalnoteapp.domain.model.ProjectItem
 import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
 import com.moltrax.personalnoteapp.domain.model.Space
 import com.moltrax.personalnoteapp.domain.model.SpaceType
@@ -141,6 +142,7 @@ class ProjectViewModel @Inject constructor(
         val prefs: Map<String, Boolean> = emptyMap(),
         val busy: Boolean = false,
         val error: String? = null,
+        val pushDone: Boolean = false,
     )
 
     private val _github = MutableStateFlow(GitHubUiState())
@@ -200,12 +202,100 @@ class ProjectViewModel @Inject constructor(
     }
 
     fun enablePush() {
+        _github.update { it.copy(busy = true, error = null, pushDone = false) }
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
                 viewModelScope.launch {
                     runCatching { github.registerFcmToken(token) }
-                        .onFailure { e -> _github.update { it.copy(error = e.message) } }
+                        .onSuccess { _github.update { it.copy(busy = false, pushDone = true) } }
+                        .onFailure { e -> _github.update { it.copy(busy = false, error = e.message) } }
                 }
             }
+            .addOnFailureListener { e ->
+                _github.update {
+                    it.copy(
+                        busy = false,
+                        error = e.message ?: "Could not reach the push service — check network / Play services.",
+                    )
+                }
+            }
+            .addOnCanceledListener {
+                _github.update { it.copy(busy = false, error = "Push setup was cancelled — try again.") }
+            }
+    }
+
+    // -- Repo picker: track/untrack a GitHub user's public repos -----------------
+
+    data class RepoBrowseUiState(
+        val username: String = "",
+        val repos: List<GithubPublicRepo> = emptyList(),
+        /** Ids already linked in this space. */
+        val trackedIds: Set<Long> = emptySet(),
+        /** Checkbox state; Save links newly checked + unlinks newly unchecked. */
+        val selectedIds: Set<Long> = emptySet(),
+        /** Forks hidden by default — most users only track their own repos. */
+        val hideForks: Boolean = true,
+        val busy: Boolean = false,
+        val error: String? = null,
+    ) {
+        val visibleRepos: List<GithubPublicRepo> =
+            if (hideForks) repos.filter { !it.fork } else repos
+    }
+
+    private val _browse = MutableStateFlow(RepoBrowseUiState())
+    val browseState: StateFlow<RepoBrowseUiState> = _browse.asStateFlow()
+
+    fun fetchBrowseRepos(spaceId: String, username: String) {
+        val clean = username.trim().trimStart('@')
+        if (clean.isEmpty()) {
+            _browse.update { it.copy(error = "Enter a GitHub username first.") }
+            return
+        }
+        viewModelScope.launch {
+            _browse.update { it.copy(busy = true, error = null, username = clean) }
+            runCatching {
+                val repos = github.publicRepos(clean)
+                val tracked = github.spaceRepos(spaceId).map { it.id }.toSet()
+                Triple(repos, tracked, tracked)
+            }.onSuccess { (repos, tracked, selected) ->
+                _browse.update {
+                    it.copy(repos = repos, trackedIds = tracked, selectedIds = selected, busy = false)
+                }
+            }.onFailure { e ->
+                _browse.update { it.copy(busy = false, error = e.message) }
+            }
+        }
+    }
+
+    fun toggleBrowseRepo(id: Long) {
+        _browse.update {
+            val sel = if (id in it.selectedIds) it.selectedIds - id else it.selectedIds + id
+            it.copy(selectedIds = sel)
+        }
+    }
+
+    fun toggleHideForks() {
+        _browse.update { it.copy(hideForks = !it.hideForks) }
+    }
+
+    fun applyBrowseRepos(spaceId: String, onDone: () -> Unit = {}) {
+        val s = _browse.value
+        if (s.busy) return
+        viewModelScope.launch {
+            _browse.update { it.copy(busy = true, error = null) }
+            val toLink = s.repos.filter { it.id in s.selectedIds && it.id !in s.trackedIds }
+            val toUnlink = s.trackedIds.filter { it !in s.selectedIds }
+            val failure = runCatching {
+                toLink.forEach { github.linkRepo(spaceId, it.id, it.fullName, it.private) }
+                toUnlink.forEach { github.unlinkRepo(it) }
+            }.exceptionOrNull()
+            if (failure != null) {
+                _browse.update { it.copy(busy = false, error = failure.message) }
+            } else {
+                _browse.update { it.copy(busy = false) }
+                loadGitHub(spaceId)
+                onDone()
+            }
+        }
     }
 }

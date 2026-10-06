@@ -3,24 +3,34 @@ package com.moltrax.personalnoteapp.ui.screen.project
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -55,7 +65,6 @@ import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.groupBoardItems
 import com.moltrax.personalnoteapp.ui.navigation.DuoHub
 import com.moltrax.personalnoteapp.ui.navigation.ProjectDetail
-import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 
 private val COLUMNS = listOf(
     ProjectStatus.IDEA to "Idea",
@@ -73,7 +82,6 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.projects_title)) }) },
-        bottomBar = { BottomNavBar(nav) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreate = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
@@ -86,17 +94,63 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
         ) {
             if (projects.isEmpty()) {
                 item {
-                    Text(
-                        stringResource(R.string.projects_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Dashboard,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp),
+                            )
+                            Text(
+                                stringResource(R.string.projects_empty_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                stringResource(R.string.projects_empty_desc),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(onClick = { showCreate = true }) {
+                                Text(stringResource(R.string.projects_new))
+                            }
+                        }
+                    }
                 }
             }
             items(projects, key = { it.id }) { space ->
                 Card(Modifier.fillMaxWidth().clickable { nav.navigate(ProjectDetail(space.id)) }) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                        Text(space.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.projects_untitled))
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.Dashboard,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                space.name?.takeIf { it.isNotBlank() }
+                                    ?: stringResource(R.string.projects_untitled),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                stringResource(R.string.projects_open),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -111,6 +165,11 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
             title = { Text(stringResource(R.string.projects_new)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.projects_new_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -150,6 +209,8 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
     var showAdd by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<ProjectItem?>(null) }
     var mainTab by remember { mutableIntStateOf(0) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(spaceId) { vm.openProject(spaceId); vm.loadGitHub(spaceId) }
     val board = groupBoardItems(state.items)
@@ -160,17 +221,27 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
                 title = { Text(stringResource(R.string.projects_board)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { nav.navigate(DuoHub(spaceId)) }) {
                         Icon(Icons.Default.Hub, contentDescription = stringResource(R.string.projects_open_hub))
                     }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more))
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.projects_delete)) },
+                                onClick = { showMenu = false; showDelete = true },
+                            )
+                        }
+                    }
                 },
             )
         },
-        bottomBar = { BottomNavBar(nav) },
         floatingActionButton = {
             if (mainTab == 0) {
                 FloatingActionButton(onClick = { showAdd = true }) {
@@ -180,10 +251,15 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = mainTab) {
-                Tab(selected = mainTab == 0, onClick = { mainTab = 0 }, text = { Text(stringResource(R.string.projects_board)) })
-                Tab(selected = mainTab == 1, onClick = { mainTab = 1 }, text = { Text(stringResource(R.string.projects_github)) })
-            }
+            com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
+                options = listOf(
+                    stringResource(R.string.projects_board),
+                    stringResource(R.string.projects_github),
+                ),
+                selectedIndex = mainTab,
+                onSelect = { mainTab = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
             if (mainTab == 0) {
                 BoardTab(vm = vm, spaceId = spaceId, state = state, board = board,
                     onAdd = { showAdd = true }, onSelect = { selected = it })
@@ -224,6 +300,21 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
             onDismiss = { selected = null },
         )
     }
+
+    if (showDelete) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text(stringResource(R.string.projects_delete_title)) },
+            text = { Text(stringResource(R.string.projects_delete_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDelete = false
+                    vm.deleteProject(spaceId) { nav.popBackStack() }
+                }) { Text(stringResource(R.string.projects_delete)) }
+            },
+            dismissButton = { TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
 }
 
 @Composable
@@ -239,26 +330,47 @@ private fun BoardTab(
     state.error?.let {
         Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
     }
-    Row(
-        Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        COLUMNS.forEach { (status, label) ->
-            BoardColumn(
-                label = label,
-                items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }]
-                    .orEmpty(),
-                onMoveLeft = { item ->
-                    val idx = COLUMNS.indexOfFirst { it.first == status }
-                    if (idx > 0) vm.moveItem(spaceId, item, COLUMNS[idx - 1].first)
-                },
-                onMoveRight = { item ->
-                    val idx = COLUMNS.indexOfFirst { it.first == status }
-                    if (idx < COLUMNS.lastIndex) vm.moveItem(spaceId, item, COLUMNS[idx + 1].first)
-                },
-                onTap = onSelect,
-                onDelete = { vm.deleteItem(spaceId, it.id) },
-            )
+    // Mobile-first board: vertical status sections with a "Move to" status
+    // picker per card (accessible, no tiny arrow buttons). Wide screens get
+    // the same sections in a horizontal scroll row via adaptive layout below.
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth >= 840.dp
+        if (wide) {
+            Row(
+                Modifier.fillMaxSize().horizontalScroll(rememberScrollState()).padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                COLUMNS.forEach { (status, label) ->
+                    androidx.compose.foundation.layout.Box(Modifier.width(300.dp)) {
+                        BoardSection(
+                            label = label,
+                            items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }].orEmpty(),
+                            current = status,
+                            onMove = { item, target -> vm.moveItem(spaceId, item, target) },
+                            onTap = onSelect,
+                            onDelete = { vm.deleteItem(spaceId, it.id) },
+                        )
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                COLUMNS.forEach { (status, label) ->
+                    item(key = status.name) {
+                        BoardSection(
+                            label = label,
+                            items = board[status.name.lowercase().replaceFirstChar { it.uppercase() }].orEmpty(),
+                            current = status,
+                            onMove = { item, target -> vm.moveItem(spaceId, item, target) },
+                            onTap = onSelect,
+                            onDelete = { vm.deleteItem(spaceId, it.id) },
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -268,6 +380,7 @@ private fun BoardTab(
 private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
     val gh by vm.githubState.collectAsStateWithLifecycle()
     var showLink by remember { mutableStateOf(false) }
+    var showBrowse by remember { mutableStateOf(false) }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -296,6 +409,7 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                 )
+                TextButton(onClick = { showBrowse = true }) { Text(stringResource(R.string.github_browse)) }
                 TextButton(onClick = { showLink = true }) { Text(stringResource(R.string.github_link)) }
             }
         }
@@ -330,8 +444,17 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
             }
         }
         item {
-            OutlinedButton(onClick = { vm.enablePush() }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.github_enable_push))
+            OutlinedButton(
+                onClick = { vm.enablePush() },
+                enabled = !gh.busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(
+                        if (gh.pushDone) R.string.github_push_done
+                        else R.string.github_enable_push
+                    )
+                )
             }
         }
         item {
@@ -376,6 +499,9 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
         var repoId by remember { mutableStateOf("") }
         var fullName by remember { mutableStateOf("") }
         var isPrivate by remember { mutableStateOf(false) }
+        var formError by remember { mutableStateOf<String?>(null) }
+        val errId = stringResource(R.string.github_err_id)
+        val errName = stringResource(R.string.github_err_name)
         AlertDialog(
             onDismissRequest = { showLink = false },
             title = { Text(stringResource(R.string.github_link_title)) },
@@ -408,50 +534,190 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                         )
                         Text(stringResource(R.string.github_private))
                     }
+                    formError?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        vm.linkRepo(spaceId, repoId.toLong(), fullName.trim(), isPrivate) { showLink = false }
+                        val id = repoId.toLongOrNull()?.takeIf { it > 0 }
+                        val name = fullName.trim()
+                        formError = when {
+                            id == null -> errId
+                            !name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) -> errName
+                            else -> null
+                        }
+                        if (formError == null) {
+                            vm.linkRepo(spaceId, id!!, name, isPrivate) { showLink = false }
+                        }
                     },
-                    enabled = repoId.toLongOrNull() != null && fullName.contains("/"),
+                    enabled = repoId.isNotBlank() && fullName.isNotBlank(),
                 ) { Text(stringResource(R.string.action_save)) }
             },
             dismissButton = { TextButton(onClick = { showLink = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
+
+    if (showBrowse) {
+        BrowseReposDialog(spaceId = spaceId, vm = vm, onDismiss = { showBrowse = false })
+    }
 }
 
 @Composable
-private fun BoardColumn(
+private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -> Unit) {
+    val browse by vm.browseState.collectAsStateWithLifecycle()
+    var username by remember { mutableStateOf(browse.username) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.github_browse_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.github_browse_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(R.string.github_browse_user)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                    )
+                    OutlinedButton(
+                        onClick = { vm.fetchBrowseRepos(spaceId, username) },
+                        enabled = !browse.busy && username.isNotBlank(),
+                    ) { Text(stringResource(R.string.github_browse_fetch)) }
+                }
+                if (browse.busy) {
+                    CircularProgressIndicator(modifier = Modifier.padding(vertical = 8.dp))
+                }
+                browse.error?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                if (!browse.busy && browse.error == null && browse.repos.isEmpty() && browse.username.isNotBlank()) {
+                    Text(
+                        stringResource(R.string.github_browse_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (browse.repos.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(
+                            checked = browse.hideForks,
+                            onCheckedChange = { vm.toggleHideForks() },
+                        )
+                        Text(
+                            stringResource(R.string.github_hide_forks),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(browse.visibleRepos, key = { it.id }) { repo ->
+                        val checked = repo.id in browse.selectedIds
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { vm.toggleBrowseRepo(repo.id) },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = checked,
+                                onCheckedChange = { vm.toggleBrowseRepo(repo.id) },
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(repo.fullName, style = MaterialTheme.typography.bodyMedium)
+                                repo.description?.takeIf { it.isNotBlank() }?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                                if (repo.fork) {
+                                    Text(
+                                        stringResource(R.string.github_fork_badge),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { vm.applyBrowseRepos(spaceId) { onDismiss() } },
+                enabled = !browse.busy && browse.repos.isNotEmpty(),
+            ) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+@Composable
+private fun BoardSection(
     label: String,
     items: List<ProjectItem>,
-    onMoveLeft: (ProjectItem) -> Unit,
-    onMoveRight: (ProjectItem) -> Unit,
+    current: ProjectStatus,
+    onMove: (ProjectItem, ProjectStatus) -> Unit,
     onTap: (ProjectItem) -> Unit,
     onDelete: (ProjectItem) -> Unit,
 ) {
-    Column(modifier = Modifier.width(250.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.titleSmall)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text(
+                items.size.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (items.isEmpty()) {
-            Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("--", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         }
         items.forEach { item ->
             Card(Modifier.fillMaxWidth().clickable { onTap(item) }) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = { onMoveLeft(item) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier)
+                    Column(Modifier.weight(1f)) {
+                        Text(item.title, style = MaterialTheme.typography.titleSmall)
+                        item.bodyMd?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                        }
                     }
-                    Text(item.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { onMoveRight(item) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                    }
-                    IconButton(onClick = { onDelete(item) }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    Box {
+                        var expanded by remember { mutableStateOf(false) }
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.projects_move_to, label))
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            COLUMNS.filter { it.first != current }.forEach { (target, targetLabel) ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.projects_move_to, targetLabel)) },
+                                    onClick = { expanded = false; onMove(item, target) },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_delete)) },
+                                onClick = { expanded = false; onDelete(item) },
+                            )
+                        }
                     }
                 }
             }
@@ -474,7 +740,10 @@ private fun ItemDetailDialog(
         onDismissRequest = onDismiss,
         title = { Text(item.title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 item.bodyMd?.takeIf { it.isNotBlank() }?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium)
                 }

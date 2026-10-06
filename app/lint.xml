@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Media3 ExoPlayer APIs are intentionally used for exercise demo videos;
+         the instability is accepted project-wide instead of annotating every
+         Compose caller up the tree. -->
+    <issue id="UnsafeOptInUsageError">
+        <option name="opt-in" value="androidx.media3.common.util.UnstableApi" />
+    </issue>
+</lint>

@@ -55,6 +55,10 @@ class AppPreferences @Inject constructor(@ApplicationContext private val context
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { it[Keys.THEME_MODE] ?: "system" }
+    suspend fun setThemeMode(mode: String) = context.dataStore.edit {
+        val normalized = mode.lowercase().takeIf { it == "light" || it == "dark" } ?: "system"
+        it[Keys.THEME_MODE] = normalized
+    }
 
     // App language — default "en" (English). The choice is persisted in DataStore; the last
     // selected language loads on restart. The root composition observes this flow for instant switching.

@@ -123,6 +123,17 @@ class SocialViewModel @Inject constructor(
         }
     }
 
+    /** Syncs the public display name to the server profile (username stays untouched). */
+    fun setMyDisplayName(name: String) {
+        viewModelScope.launch {
+            runCatching {
+                val uid = auth.currentUserId() ?: return@runCatching
+                val current = profiles.getMyProfile(uid) ?: return@runCatching
+                profiles.upsertMyProfile(current.copy(displayName = name.trim().ifBlank { null }))
+            }.onFailure { e -> _state.update { it.copy(error = e.message) } }
+        }
+    }
+
     /** Uploads a new avatar (Photo Picker bytes) and stores its URL on the profile. */
     fun uploadMyAvatar(bytes: ByteArray, extension: String, onDone: () -> Unit = {}) {
         viewModelScope.launch {

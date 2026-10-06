@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
@@ -29,7 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import com.moltrax.personalnoteapp.ui.SyncViewModel
-import com.moltrax.personalnoteapp.ui.theme.AppColors
+import com.moltrax.personalnoteapp.ui.theme.Dh
 import kotlinx.coroutines.delay
 
 /**
@@ -68,11 +69,12 @@ private fun SyncBannerContent(
         }
     }
 
+    val extra = Dh.extra
     val (text, color, isError) = when (status) {
         is SyncStatus.Syncing -> Triple(stringResource(R.string.sync_in_progress), MaterialTheme.colorScheme.primary, false)
-        is SyncStatus.Synced  -> Triple(stringResource(R.string.sync_done), AppColors.Success, false)
+        is SyncStatus.Synced  -> Triple(stringResource(R.string.sync_done), extra.success, false)
         // Error: show the full raw message (HTTP code + message + exception type), no masking
-        is SyncStatus.Error   -> Triple(status.message, AppColors.Error, true)
+        is SyncStatus.Error   -> Triple(status.message, MaterialTheme.colorScheme.error, true)
         else                  -> return
     }
 
@@ -97,10 +99,12 @@ private fun SyncBannerContent(
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             if (isError) {
-                TextButton(onClick = { showDetail = true }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                TextButton(onClick = { showDetail = true }, contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.sync_detail), style = MaterialTheme.typography.labelSmall, color = color)
                 }
-                TextButton(onClick = onSync, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                TextButton(onClick = onSync, contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.action_retry), style = MaterialTheme.typography.labelSmall, color = color)
                 }
             }

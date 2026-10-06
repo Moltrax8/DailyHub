@@ -29,8 +29,27 @@
     <string name="unit_m">m</string>
 
     <!-- Giriş -->
-    <string name="login_subtitle">Google hesabınla giriş yap</string>
+    <string name="login_subtitle">Görevler, antrenmanlar ve projeler için kişisel çalışma alanın</string>
     <string name="login_button">Google ile Giriş Yap</string>
+    <string name="login_offline_title">Çevrimdışı çalışır</string>
+    <string name="login_offline_desc">Hesap olmadan tüm temel özellikler cihazında çalışır.</string>
+    <string name="login_sync_title">İsteğe bağlı senkronizasyon</string>
+    <string name="login_sync_desc">Giriş yaparsan yedekleme ve cihazlar arası senkron açılır.</string>
+    <string name="login_continue_offline">Çevrimdışı devam et</string>
+    <string name="login_access_msg">Giriş için erişim gerekli: izin almak için Telegram\'da @Moltrax hesabına yazın.</string>
+    <string name="login_access_action">Telegram\'da yaz</string>
+    <string name="workout_exercise_count">%1$d hareket</string>
+    <string name="workout_set_count">%1$d set</string>
+    <string name="workout_empty_desc">İlk programını oluştur veya JSON dosyasından içe aktar.</string>
+    <string name="workout_delete_title">Program silinsin mi?</string>
+    <string name="workout_delete_confirm">“%1$s” kalıcı olarak silinecek. Bu işlem geri alınamaz.</string>
+    <string name="spaces_overview">Genel Bakış</string>
+    <string name="spaces_plan">Plan</string>
+    <string name="spaces_discuss">Sohbet</string>
+    <string name="spaces_library">Kütüphane</string>
+    <string name="spaces_people">Kişiler</string>
+    <string name="spaces_overview_summary">%1$d görev (%2$d açık) · %3$d not · %4$d dosya</string>
+    <string name="projects_move_to">Taşı: %1$s</string>
     <string name="login_drive_permission_error">Drive izni hatası: %1$s</string>
 
     <!-- Ana ekran -->
@@ -52,6 +71,7 @@
     <string name="task_completed">Görev tamamlandı</string>
     <string name="workout_completed">Antrenman tamamlandı</string>
     <string name="task_badge_done">Tamamlandı</string>
+    <string name="task_badge_workout">Antrenman</string>
     <string name="workout_summary_title">Antrenman Sonucu</string>
     <string name="workout_summary_empty">Bu seans için kayıtlı veri yok.</string>
     <string name="workout_summary_no_logged">Set girilmedi</string>
@@ -109,7 +129,12 @@
 
     <!-- Profil -->
     <string name="profile_sign_out">Oturumu Kapat</string>
-    <string name="profile_panel_profile">PROFİL</string>
+    <string name="profile_sign_out_confirm">Oturum kapatılsın mı? Uygulama çevrimdışı çalışmaya devam eder.</string>
+    <string name="profile_panel_profile">Profil</string>
+    <string name="profile_panel_account">Hesap</string>
+    <string name="profile_account_subtitle">Yönetilen hesap ve sosyal kimlik</string>
+    <string name="profile_info_subtitle">Kişisel bilgiler</string>
+    <string name="profile_tap_avatar_hint">Giriş yaptıysan dokunarak fotoğrafı değiştir</string>
     <string name="cd_profile_photo">Profil fotoğrafı</string>
     <string name="profile_edit_name_title">İsmi düzenle</string>
     <string name="profile_name_label">Görünen ad</string>
@@ -121,6 +146,11 @@
 
     <!-- Ayarlar -->
     <string name="settings_title">Ayarlar</string>
+    <string name="settings_section_appearance">Görünüm</string>
+    <string name="settings_appearance_desc">Açık, koyu veya sistem temasını seç.</string>
+    <string name="settings_appearance_system">Sistem</string>
+    <string name="settings_appearance_light">Açık</string>
+    <string name="settings_appearance_dark">Koyu</string>
     <string name="settings_section_language">Dil</string>
     <string name="settings_language_desc">Uygulama dilini seç. Değişiklik anında uygulanır, yeniden başlatma gerekmez.</string>
     <string name="settings_section_notifications">Bildirimler</string>
@@ -128,6 +158,8 @@
     <string name="settings_task_reminders_desc">Görev bitiş saatine yaklaşınca hatırlatma bildirimi gönderir.</string>
     <string name="settings_default_alert">Varsayılan Uyarı Süresi</string>
     <string name="settings_notif_permission">Bildirim İzinlerini Aç / Yönet</string>
+    <string name="settings_notif_status_on">Bildirimler AÇIK — hatırlatmalar gösterilebilir.</string>
+    <string name="settings_notif_status_off">Bildirimler KAPALI — izin vermeden hatırlatma gösterilemez.</string>
     <string name="settings_section_sync">Senkronizasyon</string>
     <string name="settings_last_sync">Son senkronizasyon: %1$s</string>
     <string name="settings_never_synced">Henüz senkronizasyon yapılmadı.</string>
@@ -158,6 +190,7 @@
     <string name="workout_new_workout">Yeni Antrenman</string>
     <string name="workout_workout_name_hint">Antrenman adı (örn. Göğüs Günü)</string>
     <string name="workout_program_fallback">Program</string>
+    <string name="workout_program_not_found">Program bulunamadı</string>
     <string name="workout_add_workout">Antrenman ekle</string>
     <string name="workout_no_workouts">Henüz antrenman yok.\nSağ alttaki + ile ekle.</string>
     <string name="workout_add_exercise">Hareket ekle</string>
@@ -224,7 +257,9 @@
     <string name="recurrence_interval">Gün aralığı</string>
     <string name="task_which_days">Hangi günler?</string>
     <string name="task_no_days_hint">Gün seçilmezse görevin kendi gününe göre haftalık tekrar eder.</string>
+    <string name="task_weekly_error">En az bir gün seç</string>
     <string name="task_every_n_days">Kaç günde bir</string>
+    <string name="task_interval_error">Pozitif bir gün sayısı gir</string>
     <string name="task_recurring_hint">Tekrarlayan görev tamamlandığında silinmez; bitiş tarihi otomatik olarak bir sonraki döngüye taşınır.</string>
     <string name="task_focus_duration">Odak süresi: %1$d dk</string>
     <string name="task_focus_optional">Odak süresi (opsiyonel)</string>
@@ -241,6 +276,10 @@
     <string name="task_subtasks">Alt Görevler</string>
     <string name="task_remove_subtask">Alt görevi sil</string>
     <string name="task_new_subtask">Yeni alt görev</string>
+    <string name="task_select_day_error">En az bir gün seç</string>
+    <string name="task_section_core">Temel bilgiler</string>
+    <string name="task_section_schedule">Zamanlama</string>
+    <string name="task_section_advanced">Gelişmiş seçenekler</string>
     <string name="task_add_subtask">Alt görev ekle</string>
 
     <!-- Takvim -->
@@ -289,6 +328,9 @@
     <string name="widget_filter_match_all">Tümüyle eşleş (AND)</string>
     <string name="widget_filter_limit">Limit</string>
     <string name="widget_filter_clear">Varsayılana dön</string>
+    <string name="widget_filter_space">Hub veya proje (depo bazında)</string>
+    <string name="widget_filter_space_none">Henüz hub yok — önce uygulamadan katıl veya oluştur.</string>
+    <string name="widget_filter_space_all">Tüm görevler (kişisel)</string>
 
     <!-- Supabase managed account (Phase 3+) -->
     <string name="supabase_auth_title">Hesap</string>
@@ -314,6 +356,9 @@
     <!-- Social (Phase 4+) -->
     <string name="social_title">Arkadaşlar</string>
     <string name="social_search_hint">Kullanıcı adı ara (en az 2 harf)</string>
+    <string name="social_find_title">Kişi bul</string>
+    <string name="social_find_desc">DailyHub kullanıcı adı ara ve arkadaşlık isteği gönder. Arkadaşların seninle ortak hub açabilir.</string>
+    <string name="social_no_results">Kullanıcı bulunamadı — yazımı kontrol et.</string>
     <string name="social_add">Ekle</string>
     <string name="social_requests_pending">%1$d bekleyen istek</string>
     <string name="social_friends">Arkadaşlarım</string>
@@ -360,6 +405,7 @@
     <string name="spaces_link_url">URL (https://…)</string>
     <string name="spaces_link_title">Başlık (isteğe bağlı)</string>
     <string name="spaces_section">Ortak alanlar</string>
+    <string name="spaces_section_desc">Üye olduğun hub\'lar — notlar, görevler, sohbet ve üyeler için birini aç.</string>
     <string name="spaces_none">Henüz ortak alan yok — bir arkadaşından Duo aç.</string>
     <string name="spaces_open_hub">Hub\'ı aç</string>
 
@@ -378,12 +424,32 @@
     <string name="spaces_new_event">Yeni etkinlik</string>
     <string name="spaces_event_time">Saat seç</string>
     <string name="spaces_event_end">Bitiş de ekle</string>
+    <string name="spaces_members">Üyeler</string>
+    <string name="spaces_members_desc">Bu hub\'daki işbirlikçiler — notları, görevleri, bağlantıları ve sohbeti paylaşır. Sahipler yenilerini davet edebilir.</string>
+    <string name="spaces_invite">Davet et</string>
+    <string name="spaces_invite_title">İşbirlikçi davet et</string>
+    <string name="spaces_invite_hint">DailyHub kullanıcı adını gir (Profil\'deki @kullanıcı adı).</string>
+    <string name="spaces_username">Kullanıcı adı</string>
+    <string name="spaces_remove">Çıkar</string>
+    <string name="spaces_leave">Hub\'dan ayrıl</string>
+    <string name="spaces_role_owner">sahip</string>
+    <string name="spaces_role_member">üye</string>
+    <string name="spaces_you_suffix"> (siz)</string>
+    <string name="spaces_file_size_bytes">%1$d B</string>
+    <string name="spaces_file_size_kb">%1$d KB</string>
 
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projeler</string>
     <string name="nav_social">Sosyal</string>
     <string name="projects_title">Projeler</string>
     <string name="projects_empty">Henüz proje yok — + ile oluştur.</string>
+    <string name="projects_empty_title">Henüz proje yok</string>
+    <string name="projects_empty_desc">Projeler ortak çalışma alanlarıdır: iş takibi için pano, not ve sohbet için hub ve bağlı GitHub depoları. Başlamak için bir tane oluştur.</string>
+    <string name="projects_open">Aç</string>
+    <string name="projects_new_hint">Proje; görev panosu ve işbirliği hub\'ı olan ortak bir çalışma alanıdır.</string>
+    <string name="projects_delete">Projeyi sil</string>
+    <string name="projects_delete_title">Bu proje silinsin mi?</string>
+    <string name="projects_delete_confirm">Proje, panosu, hub içeriği ve bağlantıları herkes için silinir. Bu işlem geri alınamaz.</string>
     <string name="projects_untitled">Başlıksız proje</string>
     <string name="projects_new">Yeni proje</string>
     <string name="projects_name">Proje adı</string>
@@ -396,17 +462,28 @@
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
-    <string name="github_connect_hint">GitHub henüz bağlı değil — bağlantı ayarlardan (Edge Function üzerinden OAuth) yapılır, token cihazda tutulmaz.</string>
+    <string name="github_connect_hint">Henüz GitHub hesabı bağlı değil — bu sürümde depolar alan bazında elle bağlanır. Token cihazda tutulmaz; canlı hareketler için depo webhook’unun Supabase fonksiyonuna bakması gerekir.</string>
     <string name="github_connected_as">%1$s olarak bağlı</string>
     <string name="github_repos">Bağlı depolar</string>
     <string name="github_link">Depo bağla</string>
     <string name="github_unlink">Bağlantıyı kaldır</string>
     <string name="github_prefs">Bildirim türleri</string>
     <string name="github_enable_push">Push bildirimlerini etkinleştir</string>
+    <string name="github_push_done">Bu cihazda push etkin ✓</string>
+    <string name="github_err_id">Sayısal Depo ID gir (api.github.com/repos/owner/repo → “id”).</string>
+    <string name="github_err_name">Depoyu owner/ad olarak gir (ör. moltrax8/DailyHub).</string>
+    <string name="github_browse">Depolara göz at</string>
+    <string name="github_browse_title">GitHub depolarını izle</string>
+    <string name="github_browse_hint">Herkese açık depoları listelemek için bir GitHub kullanıcı adı gir. İzlemek için işaretle, izlemeyi bırakmak için işareti kaldır. Özel depolar elle bağlanmalı.</string>
+    <string name="github_browse_user">GitHub kullanıcı adı</string>
+    <string name="github_browse_fetch">Getir</string>
+    <string name="github_browse_empty">Bu kullanıcıda herkese açık depo yok.</string>
+    <string name="github_hide_forks">Fork\'ları gizle</string>
+    <string name="github_fork_badge">fork</string>
     <string name="github_activity">Hareketler</string>
     <string name="github_activity_empty">Henüz hareket yok — webhook ilk olayda buraya düşer.</string>
     <string name="github_link_title">Depo bağla</string>
-    <string name="github_link_hint">Erişebildiğin depoyu yaz (ör. moltrax8/DailyHub). ID, depo sayfasının HTML\'inden veya API\'den alınır.</string>
+    <string name="github_link_hint">Erişebildiğin depoyu yaz (ör. moltrax8/DailyHub). Sayısal ID api.github.com/repos/owner/repo → “id” alanında. Yalnızca alan sahibi bağlayabilir.</string>
     <string name="github_repo_id">Depo ID (sayı)</string>
     <string name="github_repo_name">owner/repo</string>
     <string name="github_private">Özel depo</string>
@@ -424,6 +501,8 @@
     <!-- Odak oynat/duraklat -->
     <string name="focus_play">Başlat</string>
     <string name="focus_pause">Duraklat</string>
+    <string name="focus_reset">Sıfırla</string>
+    <string name="focus_linked_notice">Bu görev bir antrenmana bağlı — setlerini kaydetmek için onu Ana Sayfa\'dan tamamla.</string>
 
     <!-- Öncelik -->
     <string name="task_priority">Öncelik</string>

@@ -36,4 +36,16 @@ class AppReleaseTest {
         assertFalse(isUpdateAvailable(AppRelease(versionName = "v1.0", versionCode = 10000, apkUrl = "https://x"), installed))
         assertFalse(isUpdateAvailable(AppRelease(versionName = "v0.9", versionCode = 900, apkUrl = "https://x"), installed))
     }
+
+    @Test
+    fun `only github hosts trusted for apk`() {
+        assertTrue(isAllowedApkHost("https://github.com/Moltrax8/DailyHub/releases/download/v1.1.1/a.apk"))
+        assertTrue(isAllowedApkHost("https://objects.githubusercontent.com/abc/a.apk?token=x"))
+        assertTrue(isAllowedApkHost("https://release-assets.githubusercontent.com/abc/a.apk"))
+        assertFalse(isAllowedApkHost("https://evil.com/a.apk"))
+        assertFalse(isAllowedApkHost("https://github.com.evil.com/a.apk"))
+        // Scheme is enforced separately in downloadApk; the allowlist is host-only.
+        assertTrue(isAllowedApkHost("http://github.com/a.apk"))
+        assertFalse(isAllowedApkHost("not a url"))
+    }
 }

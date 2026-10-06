@@ -4,16 +4,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -38,8 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,14 +56,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.ui.screen.social.SocialViewModel
 import kotlinx.coroutines.launch
 
 private const val TAB_NOTES = 0
@@ -70,27 +76,47 @@ private const val TAB_CHAT = 3
 private const val TAB_EVENTS = 4
 private const val TAB_FILES = 5
 private const val TAB_FEED = 6
+private const val TAB_MEMBERS = 7
+
+// Primary space sections: Overview (feed+recents) · Plan (tasks+events) ·
+// Discuss (chat) · Library (notes+links+files) · People (members).
+private const val SEC_OVERVIEW = 0
+private const val SEC_PLAN = 1
+private const val SEC_DISCUSS = 2
+private const val SEC_LIBRARY = 3
+private const val SEC_PEOPLE = 4
 
 /**
  * One Duo hub: Notes | Tasks | Links tabs + members row (Phase 5 MVP).
  * Pulls on open; refresh button re-pulls (Realtime push arrives in Phase 9).
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltViewModel()) {
+fun DuoHubScreen(
+    spaceId: String,
+    nav: NavController,
+    vm: SpaceViewModel = hiltViewModel(),
+    socialVm: SocialViewModel = hiltViewModel(),
+) {
     val state by vm.detail.collectAsStateWithLifecycle()
-    var tab by remember { mutableIntStateOf(TAB_NOTES) }
+    var section by remember { mutableIntStateOf(SEC_OVERVIEW) }
+    var planSub by remember { mutableIntStateOf(0) } // 0 tasks, 1 events
+    var librarySub by remember { mutableIntStateOf(0) } // 0 notes, 1 links, 2 files
     var showAdd by remember { mutableStateOf(false) }
 
     LaunchedEffect(spaceId) { vm.openSpace(spaceId) }
 
+    // FAB target follows the visible composer: tasks/events in Plan, notes/links in Library.
+    val showFab = (section == SEC_PLAN) || (section == SEC_LIBRARY && librarySub < 2)
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.space?.name ?: stringResource(R.string.spaces_duo)) },
+                title = { Text(state.space?.name ?: stringResource(R.string.spaces_duo), style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -101,7 +127,7 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
             )
         },
         floatingActionButton = {
-            if (tab == TAB_NOTES || tab == TAB_TASKS || tab == TAB_LINKS || tab == TAB_EVENTS) {
+            if (showFab) {
                 FloatingActionButton(onClick = { showAdd = true }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
                 }
@@ -109,133 +135,336 @@ fun DuoHubScreen(spaceId: String, nav: NavController, vm: SpaceViewModel = hiltV
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
-                Tab(selected = tab == TAB_NOTES, onClick = { tab = TAB_NOTES }, text = { Text(stringResource(R.string.spaces_notes)) })
-                Tab(selected = tab == TAB_TASKS, onClick = { tab = TAB_TASKS }, text = { Text(stringResource(R.string.spaces_tasks)) })
-                Tab(selected = tab == TAB_LINKS, onClick = { tab = TAB_LINKS }, text = { Text(stringResource(R.string.spaces_links)) })
-                Tab(selected = tab == TAB_CHAT, onClick = { tab = TAB_CHAT }, text = { Text(stringResource(R.string.spaces_chat)) })
-                Tab(selected = tab == TAB_EVENTS, onClick = { tab = TAB_EVENTS }, text = { Text(stringResource(R.string.spaces_events)) })
-                Tab(selected = tab == TAB_FILES, onClick = { tab = TAB_FILES }, text = { Text(stringResource(R.string.spaces_files)) })
-                Tab(selected = tab == TAB_FEED, onClick = { tab = TAB_FEED }, text = { Text(stringResource(R.string.spaces_feed)) })
+            // Primary space navigation: 5 sections instead of 7 scrolling tabs.
+            val sections = listOf(
+                stringResource(R.string.spaces_overview),
+                stringResource(R.string.spaces_plan),
+                stringResource(R.string.spaces_discuss),
+                stringResource(R.string.spaces_library),
+                stringResource(R.string.spaces_people),
+            )
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                sections.forEachIndexed { index, label ->
+                    com.moltrax.personalnoteapp.ui.components.DhFilterChip(
+                        selected = section == index,
+                        onClick = { section = index },
+                        label = label,
+                    )
+                }
             }
-            if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+            // Secondary switchers live inside Plan + Library only.
+            if (section == SEC_PLAN) {
+                com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
+                    options = listOf(stringResource(R.string.spaces_tasks), stringResource(R.string.spaces_events)),
+                    selectedIndex = planSub,
+                    onSelect = { planSub = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
+            }
+            if (section == SEC_LIBRARY) {
+                com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
+                    options = listOf(
+                        stringResource(R.string.spaces_notes),
+                        stringResource(R.string.spaces_links),
+                        stringResource(R.string.spaces_files),
+                    ),
+                    selectedIndex = librarySub,
+                    onSelect = { librarySub = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
+            }
+            if (state.busy) {
+                Box(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+            }
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
             }
-            when (tab) {
-                TAB_NOTES -> LazyColumn(
-                    Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (state.notes.isEmpty()) {
-                        item { Text(stringResource(R.string.spaces_empty_notes)) }
-                    }
-                    items(state.notes, key = { it.id }) { note ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        note.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.spaces_untitled),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    IconButton(onClick = { vm.deleteNote(spaceId, note.id) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
-                                    }
-                                }
-                                note.bodyMd?.takeIf { it.isNotBlank() }?.let {
-                                    Text(it, style = MaterialTheme.typography.bodyMedium)
-                                }
-                            }
-                        }
-                    }
+            // Space identity strip: who the space is for + what changed recently.
+            if (section == SEC_OVERVIEW) {
+                SpaceOverview(
+                    state = state,
+                    onGoTasks = { section = SEC_PLAN; planSub = 0 },
+                    onGoChat = { section = SEC_DISCUSS },
+                    onGoLibrary = { section = SEC_LIBRARY },
+                )
+            }
+            when (section) {
+                SEC_PLAN -> if (planSub == 0) {
+                    SharedTasksList(vm = vm, spaceId = spaceId, state = state)
+                } else {
+                    EventsTab(vm = vm, spaceId = spaceId, state = state)
                 }
-                TAB_TASKS -> LazyColumn(
-                    Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (state.tasks.isEmpty()) {
-                        item { Text(stringResource(R.string.spaces_empty_tasks)) }
-                    }
-                    items(state.tasks, key = { it.id }) { task ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Checkbox(
-                                    checked = task.isDone,
-                                    onCheckedChange = { vm.toggleSharedTask(spaceId, task) },
-                                )
-                                Text(
-                                    task.title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                IconButton(onClick = { vm.deleteSharedTask(spaceId, task.id) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
-                                }
-                            }
-                        }
-                    }
+                SEC_DISCUSS -> ChatTab(vm = vm, spaceId = spaceId, state = state)
+                SEC_LIBRARY -> when (librarySub) {
+                    0 -> SharedNotesList(vm = vm, spaceId = spaceId, state = state)
+                    1 -> SharedLinksList(vm = vm, spaceId = spaceId, state = state)
+                    else -> FilesTab(vm = vm, spaceId = spaceId, state = state)
                 }
-                TAB_LINKS -> LazyColumn(
-                    Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (state.links.isEmpty()) {
-                        item { Text(stringResource(R.string.spaces_empty_links)) }
-                    }
-                    items(state.links, key = { it.id }) { link ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        link.title?.takeIf { it.isNotBlank() } ?: link.url,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                    if (!link.title.isNullOrBlank()) {
-                                        Text(
-                                            link.url,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = { vm.deleteLink(spaceId, link.id) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
-                                }
-                            }
-                        }
-                    }
+                SEC_PEOPLE -> MembersTab(vm = vm, socialVm = socialVm, spaceId = spaceId, state = state, nav = nav)
+                else -> {
+                    // Overview feed lives above; show recent activity inline too.
+                    FeedTab(state = state)
                 }
-                TAB_CHAT -> ChatTab(vm = vm, spaceId = spaceId, state = state)
-                TAB_EVENTS -> EventsTab(vm = vm, spaceId = spaceId, state = state)
-                TAB_FILES -> FilesTab(vm = vm, spaceId = spaceId, state = state)
-                TAB_FEED -> FeedTab(state = state)
             }
         }
     }
 
     if (showAdd) {
-        when (tab) {
-            TAB_NOTES -> NoteDialog(onDismiss = { showAdd = false }) { title, body ->
-                vm.addNote(spaceId, title, body) { showAdd = false }
-            }
-            TAB_TASKS -> TaskDialog(onDismiss = { showAdd = false }) { title ->
+        if (section == SEC_PLAN && planSub == 0) {
+            TaskDialog(onDismiss = { showAdd = false }) { title ->
                 vm.addSharedTask(spaceId, title) { showAdd = false }
             }
-            TAB_LINKS -> LinkDialog(onDismiss = { showAdd = false }) { url, title ->
-                vm.addLink(spaceId, url, title) { showAdd = false }
-            }
-            TAB_EVENTS -> EventDialog(onDismiss = { showAdd = false }) { title, start, end ->
+        } else if (section == SEC_PLAN) {
+            EventDialog(onDismiss = { showAdd = false }) { title, start, end ->
                 vm.addEvent(spaceId, title, start, end) { showAdd = false }
             }
-            else -> Unit
+        } else if (section == SEC_LIBRARY && librarySub == 0) {
+            NoteDialog(onDismiss = { showAdd = false }) { title, body ->
+                vm.addNote(spaceId, title, body) { showAdd = false }
+            }
+        } else if (section == SEC_LIBRARY && librarySub == 1) {
+            LinkDialog(onDismiss = { showAdd = false }) { url, title ->
+                vm.addLink(spaceId, url, title) { showAdd = false }
+            }
         }
+    }
+}
+
+/** Overview: who the space is for, what changed recently, where things live. */
+@Composable
+private fun SpaceOverview(
+    state: SpaceDetailUiState,
+    onGoTasks: () -> Unit,
+    onGoChat: () -> Unit,
+    onGoLibrary: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val openTasks = state.tasks.count { !it.isDone }
+        com.moltrax.personalnoteapp.ui.components.DhCard {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    state.space?.name ?: "",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    stringResource(R.string.spaces_overview_summary, state.tasks.size, openTasks, state.notes.size, state.files.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onGoTasks, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.spaces_tasks)) }
+                    OutlinedButton(onClick = onGoChat, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.spaces_chat)) }
+                    OutlinedButton(onClick = onGoLibrary, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.spaces_files)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (state.notes.isEmpty()) {
+            item { Text(stringResource(R.string.spaces_empty_notes)) }
+        }
+        items(state.notes, key = { it.id }) { note ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            note.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.spaces_untitled),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { vm.deleteNote(spaceId, note.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                        }
+                    }
+                    note.bodyMd?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (state.tasks.isEmpty()) {
+            item { Text(stringResource(R.string.spaces_empty_tasks)) }
+        }
+        items(state.tasks, key = { it.id }) { task ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = task.isDone,
+                        onCheckedChange = { vm.toggleSharedTask(spaceId, task) },
+                    )
+                    Text(
+                        task.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { vm.deleteSharedTask(spaceId, task.id) }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SharedLinksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (state.links.isEmpty()) {
+            item { Text(stringResource(R.string.spaces_empty_links)) }
+        }
+        items(state.links, key = { it.id }) { link ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            link.title?.takeIf { it.isNotBlank() } ?: link.url,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        if (!link.title.isNullOrBlank()) {
+                            Text(
+                                link.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(onClick = { vm.deleteLink(spaceId, link.id) }) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Collaborators tab: hubs hold the whole repo crew, not just a duo. Owners invite by username. */
+@Composable
+private fun MembersTab(
+    vm: SpaceViewModel,
+    socialVm: SocialViewModel,
+    spaceId: String,
+    state: SpaceDetailUiState,
+    nav: NavController,
+) {
+    val social by socialVm.state.collectAsStateWithLifecycle()
+    var showInvite by remember { mutableStateOf(false) }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            Text(
+                stringResource(R.string.spaces_members_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { showInvite = true },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.spaces_invite)) }
+                OutlinedButton(
+                    onClick = { vm.leaveSpace(spaceId) { nav.popBackStack() } },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.spaces_leave)) }
+            }
+        }
+        items(state.members, key = { it.userId }) { member ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            socialVm.displayNameOf(member.userId) +
+                                if (member.userId == social.myId) stringResource(R.string.spaces_you_suffix) else "",
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            stringResource(
+                                if (member.isOwner) R.string.spaces_role_owner
+                                else R.string.spaces_role_member
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (member.userId != social.myId) {
+                        IconButton(onClick = { vm.removeMember(spaceId, member.userId) }) {
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.spaces_remove))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (showInvite) {
+        var username by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showInvite = false },
+            title = { Text(stringResource(R.string.spaces_invite_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.spaces_invite_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(R.string.spaces_username)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { vm.inviteByUsername(spaceId, username) { showInvite = false } },
+                    enabled = username.isNotBlank(),
+                ) { Text(stringResource(R.string.spaces_invite)) }
+            },
+            dismissButton = { TextButton(onClick = { showInvite = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 }
 
@@ -247,7 +476,10 @@ private fun NoteDialog(onDismiss: () -> Unit, onConfirm: (String?, String?) -> U
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.spaces_new_note)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -365,7 +597,7 @@ private fun ChatTab(
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(12.dp),
+            Modifier.fillMaxWidth().imePadding().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
@@ -405,7 +637,8 @@ private fun EventsTab(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(event.title, style = MaterialTheme.typography.bodyLarge)
+                        Text(event.title, style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             fmtRange(event.startAt, event.endAt),
                             style = MaterialTheme.typography.bodySmall,
@@ -470,7 +703,8 @@ private fun FilesTab(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(file.displayName, style = MaterialTheme.typography.bodyLarge)
+                            Text(file.displayName, style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
                                 kbLabel(file.size),
                                 style = MaterialTheme.typography.bodySmall,
@@ -505,7 +739,7 @@ private fun FeedTab(state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDeta
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
-                        entry.createdAt,
+                        feedTime(entry.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -515,14 +749,33 @@ private fun FeedTab(state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDeta
     }
 }
 
+/** Locale-aware range formatter (composition locale, so it follows the app language). */
+@Composable
 private fun fmtRange(startMs: Long, endMs: Long?): String {
-    val fmt = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.getDefault())
+    val locale = LocalConfiguration.current.locales[0]
+    val fmt = remember(locale) { java.text.SimpleDateFormat("d MMM HH:mm", locale) }
     val start = fmt.format(java.util.Date(startMs))
     return if (endMs == null) start else "$start → ${fmt.format(java.util.Date(endMs))}"
 }
 
+/** Locale-aware feed timestamp: parses the ISO instant, falls back to the raw value. */
+@Composable
+private fun feedTime(iso: String): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val fmt = remember(locale) { java.text.SimpleDateFormat("d MMM HH:mm", locale) }
+    return remember(iso, fmt) {
+        runCatching {
+            val instant = runCatching { java.time.Instant.parse(iso) }.getOrNull()
+                ?: java.time.OffsetDateTime.parse(iso).toInstant()
+            fmt.format(java.util.Date.from(instant))
+        }.getOrNull() ?: iso
+    }
+}
+
+@Composable
 private fun kbLabel(bytes: Long): String =
-    if (bytes < 1024) "$bytes B" else "${bytes / 1024} KB"
+    if (bytes < 1024) stringResource(R.string.spaces_file_size_bytes, bytes)
+    else stringResource(R.string.spaces_file_size_kb, bytes / 1024)
 
 private fun contentName(context: android.content.Context, uri: android.net.Uri): String? =
     runCatching {
@@ -574,7 +827,10 @@ private fun EventDialog(onDismiss: () -> Unit, onConfirm: (String, Long, Long?) 
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.spaces_new_event)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -656,8 +912,10 @@ fun SpaceRow(spaceName: String, typeLabel: String, onClick: () -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(spaceName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(spaceName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

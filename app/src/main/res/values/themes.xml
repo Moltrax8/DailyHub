@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.PersonalNoteApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Startup/window theme: neutral, matches Compose background in both modes.
+         Compose (edge-to-edge + AppTheme) takes over after the first frame;
+         this only prevents a light/dark flash at cold start. -->
+    <style name="Theme.PersonalNoteApp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/dh_window_background</item>
+        <item name="android:statusBarColor">@color/dh_window_background</item>
+        <item name="android:navigationBarColor">@color/dh_window_background</item>
+    </style>
 
     <!-- Task-selection screen opened from the widget: transparent window. The dim (scrim) and centered
          dialog card are drawn inside Compose; so it never opens full-screen like the main app. -->

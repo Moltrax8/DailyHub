@@ -5,6 +5,7 @@ import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.data.remote.supabase.RealtimeClient
 import com.moltrax.personalnoteapp.di.SupabaseConfig
 import com.moltrax.personalnoteapp.domain.model.AppRelease
+import com.moltrax.personalnoteapp.domain.model.isAllowedApkHost
 import com.moltrax.personalnoteapp.domain.model.isUpdateAvailable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +64,7 @@ class UpdateRepository @Inject constructor(
     /** Streams the APK to [dest] (cache). Throws on HTTP/network errors. */
     suspend fun downloadApk(apkUrl: String, dest: File, onProgress: (Long, Long?) -> Unit = { _, _ -> }) {
         require(apkUrl.startsWith("https://")) { "Refusing non-HTTPS URL." }
+        require(isAllowedApkHost(apkUrl)) { "Refusing untrusted download host." }
         val req = Request.Builder().url(apkUrl).get().build()
         http.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) throw IOException("Download failed (HTTP ${resp.code}).")

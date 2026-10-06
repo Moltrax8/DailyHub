@@ -5,26 +5,51 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -35,50 +60,54 @@ import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.FeatureFlags
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.ui.AppViewModel
+import com.moltrax.personalnoteapp.ui.components.DhCard
+import com.moltrax.personalnoteapp.ui.components.DhSectionHeader
+import com.moltrax.personalnoteapp.ui.components.DhSegmentedControl
+import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
 import com.moltrax.personalnoteapp.ui.i18n.AppLanguage
 import com.moltrax.personalnoteapp.ui.navigation.Login
-import com.moltrax.personalnoteapp.ui.theme.AppColors
+import com.moltrax.personalnoteapp.ui.theme.DhThemeMode
 
 // Meaningful reminder presets (minutes)
 private val reminderPresets = listOf(5, 10, 15, 30, 45, 60, 90, 120, 180, 360, 720, 1440)
 
 private fun reminderLabel(context: Context, m: Int): String = when {
-    m < 60       -> context.getString(R.string.reminder_minutes_before, m)
-    m % 60 == 0  -> context.getString(R.string.reminder_hours_before, m / 60)
-    else         -> context.getString(R.string.reminder_hours_minutes_before, m / 60, m % 60)
+    m < 60 -> context.getString(R.string.reminder_minutes_before, m)
+    m % 60 == 0 -> context.getString(R.string.reminder_hours_before, m / 60)
+    else -> context.getString(R.string.reminder_hours_minutes_before, m / 60, m % 60)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val reminderMinutes by vm.reminderMinutes.collectAsStateWithLifecycle()
-    val systemAlerts    by vm.systemAlertsEnabled.collectAsStateWithLifecycle()
-    val lastSyncAt      by vm.lastSyncAt.collectAsStateWithLifecycle()
-    val language        by vm.language.collectAsStateWithLifecycle()
+    val systemAlerts by vm.systemAlertsEnabled.collectAsStateWithLifecycle()
+    val lastSyncAt by vm.lastSyncAt.collectAsStateWithLifecycle()
+    val language by vm.language.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    // The exact-alarm permission may have changed after returning from settings; refresh on ON_RESUME.
     var exactAlarmGranted by remember { mutableStateOf(vm.canScheduleExactAlarms()) }
+    var notifEnabled by remember { mutableStateOf(vm.areNotificationsEnabled()) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 exactAlarmGranted = vm.canScheduleExactAlarms()
+                notifEnabled = vm.areNotificationsEnabled()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    // Apply language changes via the Activity-scoped AppViewModel, so the "Loading"
-    // indicator (MainActivity) listens to the same instance.
     val appVm: AppViewModel = hiltViewModel(context.findActivity())
+    val themeMode by appVm.themeMode.collectAsStateWithLifecycle()
     var showKeyDialog by remember { mutableStateOf(false) }
     var keyInput by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
@@ -92,47 +121,75 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // --- Dil ---
-            SettingsSection(title = stringResource(R.string.settings_section_language), icon = Icons.Filled.Language) {
+            // --- Appearance ---
+            SettingsGroup(title = stringResource(R.string.settings_section_appearance), icon = Icons.Filled.SettingsSuggest) {
+                Text(
+                    stringResource(R.string.settings_appearance_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val options = listOf(
+                    stringResource(R.string.settings_appearance_system),
+                    stringResource(R.string.settings_appearance_light),
+                    stringResource(R.string.settings_appearance_dark),
+                )
+                val selected = when (themeMode) {
+                    DhThemeMode.LIGHT -> 1
+                    DhThemeMode.DARK -> 2
+                    else -> 0
+                }
+                DhSegmentedControl(
+                    options = options,
+                    selectedIndex = selected,
+                    onSelect = {
+                        appVm.setThemeMode(
+                            when (it) {
+                                1 -> DhThemeMode.LIGHT
+                                2 -> DhThemeMode.DARK
+                                else -> DhThemeMode.SYSTEM
+                            },
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            // --- Language ---
+            SettingsGroup(title = stringResource(R.string.settings_section_language), icon = Icons.Filled.Language) {
                 Text(
                     stringResource(R.string.settings_language_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                LanguageSelector(
-                    current = language,
-                    onSelect = { appVm.setLanguage(it) },
-                )
+                LanguageSelector(current = language, onSelect = { appVm.setLanguage(it) })
             }
 
-            // --- Bildirimler ---
-            SettingsSection(title = stringResource(R.string.settings_section_notifications), icon = Icons.Filled.Notifications) {
-                SettingsSwitchRow(
+            // --- Notifications ---
+            SettingsGroup(title = stringResource(R.string.settings_section_notifications), icon = Icons.Filled.Notifications) {
+                DhSettingsRow(
                     title = stringResource(R.string.settings_task_reminders),
-                    subtitle = stringResource(R.string.settings_task_reminders_desc),
-                    checked = systemAlerts,
-                    onCheckedChange = { vm.setSystemAlertsEnabled(it) },
+                    supporting = stringResource(R.string.settings_task_reminders_desc),
+                    trailing = { Switch(checked = systemAlerts, onCheckedChange = { vm.setSystemAlertsEnabled(it) }) },
                 )
-                HorizontalDivider(color = AppColors.BorderSubtle)
                 Column {
                     Text(
                         stringResource(R.string.settings_default_alert),
                         style = MaterialTheme.typography.titleSmall,
                         color = if (systemAlerts) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     )
                     Text(
                         reminderLabel(context, reminderMinutes),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (systemAlerts) AppColors.Accent
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        color = if (systemAlerts) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     )
                     val currentIdx = reminderPresets.indexOfFirst { it >= reminderMinutes }
                         .let { if (it < 0) reminderPresets.lastIndex else it }
-                    Slider(
+                    androidx.compose.material3.Slider(
                         value = currentIdx.toFloat(),
                         onValueChange = {
                             val idx = it.toInt().coerceIn(0, reminderPresets.lastIndex)
@@ -143,6 +200,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         enabled = systemAlerts,
                     )
                 }
+                // System-settings actions are outlined + full-width, visually distinct from toggles.
                 OutlinedButton(
                     onClick = {
                         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
@@ -150,14 +208,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     },
-                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.settings_notif_permission)) }
-                // Without the exact-alarm permission reminders may be delayed — route to the permission screen.
+                Text(
+                    stringResource(if (notifEnabled) R.string.settings_notif_status_on else R.string.settings_notif_status_off),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (notifEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                )
                 if (!exactAlarmGranted) {
                     OutlinedButton(
                         onClick = { vm.openExactAlarmSettings() },
-                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.settings_exact_alarm_action)) }
                     Text(
@@ -168,19 +228,18 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 }
             }
 
-            // --- Automatic updates (opt-in GitHub release notices, Phase 9) ---
-            SettingsSection(title = stringResource(R.string.settings_section_updates), icon = Icons.Filled.SystemUpdate) {
+            // --- Automatic updates ---
+            SettingsGroup(title = stringResource(R.string.settings_section_updates), icon = Icons.Filled.SystemUpdate) {
                 val autoUpdate by vm.autoUpdate.collectAsStateWithLifecycle()
-                SettingsSwitchRow(
+                DhSettingsRow(
                     title = stringResource(R.string.settings_auto_update),
-                    subtitle = stringResource(R.string.settings_auto_update_desc),
-                    checked = autoUpdate,
-                    onCheckedChange = { vm.setAutoUpdate(it) },
+                    supporting = stringResource(R.string.settings_auto_update_desc),
+                    trailing = { Switch(checked = autoUpdate, onCheckedChange = { vm.setAutoUpdate(it) }) },
                 )
             }
 
-            // --- Exercise demo videos (the user's own RapidAPI key) ---
-            SettingsSection(title = stringResource(R.string.settings_exercisedb_title), icon = Icons.Filled.FitnessCenter) {
+            // --- Exercise demo videos ---
+            SettingsGroup(title = stringResource(R.string.settings_exercisedb_title), icon = Icons.Filled.FitnessCenter) {
                 val apiKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
                 Text(
                     stringResource(R.string.settings_exercisedb_desc),
@@ -195,13 +254,11 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { keyInput = apiKey.orEmpty(); showKeyDialog = true },
-                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
                     ) { Text(stringResource(R.string.action_save)) }
                     if (!apiKey.isNullOrBlank()) {
                         OutlinedButton(
                             onClick = { vm.setExerciseDbKey(null) },
-                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f),
                         ) { Text(stringResource(R.string.settings_exercisedb_clear)) }
                     }
@@ -209,10 +266,8 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             // --- Sync + Account ---
-            // Drive sync is off for now (see FeatureFlags): since there is no sign-in, the
-            // backup/sign-out sections are hidden. They return once the flag is enabled.
             if (FeatureFlags.DRIVE_SYNC_ENABLED) {
-                SettingsSection(title = stringResource(R.string.settings_section_sync), icon = Icons.Filled.CloudSync) {
+                SettingsGroup(title = stringResource(R.string.settings_section_sync), icon = Icons.Filled.CloudSync) {
                     Text(
                         lastSyncAt?.let { stringResource(R.string.settings_last_sync, it) }
                             ?: stringResource(R.string.settings_never_synced),
@@ -220,27 +275,17 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { vm.syncNow() },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f),
-                        ) { Text(stringResource(R.string.settings_push)) }
-                        OutlinedButton(
-                            onClick = { vm.pullNow() },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f),
-                        ) { Text(stringResource(R.string.settings_pull)) }
+                        OutlinedButton(onClick = { vm.syncNow() }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.settings_push)) }
+                        OutlinedButton(onClick = { vm.pullNow() }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.settings_pull)) }
                     }
                 }
 
-                Button(
+                OutlinedButton(
                     onClick = { vm.signOut { nav.navigate(Login) { popUpTo(0) { inclusive = true } } } },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer),
-                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Filled.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.settings_sign_out))
                 }
@@ -249,11 +294,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         }
     }
 
-    // RapidAPI key input dialog: saving with empty input clears it, cancel leaves it untouched.
     if (showKeyDialog) {
         AlertDialog(
             onDismissRequest = { showKeyDialog = false },
-            title = { Text(stringResource(R.string.settings_exercisedb_title)) },
+            title = { Text(stringResource(R.string.settings_exercisedb_title), style = MaterialTheme.typography.titleMedium) },
             text = {
                 OutlinedTextField(
                     value = keyInput,
@@ -261,6 +305,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     label = { Text(stringResource(R.string.settings_exercisedb_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = MaterialTheme.shapes.small,
                 )
             },
             confirmButton = {
@@ -272,66 +317,29 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             dismissButton = {
                 TextButton(onClick = { showKeyDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             },
+            shape = MaterialTheme.shapes.large,
         )
     }
 }
 
-/** Bilingual (TR/EN) modern picker: two selectable buttons side by side. The selection applies instantly. */
+/** Bilingual picker: segmented two-option control. Applies instantly. */
 @Composable
 private fun LanguageSelector(current: String, onSelect: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        AppLanguage.entries.forEach { lang ->
-            val selected = current == lang.code
-            if (selected) {
-                Button(
-                    onClick = { onSelect(lang.code) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent),
-                    modifier = Modifier.weight(1f),
-                ) { Text(lang.nativeName) }
-            } else {
-                OutlinedButton(
-                    onClick = { onSelect(lang.code) },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f),
-                ) { Text(lang.nativeName) }
-            }
-        }
-    }
+    val codes = AppLanguage.entries.map { it.code }
+    val names = AppLanguage.entries.map { it.nativeName }
+    val selected = codes.indexOf(current).let { if (it < 0) 0 else it }
+    DhSegmentedControl(options = names, selectedIndex = selected, onSelect = { onSelect(codes[it]) }, modifier = Modifier.fillMaxWidth())
 }
 
-/**
- * Rounded card for a single settings group. An icon + section name in the header; [content] below.
- */
+/** Settings group: section header + single bordered card (not a giant floating card per row). */
 @Composable
-private fun SettingsSection(
-    title: String,
-    icon: ImageVector,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = AppColors.Accent, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
-            content()
-        }
+private fun SettingsGroup(title: String, icon: ImageVector, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        DhSectionHeader(title = title)
+        DhCard { content() }
     }
 }
 
-/**
- * Finds the [ComponentActivity] wrapping this context. MainActivity wraps LocalContext in a localized
- * [ContextWrapper], so the chain must be walked instead of casting directly.
- */
 private fun Context.findActivity(): ComponentActivity {
     var ctx: Context = this
     while (ctx is ContextWrapper) {
@@ -339,26 +347,4 @@ private fun Context.findActivity(): ComponentActivity {
         ctx = ctx.baseContext
     }
     error("SettingsScreen bir ComponentActivity içinde barındırılmalı")
-}
-
-/** Title + description on the left, Switch on the right — aligned row for on/off settings. */
-@Composable
-private fun SettingsSwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
 }

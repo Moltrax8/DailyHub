@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Stub google-services.json (real file is gitignored; CI only needs the build to work)
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {"project_number": "000000000000", "project_id": "ci-stub", "storage_bucket": "ci-stub.appspot.com"},
+            "client": [{
+              "client_info": {"mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": {"package_name": "com.moltrax.personalnoteapp"}},
+              "api_key": [{"current_key": "ci-stub-key"}]
+            }],
+            "configuration_version": "1"
+          }
+          EOF
+
+      - name: Debug build
+        run: ./gradlew :app:assembleDebug --console=plain
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --console=plain
+
+      - name: Android lint
+        run: ./gradlew :app:lintDebug --console=plain
+
+      - name: Instrumentation-test compilation
+        run: ./gradlew :app:assembleDebugAndroidTest --console=plain

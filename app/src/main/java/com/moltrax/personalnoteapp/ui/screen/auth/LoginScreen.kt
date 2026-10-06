@@ -1,12 +1,36 @@
 package com.moltrax.personalnoteapp.ui.screen.auth
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Workspaces
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,14 +40,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.ui.components.DhCard
 import com.moltrax.personalnoteapp.ui.navigation.Home
 import com.moltrax.personalnoteapp.ui.navigation.Login
 import kotlinx.coroutines.launch
@@ -33,7 +57,6 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
     val isSignedIn by vm.isSignedIn.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { vm.checkExistingSignIn() }
-    // Go straight to the main screen once signed in (the onboarding/physical-info step was removed).
     LaunchedEffect(isSignedIn) {
         if (isSignedIn) {
             nav.navigate(Home) { popUpTo<Login> { inclusive = true } }
@@ -60,14 +83,12 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
         }
     }
 
-    // Returning from the Drive consent screen; when denied, offer a Snackbar + retry.
     val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) {
             showSnackbarWithRetry(consentDeniedMsg)
         }
     }
 
-    // Retry request: fetch a fresh consent Intent and relaunch it (the old Intent may be single-use).
     LaunchedEffect(consentRetryTick) {
         if (consentRetryTick > 0) {
             vm.ensureDriveConsent(
@@ -87,41 +108,77 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             vm.handleSignInResult(result.data)
-            // The sensitive drive.appdata permission may not have come with sign-in; chain the consent
-            // flow right after a sign-in success (open the consent screen if needed).
             requestDriveConsent()
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+        val context = LocalContext.current
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(32.dp),
+            modifier = Modifier.fillMaxSize().padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         ) {
-            Icon(Icons.Default.AccountCircle, contentDescription = null,
-                modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
-
-            Spacer(Modifier.height(24.dp))
-
-            Text(stringResource(R.string.app_name), fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground)
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(stringResource(R.string.login_subtitle), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Spacer(Modifier.height(48.dp))
-
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(72.dp)) {
+                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Workspaces, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(36.dp))
+                }
+            }
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                stringResource(R.string.login_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            DhCard {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row2(Icons.Filled.CloudOff, stringResource(R.string.login_offline_title), stringResource(R.string.login_offline_desc))
+                    Row2(Icons.Filled.CheckCircle, stringResource(R.string.login_sync_title), stringResource(R.string.login_sync_desc))
+                }
+            }
             Button(
                 onClick = { launcher.launch(vm.signInIntent) },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
-                Text(stringResource(R.string.login_button), fontSize = 16.sp)
+                Text(stringResource(R.string.login_button), style = MaterialTheme.typography.labelLarge)
             }
+            // Publishing is not possible (Google verification), so sign-in is
+            // granted per-person: tapping opens the owner's Telegram profile.
+            DhCard {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(R.string.login_access_msg),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/Moltrax")),
+                                )
+                            }
+                        },
+                    ) { Text(stringResource(R.string.login_access_action)) }
+                }
+            }
+            TextButton(onClick = { nav.navigate(Home) { popUpTo<Login> { inclusive = true } } }) {
+                Text(stringResource(R.string.login_continue_offline))
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun Row2(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, desc: String) {
+    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

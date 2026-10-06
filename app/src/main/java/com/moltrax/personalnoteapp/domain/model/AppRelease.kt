@@ -35,3 +35,15 @@ fun versionCodeFromTag(tag: String): Int? {
 /** True when the release is strictly newer than the installed build. */
 fun isUpdateAvailable(release: AppRelease, installedCode: Int): Boolean =
     release.versionCode > installedCode
+
+/**
+ * APK downloads are only trusted from GitHub's own hosts, so a tampered
+ * `app_releases` row cannot point users at an evil server. Pure (JVM-tested).
+ */
+fun isAllowedApkHost(url: String): Boolean {
+    val host = runCatching { java.net.URI(url).host.orEmpty().lowercase() }.getOrDefault("")
+    if (host.isBlank()) return false
+    return host == "github.com" || host.endsWith(".github.com") ||
+        host == "objects.githubusercontent.com" ||
+        host == "release-assets.githubusercontent.com"
+}

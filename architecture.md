@@ -167,7 +167,7 @@ Entry: `MainActivity` (singleTop launcher) → `AppNavHost`.
 | `WorkoutSummary(sessionId)` | `WorkoutSummaryScreen` | Read-only result of a session |
 | `Profile` / `Settings` | `ProfileScreen` / `SettingsScreen` | Account, prefs, ExerciseDB key, backup status |
 
-Bottom navigation: `BottomNavBar` (defined in `HomeScreen.kt`) has exactly 3 items — Tasks (`Home`), Workouts (`WorkoutList`), Profile (`Profile`). It is used as `bottomBar` by `HomeScreen`, `WorkoutScreen`, `WorkoutDetailScreen`, and `ProfileScreen`. `SettingsScreen` has a top app bar with back navigation and no bottom bar. Calendar is not a bottom tab; it is a `TabRow` sub-tab (index 0 = Tasks list, index 1 = Calendar) inside Home. The FAB (new task) shows only on the Tasks sub-tab.
+Bottom navigation: `DailyHubScaffold` (in `ui/shell`, never inside a feature screen) owns the 5 root destinations — Tasks (`Home`), Workouts (`WorkoutList`), Profile (`Profile`). It is used as `bottomBar` by `HomeScreen`, `WorkoutScreen`, `WorkoutDetailScreen`, and `ProfileScreen`. `SettingsScreen` has a top app bar with back navigation and no bottom bar. Calendar is not a bottom tab; it is a `TabRow` sub-tab (index 0 = Tasks list, index 1 = Calendar) inside Home. The FAB (new task) shows only on the Tasks sub-tab.
 
 Cross-cutting UI: `SyncBanner` (Drive status, composed only when sync enabled), 90 ms fade transitions, i18n via `Localization`/`EnumLabels` (`tr`/`en`, default `en`), theming via `AppTheme`/`AppColors` + `theme_mode` pref (`system` default). Each screen owns its own window insets; `AppNavHost` deliberately adds no `statusBarsPadding` (avoids double top spacing).
 

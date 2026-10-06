@@ -10,14 +10,18 @@ data class GoTrueUser(
     val email: String? = null,
 )
 
-/** GoTrue session (sign-up / token responses). */
+/** GoTrue session (sign-up / token responses). Tokens are nullable because a
+ * sign-up with Confirm-email ON returns a bare user object (no session). */
 @Serializable
 data class GoTrueSession(
-    @SerialName("access_token") val accessToken: String,
-    @SerialName("refresh_token") val refreshToken: String = "",
+    @SerialName("access_token") val accessToken: String? = null,
+    @SerialName("refresh_token") val refreshToken: String? = null,
     @SerialName("expires_in") val expiresIn: Long = 3600L,
     val user: GoTrueUser? = null,
-)
+) {
+    /** True when the response carries no usable session (confirm email first). */
+    fun needsConfirmation(): Boolean = accessToken.isNullOrBlank()
+}
 
 /** Stored session + when it was saved (for expiry math). */
 @Serializable

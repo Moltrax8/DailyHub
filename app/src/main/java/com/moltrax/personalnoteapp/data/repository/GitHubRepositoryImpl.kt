@@ -1,9 +1,11 @@
 package com.moltrax.personalnoteapp.data.repository
 
+import com.moltrax.personalnoteapp.data.remote.github.GitHubPublicApi
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseDbApi
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
 import com.moltrax.personalnoteapp.domain.repository.GitHubRepository
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +22,7 @@ import javax.inject.Singleton
 class GitHubRepositoryImpl @Inject constructor(
     private val db: SupabaseDbApi?,
     private val auth: SupabaseAuthService,
+    private val publicApi: GitHubPublicApi,
 ) : GitHubRepository {
 
     private fun api(): SupabaseDbApi =
@@ -49,22 +52,50 @@ class GitHubRepositoryImpl @Inject constructor(
     }
 
     override suspend fun linkRepo(spaceId: String, repoId: Long, fullName: String, private: Boolean) {
+        val name = fullName.trim()
+        require(repoId > 0) { "Enter the numeric Repo ID (from api.github.com/repos/owner/repo → id)." }
+        require(name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"))) {
+            "Enter the repo as owner/name (e.g. moltrax8/DailyHub)."
+        }
         val res = api().linkRepo(
             bearer(),
             body = buildJsonObject {
                 put("id", repoId)
                 put("space_id", spaceId)
-                put("full_name", fullName.trim())
+                put("full_name", name)
                 put("private", private)
                 put("installed_by", myId())
             },
         )
-        if (!res.isSuccessful) throw IOException("Link failed (HTTP ${res.code()}).")
+        if (!res.isSuccessful) throw IOException(linkError(res.code()))
     }
 
     override suspend fun unlinkRepo(repoId: Long) {
         val res = api().unlinkRepo(bearer(), "eq.$repoId")
         if (!res.isSuccessful) throw IOException("Unlink failed (HTTP ${res.code()}).")
+    }
+
+    override suspend fun publicRepos(username: String): List<GithubPublicRepo> {
+        val clean = username.trim().trimStart('@')
+        require(clean.matches(Regex("[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?"))) {
+            "Enter a GitHub username (e.g. moltrax8)."
+        }
+        val res = runCatching { publicApi.publicRepos(clean) }.getOrElse {
+            throw IOException("GitHub is unreachable — check connection.")
+        }
+        if (!res.isSuccessful) {
+            if (res.code() == 404) throw IOException("GitHub user \"$clean\" not found.")
+            if (res.code() == 403) throw IOException("GitHub rate limit hit — try again later.")
+            throw IOException("GitHub lookup failed (HTTP ${res.code()}).")
+        }
+        return res.body().orEmpty()
+    }
+
+    private fun linkError(code: Int): String = when (code) {
+        401, 403 -> "Link denied — only a space owner can link repos (RLS)."
+        404 -> "Space not found — pull the space first, then link."
+        409 -> "Repo already linked to a space."
+        else -> "Link failed (HTTP $code)."
     }
 
     override fun observeActivity(spaceId: String): Flow<List<GithubActivity>> =

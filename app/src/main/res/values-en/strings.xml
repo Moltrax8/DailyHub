@@ -29,8 +29,27 @@
     <string name="unit_m">m</string>
 
     <!-- Login -->
-    <string name="login_subtitle">Sign in with your Google account</string>
+    <string name="login_subtitle">Your personal workspace for tasks, workouts, and projects</string>
     <string name="login_button">Sign in with Google</string>
+    <string name="login_offline_title">Works offline</string>
+    <string name="login_offline_desc">All core features run on-device with no account.</string>
+    <string name="login_sync_title">Optional sync</string>
+    <string name="login_sync_desc">Sign in to enable backup and cross-device sync.</string>
+    <string name="login_continue_offline">Continue offline</string>
+    <string name="login_access_msg">Sign-in requires access: message @Moltrax on Telegram to request it.</string>
+    <string name="login_access_action">Message on Telegram</string>
+    <string name="workout_exercise_count">%1$d exercises</string>
+    <string name="workout_set_count">%1$d sets</string>
+    <string name="workout_empty_desc">Create your first program or import one from a JSON file.</string>
+    <string name="workout_delete_title">Delete program?</string>
+    <string name="workout_delete_confirm">“%1$s” will be permanently deleted. This cannot be undone.</string>
+    <string name="spaces_overview">Overview</string>
+    <string name="spaces_plan">Plan</string>
+    <string name="spaces_discuss">Discuss</string>
+    <string name="spaces_library">Library</string>
+    <string name="spaces_people">People</string>
+    <string name="spaces_overview_summary">%1$d tasks (%2$d open) · %3$d notes · %4$d files</string>
+    <string name="projects_move_to">Move to %1$s</string>
     <string name="login_drive_permission_error">Drive permission error: %1$s</string>
 
     <!-- Home -->
@@ -52,6 +71,7 @@
     <string name="task_completed">Task completed</string>
     <string name="workout_completed">Workout completed</string>
     <string name="task_badge_done">Completed</string>
+    <string name="task_badge_workout">Workout</string>
     <string name="workout_summary_title">Workout Result</string>
     <string name="workout_summary_empty">No data recorded for this session.</string>
     <string name="workout_summary_no_logged">No sets entered</string>
@@ -109,7 +129,12 @@
 
     <!-- Profile -->
     <string name="profile_sign_out">Sign Out</string>
-    <string name="profile_panel_profile">PROFILE</string>
+    <string name="profile_sign_out_confirm">Sign out? The app keeps working offline.</string>
+    <string name="profile_panel_profile">Profile</string>
+    <string name="profile_panel_account">Account</string>
+    <string name="profile_account_subtitle">Managed account and social identity</string>
+    <string name="profile_info_subtitle">Personal information</string>
+    <string name="profile_tap_avatar_hint">Tap to change photo when signed in</string>
     <string name="cd_profile_photo">Profile photo</string>
     <string name="profile_edit_name_title">Edit name</string>
     <string name="profile_name_label">Display name</string>
@@ -121,6 +146,11 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_appearance_desc">Choose light, dark, or system theme.</string>
+    <string name="settings_appearance_system">System</string>
+    <string name="settings_appearance_light">Light</string>
+    <string name="settings_appearance_dark">Dark</string>
     <string name="settings_section_language">Language</string>
     <string name="settings_language_desc">Choose the app language. The change applies instantly, no restart needed.</string>
     <string name="settings_section_notifications">Notifications</string>
@@ -128,6 +158,8 @@
     <string name="settings_task_reminders_desc">Sends a reminder notification as a task\'s due time approaches.</string>
     <string name="settings_default_alert">Default Reminder Time</string>
     <string name="settings_notif_permission">Open / Manage Notification Permissions</string>
+    <string name="settings_notif_status_on">Notifications are ON — reminders can be shown.</string>
+    <string name="settings_notif_status_off">Notifications are OFF — reminders cannot be shown until you grant permission.</string>
     <string name="settings_section_sync">Synchronization</string>
     <string name="settings_last_sync">Last sync: %1$s</string>
     <string name="settings_never_synced">Not synced yet.</string>
@@ -158,6 +190,7 @@
     <string name="workout_new_workout">New Workout</string>
     <string name="workout_workout_name_hint">Workout name (e.g. Chest Day)</string>
     <string name="workout_program_fallback">Program</string>
+    <string name="workout_program_not_found">Program not found</string>
     <string name="workout_add_workout">Add workout</string>
     <string name="workout_no_workouts">No workouts yet.\nAdd one with the + at the bottom right.</string>
     <string name="workout_add_exercise">Add exercise</string>
@@ -224,7 +257,9 @@
     <string name="recurrence_interval">Day interval</string>
     <string name="task_which_days">Which days?</string>
     <string name="task_no_days_hint">If no day is selected, the task repeats weekly based on its own day.</string>
+    <string name="task_weekly_error">Select at least one day</string>
     <string name="task_every_n_days">Every how many days</string>
+    <string name="task_interval_error">Enter a positive number of days</string>
     <string name="task_recurring_hint">A recurring task is not deleted when completed; its due date automatically moves to the next cycle.</string>
     <string name="task_focus_duration">Focus duration: %1$d min</string>
     <string name="task_focus_optional">Focus time (optional)</string>
@@ -241,6 +276,10 @@
     <string name="task_subtasks">Subtasks</string>
     <string name="task_remove_subtask">Remove subtask</string>
     <string name="task_new_subtask">New subtask</string>
+    <string name="task_select_day_error">Select at least one day</string>
+    <string name="task_section_core">Core details</string>
+    <string name="task_section_schedule">Scheduling</string>
+    <string name="task_section_advanced">Advanced options</string>
     <string name="task_add_subtask">Add subtask</string>
 
     <!-- Calendar -->
@@ -289,6 +328,9 @@
     <string name="widget_filter_match_all">Match all (AND)</string>
     <string name="widget_filter_limit">Limit</string>
     <string name="widget_filter_clear">Reset to default</string>
+    <string name="widget_filter_space">Hub or project (repo-wise)</string>
+    <string name="widget_filter_space_none">No hubs yet — join or create one in the app first.</string>
+    <string name="widget_filter_space_all">All tasks (personal)</string>
 
     <!-- Supabase managed account (Phase 3+) -->
     <string name="supabase_auth_title">Account</string>
@@ -314,6 +356,9 @@
     <!-- Social (Phase 4+) -->
     <string name="social_title">Friends</string>
     <string name="social_search_hint">Search username (2+ chars)</string>
+    <string name="social_find_title">Find people</string>
+    <string name="social_find_desc">Search a DailyHub username and send a friend request. Friends can open shared hubs with you.</string>
+    <string name="social_no_results">No users found — check the spelling.</string>
     <string name="social_add">Add</string>
     <string name="social_requests_pending">%1$d pending requests</string>
     <string name="social_friends">My friends</string>
@@ -360,6 +405,7 @@
     <string name="spaces_link_url">URL (https://…)</string>
     <string name="spaces_link_title">Title (optional)</string>
     <string name="spaces_section">Shared spaces</string>
+    <string name="spaces_section_desc">Hubs you belong to — open one for notes, tasks, chat and members.</string>
     <string name="spaces_none">No shared spaces yet — open a Duo hub from a friend.</string>
     <string name="spaces_open_hub">Open hub</string>
 
@@ -378,12 +424,32 @@
     <string name="spaces_new_event">New event</string>
     <string name="spaces_event_time">Pick a time</string>
     <string name="spaces_event_end">Add an end</string>
+    <string name="spaces_members">Members</string>
+    <string name="spaces_members_desc">Collaborators in this hub — they share notes, tasks, links and chat. Owners can invite more.</string>
+    <string name="spaces_invite">Invite</string>
+    <string name="spaces_invite_title">Invite collaborator</string>
+    <string name="spaces_invite_hint">Enter their DailyHub username (the @handle from Profile).</string>
+    <string name="spaces_username">Username</string>
+    <string name="spaces_remove">Remove</string>
+    <string name="spaces_leave">Leave hub</string>
+    <string name="spaces_role_owner">owner</string>
+    <string name="spaces_role_member">member</string>
+    <string name="spaces_you_suffix"> (you)</string>
+    <string name="spaces_file_size_bytes">%1$d B</string>
+    <string name="spaces_file_size_kb">%1$d KB</string>
 
     <!-- Project Manager (Phase 6+) -->
     <string name="nav_projects">Projects</string>
     <string name="nav_social">Social</string>
     <string name="projects_title">Projects</string>
     <string name="projects_empty">No projects yet — create one with +.</string>
+    <string name="projects_empty_title">No projects yet</string>
+    <string name="projects_empty_desc">Projects are shared workspaces: a board for tracking work, a hub for notes and chat, and linked GitHub repos. Create one to get started.</string>
+    <string name="projects_open">Open</string>
+    <string name="projects_new_hint">A project is a shared workspace with a task board and a collaboration hub.</string>
+    <string name="projects_delete">Delete project</string>
+    <string name="projects_delete_title">Delete this project?</string>
+    <string name="projects_delete_confirm">The project, its board, hub content and links are removed for everyone. This cannot be undone.</string>
     <string name="projects_untitled">Untitled project</string>
     <string name="projects_new">New project</string>
     <string name="projects_name">Project name</string>
@@ -396,17 +462,28 @@
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
-    <string name="github_connect_hint">GitHub is not connected yet — connecting happens in Settings (OAuth via Edge Function), the token never lives on-device.</string>
+    <string name="github_connect_hint">No GitHub account linked yet — this build links repos manually per space below. The token never lives on-device; live activity needs the repo webhook pointed at the Supabase function.</string>
     <string name="github_connected_as">Connected as %1$s</string>
     <string name="github_repos">Linked repos</string>
     <string name="github_link">Link repo</string>
     <string name="github_unlink">Unlink</string>
     <string name="github_prefs">Notification kinds</string>
     <string name="github_enable_push">Enable push notifications</string>
+    <string name="github_push_done">Push enabled on this device ✓</string>
+    <string name="github_err_id">Enter the numeric Repo ID (api.github.com/repos/owner/repo → “id”).</string>
+    <string name="github_err_name">Enter the repo as owner/name (e.g. moltrax8/DailyHub).</string>
+    <string name="github_browse">Browse repos</string>
+    <string name="github_browse_title">Track GitHub repos</string>
+    <string name="github_browse_hint">Enter a GitHub username to list public repos. Tick to track in this space, untick to stop tracking. Private repos still need manual linking.</string>
+    <string name="github_browse_user">GitHub username</string>
+    <string name="github_browse_fetch">Fetch</string>
+    <string name="github_browse_empty">No public repos found for this user.</string>
+    <string name="github_hide_forks">Hide forks</string>
+    <string name="github_fork_badge">fork</string>
     <string name="github_activity">Activity</string>
     <string name="github_activity_empty">No activity yet — the webhook drops the first event here.</string>
     <string name="github_link_title">Link repo</string>
-    <string name="github_link_hint">Type a repo you can access (e.g. moltrax8/DailyHub). The ID comes from the repo page HTML or the API.</string>
+    <string name="github_link_hint">Type a repo you can access (e.g. moltrax8/DailyHub). Find the numeric ID at api.github.com/repos/owner/repo → “id”. Only a space owner can link.</string>
     <string name="github_repo_id">Repo ID (number)</string>
     <string name="github_repo_name">owner/repo</string>
     <string name="github_private">Private repo</string>
@@ -424,6 +501,8 @@
     <!-- Focus play/pause -->
     <string name="focus_play">Start</string>
     <string name="focus_pause">Pause</string>
+    <string name="focus_reset">Reset</string>
+    <string name="focus_linked_notice">This task is linked to a workout — complete it from Home to log your sets.</string>
 
     <!-- Priority -->
     <string name="task_priority">Priority</string>

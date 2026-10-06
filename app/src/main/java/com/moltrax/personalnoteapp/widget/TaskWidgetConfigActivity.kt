@@ -49,7 +49,9 @@ import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.domain.model.Space
 import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
+import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -74,6 +76,7 @@ class TaskWidgetConfigActivity : ComponentActivity() {
 
     @Inject lateinit var taskRepo: TaskRepository
     @Inject lateinit var categoryRepo: CategoryRepository
+    @Inject lateinit var spaceRepo: SpaceRepository
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
@@ -93,10 +96,12 @@ class TaskWidgetConfigActivity : ComponentActivity() {
         lifecycleScope.launch {
             val initial = loadExistingFilter()
             val tags = availableTags()
+            val spaces = availableSpaces()
             setContent {
                 AppTheme {
                     ConfigDialog(
                         allTags = tags,
+                        allSpaces = spaces,
                         initial = initial,
                         onSave = ::applyFilter,
                         onDismiss = ::dismiss,
@@ -113,6 +118,12 @@ class TaskWidgetConfigActivity : ComponentActivity() {
         val glanceId = GlanceAppWidgetManager(this).getGlanceIdBy(appWidgetId)
         WidgetFilter.load(getAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId))
     }.getOrNull() ?: WidgetFilter()
+
+    /** Hubs/projects for the repo-wise widget mode (empty = signed out or none yet). */
+    private suspend fun availableSpaces(): List<Space> = runCatching {
+        spaceRepo.observeSpaces().first()
+            .sortedBy { (it.name.orEmpty().lowercase()) }
+    }.getOrDefault(emptyList())
 
     /** Permanent categories + tags currently used by open tasks (same source as Home chips). */
     private suspend fun availableTags(): List<String> = runCatching {
@@ -149,6 +160,7 @@ class TaskWidgetConfigActivity : ComponentActivity() {
 @Composable
 private fun ConfigDialog(
     allTags: List<String>,
+    allSpaces: List<Space>,
     initial: WidgetFilter,
     onSave: (WidgetFilter) -> Unit,
     onDismiss: () -> Unit,
@@ -158,6 +170,8 @@ private fun ConfigDialog(
     var showDone by remember { mutableStateOf(initial.showDone) }
     var matchAll by remember { mutableStateOf(initial.matchAll) }
     var limit by remember { mutableIntStateOf(initial.limit) }
+    // Repo-wise mode: one hub/project's shared todos instead of personal tasks.
+    var spaceId by remember { mutableStateOf(initial.spaceId) }
 
     // Transparent dim (scrim): closes on outside tap → returns to the home screen.
     androidx.compose.foundation.layout.Box(
@@ -193,6 +207,40 @@ private fun ConfigDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
+
+                Text(
+                    text = stringResource(R.string.widget_filter_space),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (allSpaces.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.widget_filter_space_none),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 150.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        item(key = "all") {
+                            SpaceOption(
+                                name = stringResource(R.string.widget_filter_space_all),
+                                checked = spaceId.isBlank(),
+                                onToggle = { spaceId = "" },
+                            )
+                        }
+                        items(allSpaces, key = { it.id }) { space ->
+                            SpaceOption(
+                                name = space.name?.takeIf { n -> n.isNotBlank() }
+                                    ?: stringResource(R.string.spaces_duo),
+                                checked = spaceId == space.id,
+                                onToggle = { spaceId = if (spaceId == space.id) "" else space.id },
+                            )
+                        }
+                    }
+                }
 
                 Text(
                     text = stringResource(R.string.widget_filter_tags),
@@ -256,13 +304,35 @@ private fun ConfigDialog(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = {
-                        onSave(WidgetFilter(title.trim(), tags.toSet(), showDone, limit, matchAll))
+                        onSave(WidgetFilter(title.trim(), tags.toSet(), showDone, limit, matchAll, spaceId.trim()))
                     }) { Text(stringResource(R.string.action_save)) }
                     OutlinedButton(onClick = { onSave(WidgetFilter()) }) {
                         Text(stringResource(R.string.widget_filter_clear))
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SpaceOption(name: String, checked: Boolean, onToggle: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = checked, onCheckedChange = { onToggle() })
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 8.dp),
+            )
         }
     }
 }

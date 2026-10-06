@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,7 +34,6 @@ import com.moltrax.personalnoteapp.ui.components.ExerciseMediaPlayer
 import com.moltrax.personalnoteapp.ui.components.ExerciseThumb
 import com.moltrax.personalnoteapp.ui.i18n.label
 import com.moltrax.personalnoteapp.ui.navigation.LiveWorkout
-import com.moltrax.personalnoteapp.ui.screen.home.BottomNavBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,7 +127,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(group?.name ?: stringResource(R.string.workout_program_fallback)) },
+                title = { Text(group?.name ?: stringResource(R.string.workout_program_fallback),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
@@ -136,22 +137,24 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddWorkoutDialog = true }) {
+            FloatingActionButton(
+                onClick = { showAddWorkoutDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 Icon(Icons.Default.Add, stringResource(R.string.workout_add_workout))
             }
         },
-        bottomBar = { BottomNavBar(nav) },
     ) { padding ->
         if (group == null) {
             // Show a not-found + back affordance instead of an endless spinner for an invalid/deleted groupId.
-            // (Fixed text to avoid touching res; owned-files: ui/** only.)
             Column(
                 Modifier.fillMaxSize().padding(padding).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    "Program not found",
+                    stringResource(R.string.workout_program_not_found),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -177,11 +180,16 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                 }
             }
             items(group.workouts, key = { it.id }) { workout ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(workout.name, style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.weight(1f))
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                             IconButton(onClick = { showAddExerciseForWorkoutId = workout.id }) {
                                 Icon(Icons.Default.AddCircle, stringResource(R.string.workout_add_exercise),
                                     tint = MaterialTheme.colorScheme.primary)
@@ -210,7 +218,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                                         tint = MaterialTheme.colorScheme.primary)
                                     Spacer(Modifier.width(6.dp))
                                     Column(Modifier.weight(1f)) {
-                                        Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium)
+                                        Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         val planText = plannedSummary(LocalContext.current, ex.type, ex.plannedSets)
                                         if (planText != null) {
                                             Text(planText, style = MaterialTheme.typography.bodySmall,
@@ -219,7 +228,6 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                                     }
                                     IconButton(
                                         onClick = { editExercise = workout.id to ex },
-                                        modifier = Modifier.size(32.dp),
                                     ) {
                                         Icon(Icons.Default.Edit, stringResource(R.string.workout_edit_exercise),
                                             modifier = Modifier.size(16.dp),
@@ -238,7 +246,7 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
                             modifier = Modifier.fillMaxWidth(),
                             enabled = workout.exercises.isNotEmpty(),
                         ) {
-                            Icon(Icons.Default.PlayArrow, null)
+                            Icon(Icons.Default.PlayArrow, stringResource(R.string.workout_start))
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.workout_start))
                         }

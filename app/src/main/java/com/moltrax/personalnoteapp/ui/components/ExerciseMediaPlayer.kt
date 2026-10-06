@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Icon
@@ -57,7 +56,7 @@ fun ExerciseMediaPlayer(
     val shaped = modifier
         .fillMaxWidth()
         .height(heightDp.dp)
-        .clip(RoundedCornerShape(12.dp))
+        .clip(MaterialTheme.shapes.small)
 
     if (source.isNullOrBlank()) {
         Box(shaped, contentAlignment = Alignment.Center) {
@@ -112,7 +111,7 @@ fun ExerciseThumb(
 ) {
     val box = modifier
         .size(sizeDp.dp)
-        .clip(RoundedCornerShape(8.dp))
+        .clip(MaterialTheme.shapes.extraSmall)
 
     if (source.isNullOrBlank()) {
         Box(
@@ -171,7 +170,7 @@ private fun rememberGifImageLoader(exerciseDbKey: String): ImageLoader {
 }
 
 /** Plays the real video in a loop with Media3 ExoPlayer; releases it when the component is disposed. */
-@OptIn(UnstableApi::class)
+@UnstableApi
 @Composable
 private fun ExoVideoPlayer(uri: Uri, modifier: Modifier) {
     val context = LocalContext.current

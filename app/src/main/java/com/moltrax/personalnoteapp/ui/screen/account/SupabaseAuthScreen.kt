@@ -1,16 +1,24 @@
 package com.moltrax.personalnoteapp.ui.screen.account
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -21,13 +29,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -57,7 +64,8 @@ fun SupabaseAuthScreen(nav: NavController, vm: SupabaseAuthViewModel = hiltViewM
         topBar = { TopAppBar(title = { Text(stringResource(R.string.supabase_auth_title)) }) },
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp, vertical = 16.dp),
+            Modifier.fillMaxSize().padding(padding).imePadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!vm.isConfigured) {
@@ -85,11 +93,18 @@ fun SupabaseAuthScreen(nav: NavController, vm: SupabaseAuthViewModel = hiltViewM
 
 @Composable
 private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp),
+        )
+    }
     Text(
         if (state.signUpMode) stringResource(R.string.supabase_auth_create)
         else stringResource(R.string.supabase_auth_welcome),
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.headlineSmall,
     )
     OutlinedTextField(
         value = state.email,
@@ -134,8 +149,7 @@ private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
 private fun UsernameForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
     Text(
         stringResource(R.string.supabase_auth_pick_username),
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.headlineSmall,
     )
     Text(
         stringResource(R.string.supabase_auth_username_hint),

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,9 +47,10 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(session?.workoutName ?: stringResource(R.string.live_workout_title)) },
+                title = { Text(session?.workoutName ?: stringResource(R.string.live_workout_title),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = { nav.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
                 actions = {
                     TextButton(onClick = {
                         vm.finishSession { sessionId -> finishedSessionId = sessionId }
@@ -60,6 +62,14 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
         val exercises = session?.loggedExercises ?: emptyList()
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (exercises.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.workout_no_exercises),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             itemsIndexed(exercises) { _, ex ->
                 val cached = exercisesById[ex.exerciseId]
                 ExerciseLogCard(
@@ -90,7 +100,11 @@ private fun ExerciseLogCard(
     // Whether the demo (GIF/video) dialog is open — triggered by the "how to" button.
     var showDemo by remember { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium,
@@ -162,11 +176,11 @@ private fun WeightliftingInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
-        IconButton(onClick = {
-            val r = reps.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val r = reps.toIntOrNull() ?: return@Button
             onLog(LoggedSet(reps = r, weightKg = weight.replace(',', '.').toDoubleOrNull()))
             reps = ""; weight = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_set), style = MaterialTheme.typography.labelLarge) }
     }
 }
 
@@ -185,12 +199,12 @@ private fun BodyweightInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
-        IconButton(onClick = {
-            val r = reps.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val r = reps.toIntOrNull() ?: return@Button
             // Bodyweight: null when no added weight is entered (pure bodyweight).
             onLog(LoggedSet(reps = r, weightKg = addedWeight.replace(',', '.').toDoubleOrNull()))
             reps = ""; addedWeight = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_set), style = MaterialTheme.typography.labelLarge) }
     }
 }
 
@@ -203,11 +217,11 @@ private fun DurationInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        IconButton(onClick = {
-            val s = seconds.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val s = seconds.toIntOrNull() ?: return@Button
             onLog(LoggedSet(reps = 0, durationSeconds = s))
             seconds = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_set)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_set), style = MaterialTheme.typography.labelLarge) }
     }
 }
 
@@ -226,8 +240,8 @@ private fun CardioInput(onLog: (LoggedSet) -> Unit) {
             modifier = Modifier.weight(1f), singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        IconButton(onClick = {
-            val min = minutes.toIntOrNull() ?: return@IconButton
+        Button(onClick = {
+            val min = minutes.toIntOrNull() ?: return@Button
             onLog(
                 LoggedSet(
                     reps = 0,
@@ -236,7 +250,7 @@ private fun CardioInput(onLog: (LoggedSet) -> Unit) {
                 )
             )
             minutes = ""; steps = ""
-        }) { Icon(Icons.Default.Add, stringResource(R.string.add_entry)) }
+        }) { Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_entry), style = MaterialTheme.typography.labelLarge) }
     }
 }
 

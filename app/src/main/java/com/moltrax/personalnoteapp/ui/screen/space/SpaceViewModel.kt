@@ -12,6 +12,7 @@ import com.moltrax.personalnoteapp.domain.model.SpaceLink
 import com.moltrax.personalnoteapp.domain.model.SpaceMember
 import com.moltrax.personalnoteapp.domain.model.SpaceMessage
 import com.moltrax.personalnoteapp.domain.model.SpaceType
+import com.moltrax.personalnoteapp.domain.repository.SocialRepository
 import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -48,6 +49,7 @@ data class SpaceDetailUiState(
 @HiltViewModel
 class SpaceViewModel @Inject constructor(
     private val spaces: SpaceRepository,
+    private val social: SocialRepository,
 ) : ViewModel() {
 
     val mySpaces: StateFlow<List<Space>> = spaces.observeSpaces()
@@ -214,6 +216,39 @@ class SpaceViewModel @Inject constructor(
     fun inviteMember(spaceId: String, userId: String) {
         viewModelScope.launch {
             runCatching { spaces.inviteMember(spaceId, userId) }
+                .onFailure { e -> _detail.update { it.copy(error = e.message) } }
+        }
+    }
+
+    /** Invites a collaborator by their DailyHub username (owner adds friends). */
+    fun inviteByUsername(spaceId: String, username: String, onDone: () -> Unit = {}) {
+        val clean = username.trim().trimStart('@')
+        if (clean.isEmpty()) {
+            _detail.update { it.copy(error = "Enter a username to invite.") }
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                val match = social.searchByUsername(clean)
+                    .firstOrNull { it.username.equals(clean, ignoreCase = true) }
+                    ?: throw IllegalStateException("User \"$clean\" not found — check the spelling.")
+                spaces.inviteMember(spaceId, match.id)
+            }.onSuccess { onDone() }
+                .onFailure { e -> _detail.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun removeMember(spaceId: String, userId: String) {
+        viewModelScope.launch {
+            runCatching { spaces.removeMember(spaceId, userId) }
+                .onFailure { e -> _detail.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun leaveSpace(spaceId: String, onGone: () -> Unit = {}) {
+        viewModelScope.launch {
+            runCatching { spaces.leaveSpace(spaceId) }
+                .onSuccess { onGone() }
                 .onFailure { e -> _detail.update { it.copy(error = e.message) } }
         }
     }
