@@ -21,6 +21,7 @@ import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.json.WorkoutJsonCodec
 import com.moltrax.personalnoteapp.domain.model.WorkoutGroup
+import com.moltrax.personalnoteapp.ui.components.DhFab
 import com.moltrax.personalnoteapp.ui.navigation.WorkoutDetail
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,10 +82,8 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            DhFab(
                 onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) { Icon(Icons.Default.Add, stringResource(R.string.workout_new_program)) }
         },
         snackbarHost = { SnackbarHost(snackbar) },

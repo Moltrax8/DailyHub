@@ -36,8 +36,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import com.moltrax.personalnoteapp.ui.components.DhFab
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -128,7 +128,7 @@ fun DuoHubScreen(
         },
         floatingActionButton = {
             if (showFab) {
-                FloatingActionButton(onClick = { showAdd = true }) {
+                DhFab(onClick = { showAdd = true }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
                 }
             }

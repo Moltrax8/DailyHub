@@ -30,6 +30,7 @@ import com.moltrax.personalnoteapp.domain.model.Exercise
 import com.moltrax.personalnoteapp.domain.model.ExerciseType
 import com.moltrax.personalnoteapp.domain.model.PlannedSet
 import com.moltrax.personalnoteapp.domain.model.WorkoutExercise
+import com.moltrax.personalnoteapp.ui.components.DhFab
 import com.moltrax.personalnoteapp.ui.components.ExerciseMediaPlayer
 import com.moltrax.personalnoteapp.ui.components.ExerciseThumb
 import com.moltrax.personalnoteapp.ui.i18n.label
@@ -137,10 +138,8 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            DhFab(
                 onClick = { showAddWorkoutDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
                 Icon(Icons.Default.Add, stringResource(R.string.workout_add_workout))
             }
