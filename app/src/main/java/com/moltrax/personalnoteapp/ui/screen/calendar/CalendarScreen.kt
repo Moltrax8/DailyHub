@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -84,7 +84,7 @@ fun CalendarContent(
         map
     }
 
-    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(MaterialTheme.colorScheme.background)) {
         MonthHeader(
             month = currentMonth,
             onPrev = { currentMonthIso = currentMonth.minusMonths(1).toString() },
@@ -230,7 +230,7 @@ private fun DayCell(
 }
 
 @Composable
-private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Unit) {
+private fun DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val header = remember(date, locale) {
         val d = Date(date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
@@ -243,17 +243,16 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
         color = MaterialTheme.colorScheme.onBackground)
 
     if (tasks.isEmpty()) {
-        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.calendar_no_tasks), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
-    LazyColumn(
-        Modifier.fillMaxWidth().weight(1f),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(tasks, key = { it.id }) { task ->
+        tasks.forEach { task ->
             com.moltrax.personalnoteapp.ui.components.DhCard(onClick = { onTap(task) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
