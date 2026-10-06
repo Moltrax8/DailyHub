@@ -207,31 +207,46 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  async function persistRefresh(refreshed: {
+    access_token: string;
+    refresh_token: string | null;
+    expires_at: string;
+    scope: string;
+  }): Promise<void> {
+    accessToken = refreshed.access_token;
+    await admin.from("github_tokens").update({
+      access_token: refreshed.access_token,
+      refresh_token: refreshed.refresh_token ?? tokenRow.refresh_token,
+      expires_at: refreshed.expires_at,
+      scope: refreshed.scope,
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId);
+  }
+
   if (!usedInstallations) {
     for (let page = 1; page <= 10; page++) {
-      const rRes = await fetch(
-        `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated`,
-        { headers: ghHeaders(accessToken) },
-      ).catch(() => null);
+      const pageUrl =
+        `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated`;
+      let rRes = await fetch(pageUrl, { headers: ghHeaders(accessToken) }).catch(() => null);
       if (!rRes) {
         return json(502, { error: "github_failed" });
       }
       if (rRes.status === 401) {
-        // Token may have just expired: try one refresh if possible.
+        // Token may have just expired: try one refresh, then retry this page.
         if (tokenRow.refresh_token) {
           const refreshed = await tryRefresh(tokenRow.refresh_token);
           if (!refreshed) return json(404, { error: "not_connected" });
-          accessToken = refreshed.access_token;
-          await admin.from("github_tokens").update({
-            access_token: refreshed.access_token,
-            refresh_token: refreshed.refresh_token ?? tokenRow.refresh_token,
-            expires_at: refreshed.expires_at,
-            scope: refreshed.scope,
-            updated_at: new Date().toISOString(),
-          }).eq("user_id", userId);
-          return json(502, { error: "retry" });
+          await persistRefresh(refreshed);
+          rRes = await fetch(pageUrl, { headers: ghHeaders(accessToken) }).catch(() => null);
+          if (!rRes) {
+            return json(502, { error: "github_failed" });
+          }
+          if (rRes.status === 401) {
+            return json(404, { error: "not_connected" });
+          }
+        } else {
+          return json(404, { error: "not_connected" });
         }
-        return json(404, { error: "not_connected" });
       }
       if (!rRes.ok) {
         return json(502, { error: "github_failed" });
