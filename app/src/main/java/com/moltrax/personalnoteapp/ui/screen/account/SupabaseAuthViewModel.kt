@@ -47,6 +47,20 @@ class SupabaseAuthViewModel @Inject constructor(
     val sessionState: StateFlow<SessionState> = auth.sessionState
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionState.SignedOut)
 
+    /** Stored account email for display (Profile header); null when signed out. Read-only. */
+    private val _userEmail = MutableStateFlow<String?>(null)
+    val userEmail: StateFlow<String?> = _userEmail.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            auth.sessionState.collect {
+                _userEmail.value = if (it is SessionState.SignedIn) {
+                    runCatching { auth.currentUserEmail() }.getOrNull()
+                } else null
+            }
+        }
+    }
+
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
