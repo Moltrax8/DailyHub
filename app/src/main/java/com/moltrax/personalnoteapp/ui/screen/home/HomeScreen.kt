@@ -60,6 +60,7 @@ import com.moltrax.personalnoteapp.domain.model.LoggedSet
 import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.ui.SyncViewModel
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
 import com.moltrax.personalnoteapp.ui.components.DhEmptyState
 import com.moltrax.personalnoteapp.ui.components.DhFab
 import com.moltrax.personalnoteapp.ui.components.DhFilterChip
@@ -330,6 +331,10 @@ fun HomeScreen(
                             else nav.navigate(TaskDetail(task.id))
                         },
                         onDelete = { vm.deleteTask(it.id) },
+                        // Drag handles only where manual sorting makes sense:
+                        // Active filter with more than one visible task.
+                        showDragHandles = state.filter.status == TaskStatus.ACTIVE &&
+                            state.filteredTasks.size > 1,
                         emptyText = when (state.filter.status) {
                             TaskStatus.DONE   -> stringResource(R.string.empty_done)
                             TaskStatus.ALL    -> stringResource(R.string.empty_all)
@@ -624,6 +629,7 @@ private fun TaskList(
     emptyText: String,
     emptyDescription: String,
     showEmptyAction: Boolean,
+    showDragHandles: Boolean,
     onAddTask: () -> Unit,
 ) {
     if (tasks.isEmpty()) {
@@ -673,6 +679,9 @@ private fun TaskList(
         }
         entries = entries.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
     }
+    // Deletes have no undo/restore path in the ViewModel, so a swiped row
+    // stages a confirm dialog instead of deleting immediately.
+    var pendingDelete by remember { mutableStateOf<Task?>(null) }
 
     LazyColumn(
         state = lazyListState,
@@ -688,30 +697,73 @@ private fun TaskList(
                 is TaskListEntry.Row -> {
                     val task = entry.task
                     ReorderableItem(reorderableState, key = entryKey(entry)) { isDragging ->
-                        TaskItem(
-                            task = task,
-                            dragging = isDragging,
-                            onToggle = { onToggle(task) },
-                            onTap = { onTap(task) },
-                            onDelete = { onDelete(task) },
-                            dragHandle = {
-                                IconButton(
-                                    onClick = {},
-                                    modifier = Modifier.draggableHandle(
-                                        onDragStopped = {
-                                            onReorder(entries.filterIsInstance<TaskListEntry.Row>().map { it.task.id })
-                                        },
-                                    ),
-                                ) {
-                                    Icon(Icons.Default.DragHandle, contentDescription = stringResource(R.string.cd_drag_reorder),
-                                        modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                        // Swipe end-to-start stages the delete confirmation and snaps
+                        // back; the dialog (below) performs the actual delete.
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    pendingDelete = task
+                                    false
+                                } else true
                             },
                         )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = true,
+                            backgroundContent = {
+                                Box(
+                                    Modifier.fillMaxSize()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.errorContainer)
+                                        .padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.CenterEnd,
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.action_delete),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                }
+                            },
+                        ) {
+                            TaskItem(
+                                task = task,
+                                dragging = isDragging,
+                                onToggle = { onToggle(task) },
+                                onTap = { onTap(task) },
+                                dragHandle = if (showDragHandles) {
+                                    {
+                                        IconButton(
+                                            onClick = {},
+                                            modifier = Modifier.draggableHandle(
+                                                onDragStopped = {
+                                                    onReorder(entries.filterIsInstance<TaskListEntry.Row>().map { it.task.id })
+                                                },
+                                            ),
+                                        ) {
+                                            Icon(Icons.Default.DragHandle, contentDescription = stringResource(R.string.cd_drag_reorder),
+                                                modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.outline)
+                                        }
+                                    }
+                                } else null,
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    pendingDelete?.let { task ->
+        DhConfirmDialog(
+            title = stringResource(R.string.task_delete_title),
+            message = stringResource(R.string.task_delete_message, task.title),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { pendingDelete = null; onDelete(task) },
+            onDismiss = { pendingDelete = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
     }
 }
 
@@ -722,7 +774,6 @@ fun TaskItem(
     task: Task,
     onToggle: () -> Unit,
     onTap: () -> Unit,
-    onDelete: () -> Unit,
     dragging: Boolean = false,
     dragHandle: (@Composable () -> Unit)? = null,
 ) {
@@ -823,10 +874,6 @@ fun TaskItem(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.action_delete),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             dragHandle?.invoke()
         }

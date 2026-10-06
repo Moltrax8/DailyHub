@@ -562,17 +562,24 @@ private fun GitHubRow(ghVm: GithubSettingsViewModel = hiltViewModel()) {
 
     // One row: title "GitHub", neutral status line, trailing tonal action.
     // Ordinary states stay in onSurfaceVariant — error red is only for real failures.
+    // Signed-out is NOT an error: the repo throws "Not signed in." when there is
+    // no app session, which we render as a neutral hint with no connect button
+    // (ViewModel/data logic untouched).
+    val signedOut = state.login == null && state.error == "Not signed in."
     DhSettingsRow(
         title = stringResource(R.string.settings_section_github),
         supporting = state.login?.let { context.getString(R.string.github_connected_as, "@$it") }
-            ?: stringResource(R.string.github_not_connected_title),
+            ?: if (signedOut) stringResource(R.string.github_sign_in_to_connect)
+            else stringResource(R.string.github_not_connected_title),
         leading = { DhTonalIcon(Icons.Filled.Code, contentDescription = null) },
         trailing = {
             if (state.login == null) {
-                FilledTonalButton(
-                    onClick = { ghVm.startConnect(openUrl) },
-                    enabled = !state.busy,
-                ) { Text(stringResource(R.string.github_connect)) }
+                if (!signedOut) {
+                    FilledTonalButton(
+                        onClick = { ghVm.startConnect(openUrl) },
+                        enabled = !state.busy,
+                    ) { Text(stringResource(R.string.github_connect_short)) }
+                }
             } else {
                 FilledTonalButton(
                     onClick = { showDisconnect = true },
@@ -581,13 +588,15 @@ private fun GitHubRow(ghVm: GithubSettingsViewModel = hiltViewModel()) {
             }
         },
     )
-    state.error?.let {
-        Text(
-            it,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
-        )
+    if (!signedOut) {
+        state.error?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+            )
+        }
     }
 
     if (showDisconnect) {
