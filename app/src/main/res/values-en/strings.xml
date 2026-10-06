@@ -556,6 +556,7 @@
     <string name="settings_section_account">Account</string>
     <string name="settings_reminder_min">%1$d min</string>
     <string name="settings_reminder_hour">%1$d h</string>
+    <string name="settings_reminder_hour_half">1.5 h</string>
     <string name="settings_reminder_day">%1$d d</string>
     <string name="settings_notif_status_title">Permission status</string>
     <string name="settings_state_on">On</string>
@@ -580,7 +581,21 @@
     <string name="profile_section_personal">Personal</string>
     <string name="profile_section_account">Account</string>
     <string name="profile_section_sync">Sync &amp; backup</string>
+    <string name="profile_section_sync_integrations">Sync &amp; integrations</string>
     <string name="profile_section_integrations">Integrations</string>
     <string name="profile_sync_title">Sync</string>
     <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
+
+    <!-- Task list groups + empty state (rd2) -->
+    <string name="tasks_group_overdue">Overdue</string>
+    <string name="tasks_group_today">Today</string>
+    <string name="tasks_group_upcoming">Upcoming</string>
+    <string name="tasks_group_no_date">No date</string>
+    <string name="tasks_empty_desc">Add your first task to get started — it takes seconds.</string>
+    <string name="tasks_empty_done_desc">Tasks you complete will show up here.</string>
+    <!-- Task detail reminder row (rd2, read-only — value comes from Settings) -->
+    <string name="task_reminder_title">Reminder</string>
+    <string name="task_reminder_default_off">Off</string>
+    <!-- Calendar agenda header (rd2) -->
+    <string name="calendar_tasks_count">%1$d tasks</string>
 </resources>

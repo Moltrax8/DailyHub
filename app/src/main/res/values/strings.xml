@@ -556,6 +556,7 @@
     <string name="settings_section_account">Hesap</string>
     <string name="settings_reminder_min">%1$d dk</string>
     <string name="settings_reminder_hour">%1$d sa</string>
+    <string name="settings_reminder_hour_half">1,5 sa</string>
     <string name="settings_reminder_day">%1$d gün</string>
     <string name="settings_notif_status_title">İzin durumu</string>
     <string name="settings_state_on">Açık</string>
@@ -580,7 +581,21 @@
     <string name="profile_section_personal">Kişisel</string>
     <string name="profile_section_account">Hesap</string>
     <string name="profile_section_sync">Senkronizasyon ve yedekleme</string>
+    <string name="profile_section_sync_integrations">Senkronizasyon ve entegrasyonlar</string>
     <string name="profile_section_integrations">Entegrasyonlar</string>
     <string name="profile_sync_title">Senkronizasyon</string>
     <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
+
+    <!-- Görev listesi grupları + boş durum (rd2) -->
+    <string name="tasks_group_overdue">Geciken</string>
+    <string name="tasks_group_today">Bugün</string>
+    <string name="tasks_group_upcoming">Yaklaşan</string>
+    <string name="tasks_group_no_date">Tarihsiz</string>
+    <string name="tasks_empty_desc">Başlamak için ilk görevini ekle — birkaç saniye sürer.</string>
+    <string name="tasks_empty_done_desc">Tamamladığın görevler burada görünür.</string>
+    <!-- Görev detayı hatırlatma satırı (rd2, salt okunur — değer Ayarlar\'dan gelir) -->
+    <string name="task_reminder_title">Hatırlatma</string>
+    <string name="task_reminder_default_off">Kapalı</string>
+    <!-- Takvim gündem başlığı (rd2) -->
+    <string name="calendar_tasks_count">%1$d görev</string>
 </resources>

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
@@ -295,8 +296,8 @@ fun ProfileScreen(
                 )
             }
 
-            // Sync & backup status (details live in Settings).
-            DhSection(title = stringResource(R.string.profile_section_sync)) {
+            // Sync & integrations in ONE group block (details live in Settings).
+            DhSection(title = stringResource(R.string.profile_section_sync_integrations)) {
                 DhSettingsRow(
                     title = stringResource(R.string.profile_sync_title),
                     supporting = lastSyncAt?.let { stringResource(R.string.settings_last_sync, it) }
@@ -311,15 +312,12 @@ fun ProfileScreen(
                     },
                     onClick = { nav.navigate(Settings) },
                 )
-            }
-
-            // Integrations: GitHub status (connect lives in Settings).
-            DhSection(title = stringResource(R.string.profile_section_integrations)) {
+                DhDivider()
                 DhSettingsRow(
                     title = stringResource(R.string.settings_section_github),
                     supporting = ghState.login?.let { context.getString(R.string.github_connected_as, "@$it") }
                         ?: stringResource(R.string.github_not_connected_title),
-                    leading = { DhTonalIcon(Icons.Filled.CloudSync, contentDescription = null) },
+                    leading = { DhTonalIcon(Icons.Filled.Code, contentDescription = null) },
                     trailing = {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowForward,
