@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Workspaces
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -146,13 +147,34 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
             }
             // Publishing is not possible (Google verification), so sign-in is
             // granted per-person: tapping opens the owner's Telegram profile.
-            DhCard {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        stringResource(R.string.login_access_msg),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            // Quiet tonal info block (not a bordered card).
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Text(
+                            stringResource(R.string.login_access_msg),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                     TextButton(
                         onClick = {
                             runCatching {
@@ -161,6 +183,7 @@ fun LoginScreen(nav: NavController, vm: AuthViewModel = hiltViewModel()) {
                                 )
                             }
                         },
+                        modifier = Modifier.align(Alignment.End),
                     ) { Text(stringResource(R.string.login_access_action)) }
                 }
             }

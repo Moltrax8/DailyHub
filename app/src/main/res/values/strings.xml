@@ -556,6 +556,7 @@
     <string name="settings_section_account">Hesap</string>
     <string name="settings_reminder_min">%1$d dk</string>
     <string name="settings_reminder_hour">%1$d sa</string>
+    <string name="settings_reminder_hour_half">1,5 sa</string>
     <string name="settings_reminder_day">%1$d gün</string>
     <string name="settings_notif_status_title">İzin durumu</string>
     <string name="settings_state_on">Açık</string>
@@ -580,6 +581,7 @@
     <string name="profile_section_personal">Kişisel</string>
     <string name="profile_section_account">Hesap</string>
     <string name="profile_section_sync">Senkronizasyon ve yedekleme</string>
+    <string name="profile_section_sync_integrations">Senkronizasyon ve entegrasyonlar</string>
     <string name="profile_section_integrations">Entegrasyonlar</string>
     <string name="profile_sync_title">Senkronizasyon</string>
     <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
@@ -609,4 +611,26 @@
     <string name="spaces_leave_confirm">Bu ortak alandan ayrılacaksın. Tekrar katılmak için yeni davet gerekir.</string>
     <string name="spaces_remove_title">Üye çıkarılsın mı?</string>
     <string name="spaces_remove_confirm">“%1$s” bu alandan çıkarılacak.</string>
+    <!-- Görev listesi grupları + boş durum (rd2) -->
+    <string name="tasks_group_overdue">Geciken</string>
+    <string name="tasks_group_today">Bugün</string>
+    <string name="tasks_group_upcoming">Yaklaşan</string>
+    <string name="tasks_group_no_date">Tarihsiz</string>
+    <string name="tasks_empty_desc">Başlamak için ilk görevini ekle — birkaç saniye sürer.</string>
+    <string name="tasks_empty_done_desc">Tamamladığın görevler burada görünür.</string>
+    <!-- Görev detayı hatırlatma satırı (rd2, salt okunur — değer Ayarlar\'dan gelir) -->
+    <string name="task_reminder_title">Hatırlatma</string>
+    <string name="task_reminder_default_off">Kapalı</string>
+    <!-- Takvim gündem başlığı (rd2) -->
+    <string name="calendar_tasks_count">%1$d görev</string>
+    <!-- Düzeltmeler (rd4): switch birliği, nötr çıkış durumu, kaydır-sil, gündem, görev düzenleyici -->
+    <string name="github_sign_in_to_connect">Bağlanmak için giriş yap</string>
+    <string name="github_connect_short">Bağlan</string>
+    <string name="calendar_empty_title">Planlanan bir şey yok</string>
+    <string name="task_title_hint">Ne yapılması gerekiyor?</string>
+    <string name="task_due_today">Bugün, %1$s</string>
+    <string name="task_due_tomorrow">Yarın, %1$s</string>
+    <string name="task_keep_when_empty">Boşken kategoriyi koru</string>
+    <string name="task_delete_title">Bu görev silinsin mi?</string>
+    <string name="task_delete_message">“%1$s” silinecek. Bu işlem geri alınamaz.</string>
 </resources>

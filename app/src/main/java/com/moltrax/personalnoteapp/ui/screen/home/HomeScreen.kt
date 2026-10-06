@@ -11,12 +11,14 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +33,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.platform.LocalConfiguration
@@ -54,7 +60,12 @@ import com.moltrax.personalnoteapp.domain.model.LoggedSet
 import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.ui.SyncViewModel
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
 import com.moltrax.personalnoteapp.ui.components.DhFab
+import com.moltrax.personalnoteapp.ui.components.DhFilterChip
+import com.moltrax.personalnoteapp.ui.components.DhSectionHeader
+import com.moltrax.personalnoteapp.ui.components.DhStatusChip
 import com.moltrax.personalnoteapp.ui.i18n.label
 import com.moltrax.personalnoteapp.ui.navigation.*
 import com.moltrax.personalnoteapp.ui.theme.AppColors
@@ -178,10 +189,17 @@ fun HomeScreen(
             notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
+    // Inline tonal banner state: shown when notifications are off until dismissed.
+    // It lives in the content flow (never floating over the FAB).
+    var notifBannerDismissed by rememberSaveable { mutableStateOf(false) }
+    var notifEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
     val notifLifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(notifLifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) maybeAskNotifPermission()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notifEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+                maybeAskNotifPermission()
+            }
         }
         notifLifecycleOwner.lifecycle.addObserver(observer)
         onDispose { notifLifecycleOwner.lifecycle.removeObserver(observer) }
@@ -240,6 +258,51 @@ fun HomeScreen(
             Spacer(Modifier.height(8.dp))
 
             if (homeTab == 0) {
+                // Tonal inline permission banner in the content flow (dismissible, never over the FAB).
+                if (!notifEnabled && !notifBannerDismissed) {
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.NotificationsOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(22.dp),
+                            )
+                            Text(
+                                stringResource(R.string.notif_permission_rationale),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            TextButton(onClick = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        },
+                                    )
+                                }
+                            }) { Text(stringResource(R.string.notif_permission_open_settings)) }
+                            IconButton(onClick = { notifBannerDismissed = true }, modifier = Modifier.size(48.dp)) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.action_dismiss),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                            }
+                        }
+                    }
+                }
                 TaskFilterBar(
                     filter = state.filter,
                     categories = state.categories,
@@ -268,11 +331,21 @@ fun HomeScreen(
                             else nav.navigate(TaskDetail(task.id))
                         },
                         onDelete = { vm.deleteTask(it.id) },
+                        // Drag handles only where manual sorting makes sense:
+                        // Active filter with more than one visible task.
+                        showDragHandles = state.filter.status == TaskStatus.ACTIVE &&
+                            state.filteredTasks.size > 1,
                         emptyText = when (state.filter.status) {
                             TaskStatus.DONE   -> stringResource(R.string.empty_done)
                             TaskStatus.ALL    -> stringResource(R.string.empty_all)
                             TaskStatus.ACTIVE -> stringResource(R.string.empty_active)
                         },
+                        emptyDescription = when (state.filter.status) {
+                            TaskStatus.DONE -> stringResource(R.string.tasks_empty_done_desc)
+                            else -> stringResource(R.string.tasks_empty_desc)
+                        },
+                        showEmptyAction = state.filter.status != TaskStatus.DONE,
+                        onAddTask = { nav.navigate(TaskDetail("new")) },
                     )
                 }
             } else {
@@ -456,10 +529,10 @@ private fun TaskFilterBar(
                 TaskStatus.ACTIVE to stringResource(R.string.filter_active),
                 TaskStatus.DONE   to stringResource(R.string.filter_done),
             ).forEach { (status, label) ->
-                FilterChip(
+                DhFilterChip(
                     selected = filter.status == status,
                     onClick = { onFilterChange(filter.copy(status = status)) },
-                    label = { Text(label) },
+                    label = label,
                 )
             }
         }
@@ -471,12 +544,12 @@ private fun TaskFilterBar(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
+                DhFilterChip(
                     selected = filter.categories.isEmpty() && !filter.untaggedOnly,
                     onClick = { onFilterChange(filter.copy(categories = emptySet(), untaggedOnly = false)) },
-                    label = { Text(stringResource(R.string.categories_all)) },
+                    label = stringResource(R.string.categories_all),
                 )
-                FilterChip(
+                DhFilterChip(
                     selected = filter.untaggedOnly,
                     onClick = {
                         onFilterChange(filter.copy(
@@ -484,11 +557,11 @@ private fun TaskFilterBar(
                             categories = emptySet(),
                         ))
                     },
-                    label = { Text(stringResource(R.string.categories_untagged)) },
+                    label = stringResource(R.string.categories_untagged),
                 )
                 categories.forEach { cat ->
                     val selected = filter.categories.any { it.equals(cat, ignoreCase = true) }
-                    FilterChip(
+                    DhFilterChip(
                         selected = selected,
                         onClick = {
                             val next = if (selected) {
@@ -498,9 +571,49 @@ private fun TaskFilterBar(
                             }
                             onFilterChange(filter.copy(categories = next, untaggedOnly = false))
                         },
-                        label = { Text(cat) },
+                        label = cat,
                     )
                 }
+            }
+        }
+    }
+}
+
+/** Grouped-list entries: quiet section labels interleaved with task rows. */
+private sealed interface TaskListEntry {
+    data class Header(val key: String, val titleRes: Int) : TaskListEntry
+    data class Row(val task: Task) : TaskListEntry
+}
+
+private fun entryKey(entry: TaskListEntry): String = when (entry) {
+    is TaskListEntry.Header -> entry.key
+    is TaskListEntry.Row -> "task-${entry.task.id}"
+}
+
+/** Date bucket for grouping: 0 Overdue, 1 Today, 2 Upcoming, 3 No date. */
+private fun taskGroupIndex(task: Task, startOfToday: Long, startOfTomorrow: Long): Int {
+    val due = task.dueDate ?: return 3
+    if (due >= startOfTomorrow) return 2
+    if (due >= startOfToday) return 1
+    // Past due only counts as overdue while still open; done items rest under Today.
+    return if (!task.isDone) 0 else 1
+}
+
+private fun buildTaskEntries(tasks: List<Task>, startOfToday: Long, startOfTomorrow: Long): List<TaskListEntry> {
+    val groups = List(4) { mutableListOf<Task>() }
+    tasks.forEach { groups[taskGroupIndex(it, startOfToday, startOfTomorrow)].add(it) }
+    val titles = listOf(
+        R.string.tasks_group_overdue,
+        R.string.tasks_group_today,
+        R.string.tasks_group_upcoming,
+        R.string.tasks_group_no_date,
+    )
+    val keys = listOf("g-overdue", "g-today", "g-upcoming", "g-nodate")
+    return buildList {
+        groups.forEachIndexed { index, list ->
+            if (list.isNotEmpty()) {
+                add(TaskListEntry.Header(keys[index], titles[index]))
+                list.forEach { add(TaskListEntry.Row(it)) }
             }
         }
     }
@@ -514,69 +627,154 @@ private fun TaskList(
     onTap: (Task) -> Unit,
     onDelete: (Task) -> Unit,
     emptyText: String,
+    emptyDescription: String,
+    showEmptyAction: Boolean,
+    showDragHandles: Boolean,
+    onAddTask: () -> Unit,
 ) {
     if (tasks.isEmpty()) {
         // LazyColumn (not Box): a scrollable container is needed so the pull-to-refresh gesture
-        // is still detected on an empty list. The single item fills the screen, the text is centered.
+        // is still detected on an empty list. The single item fills the screen, centered content.
         LazyColumn(Modifier.fillMaxSize()) {
             item {
                 Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(emptyText, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    DhEmptyState(
+                        icon = Icons.Default.CheckCircle,
+                        title = emptyText,
+                        description = emptyDescription,
+                        actionLabel = if (showEmptyAction) stringResource(R.string.home_new_task) else null,
+                        onAction = if (showEmptyAction) onAddTask else null,
+                    )
                 }
             }
         }
         return
     }
 
-    // Local ordered copy for smooth animation while dragging; synced when the data source changes.
+    // Day boundaries for grouping (recomputed per composition; cheap calendar math).
+    val (startOfToday, startOfTomorrow) = remember {
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val start = cal.timeInMillis
+        cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+        start to cal.timeInMillis
+    }
+    // Local entry copy for smooth animation while dragging; synced when the data source changes.
+    // Headers are fixed labels: drops onto them are ignored, drops onto rows reorder the tasks.
     // Persistent write + sync happen only when the drag ENDS (onDragStopped), not on every step.
-    var ordered by remember { mutableStateOf(tasks) }
-    LaunchedEffect(tasks) { ordered = tasks }
+    var entries by remember(tasks) { mutableStateOf(buildTaskEntries(tasks, startOfToday, startOfTomorrow)) }
+    LaunchedEffect(tasks) { entries = buildTaskEntries(tasks, startOfToday, startOfTomorrow) }
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        ordered = ordered.toMutableList().apply { add(to.index, removeAt(from.index)) }
+        val fromIdx = entries.indexOfFirst { entryKey(it) == from.key }
+        val toIdx = entries.indexOfFirst { entryKey(it) == to.key }
+        if (fromIdx == -1 || toIdx == -1) return@rememberReorderableLazyListState
+        if (entries[fromIdx] !is TaskListEntry.Row || entries[toIdx] !is TaskListEntry.Row) {
+            return@rememberReorderableLazyListState
+        }
+        entries = entries.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
     }
+    // Deletes have no undo/restore path in the ViewModel, so a swiped row
+    // stages a confirm dialog instead of deleting immediately.
+    var pendingDelete by remember { mutableStateOf<Task?>(null) }
 
     LazyColumn(
         state = lazyListState,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        items(ordered, key = { it.id }) { task ->
-            ReorderableItem(reorderableState, key = task.id) { isDragging ->
-                val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "drag-elevation")
-                TaskItem(
-                    task = task,
-                    elevation = elevation,
-                    onToggle = { onToggle(task) },
-                    onTap = { onTap(task) },
-                    onDelete = { onDelete(task) },
-                    dragHandle = {
-                        IconButton(
-                            onClick = {},
-                            modifier = Modifier.draggableHandle(
-                                onDragStopped = { onReorder(ordered.map { it.id }) },
-                            ),
-                        ) {
-                            Icon(Icons.Default.DragHandle, contentDescription = stringResource(R.string.cd_drag_reorder),
-                                modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    },
+        items(entries.size, key = { index -> entryKey(entries[index]) }) { index ->
+            when (val entry = entries[index]) {
+                is TaskListEntry.Header -> DhSectionHeader(
+                    title = stringResource(entry.titleRes),
+                    modifier = Modifier.padding(top = if (index == 0) 4.dp else 14.dp, bottom = 2.dp),
                 )
+                is TaskListEntry.Row -> {
+                    val task = entry.task
+                    ReorderableItem(reorderableState, key = entryKey(entry)) { isDragging ->
+                        // Swipe end-to-start stages the delete confirmation and snaps
+                        // back; the dialog (below) performs the actual delete.
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    pendingDelete = task
+                                    false
+                                } else true
+                            },
+                        )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = true,
+                            backgroundContent = {
+                                Box(
+                                    Modifier.fillMaxSize()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.errorContainer)
+                                        .padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.CenterEnd,
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.action_delete),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                }
+                            },
+                        ) {
+                            TaskItem(
+                                task = task,
+                                dragging = isDragging,
+                                onToggle = { onToggle(task) },
+                                onTap = { onTap(task) },
+                                dragHandle = if (showDragHandles) {
+                                    {
+                                        IconButton(
+                                            onClick = {},
+                                            modifier = Modifier.draggableHandle(
+                                                onDragStopped = {
+                                                    onReorder(entries.filterIsInstance<TaskListEntry.Row>().map { it.task.id })
+                                                },
+                                            ),
+                                        ) {
+                                            Icon(Icons.Default.DragHandle, contentDescription = stringResource(R.string.cd_drag_reorder),
+                                                modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.outline)
+                                        }
+                                    }
+                                } else null,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+
+    pendingDelete?.let { task ->
+        DhConfirmDialog(
+            title = stringResource(R.string.task_delete_title),
+            message = stringResource(R.string.task_delete_message, task.title),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { pendingDelete = null; onDelete(task) },
+            onDismiss = { pendingDelete = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
+    }
 }
 
+/** Things-style task row: round checkbox, title (1-2 lines), tonal meta chips. */
 @Composable
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 fun TaskItem(
     task: Task,
     onToggle: () -> Unit,
     onTap: () -> Unit,
-    onDelete: () -> Unit,
-    elevation: Dp = 0.dp,
+    dragging: Boolean = false,
     dragHandle: (@Composable () -> Unit)? = null,
 ) {
     // Due-date formatter depends on the composition locale; recreated when the language changes.
@@ -586,28 +784,26 @@ fun TaskItem(
     val dueToday = !task.isDone && task.dueDate != null && !overdue &&
         java.text.SimpleDateFormat("yyyyMMdd", locale).format(Date(task.dueDate)) ==
         java.text.SimpleDateFormat("yyyyMMdd", locale).format(Date(System.currentTimeMillis()))
-    Card(
+    Surface(
         onClick = onTap,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (task.isDone) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-            else MaterialTheme.colorScheme.surface,
-        ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         shape = MaterialTheme.shapes.medium,
+        color = if (dragging) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+        else MaterialTheme.colorScheme.surface,
     ) {
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            dragHandle?.invoke()
-            Checkbox(
+        Row(
+            Modifier.alpha(if (task.isDone) 0.62f else 1f).padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DhRoundCheck(
                 checked = task.isDone,
-                onCheckedChange = { onToggle() },
-                modifier = Modifier.size(40.dp),
+                onToggle = onToggle,
+                contentDescription = task.title,
             )
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(
                     task.title,
-                    style = if (task.isDone) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleSmall,
+                    style = if (task.isDone) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                     color = if (task.isDone) MaterialTheme.colorScheme.onSurfaceVariant
                     else MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (task.isDone) TextDecoration.LineThrough else TextDecoration.None,
@@ -624,39 +820,40 @@ fun TaskItem(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         if (task.isDone) {
-                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                            DhStatusChip(
                                 label = stringResource(R.string.task_badge_done),
                                 container = MaterialTheme.colorScheme.secondaryContainer,
                                 icon = Icons.Default.CheckCircle,
                             )
                         }
                         if (task.isRecurring) {
-                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                            DhStatusChip(
                                 label = stringResource(R.string.cd_recurring),
                                 icon = Icons.Default.Repeat,
                             )
                         }
                         task.dueDate?.let {
-                            val (dueLabel, dueContainer) = when {
-                                task.isDone -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.secondaryContainer)
-                                overdue -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.errorContainer)
-                                dueToday -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.primaryContainer)
-                                else -> Pair(taskDueFmt.format(Date(it)), MaterialTheme.colorScheme.secondaryContainer)
+                            // Overdue stays tonal (section label carries the meaning); today gets the calm accent.
+                            val dueContainer = when {
+                                task.isDone -> MaterialTheme.colorScheme.secondaryContainer
+                                overdue -> MaterialTheme.colorScheme.secondaryContainer
+                                dueToday -> MaterialTheme.colorScheme.primaryContainer
+                                else -> MaterialTheme.colorScheme.secondaryContainer
                             }
-                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
-                                label = dueLabel,
+                            DhStatusChip(
+                                label = taskDueFmt.format(Date(it)),
                                 container = dueContainer,
                                 icon = Icons.Default.Schedule,
                             )
                         }
                         if (task.linkedWorkoutId != null || task.linkedProgramId != null) {
-                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                            DhStatusChip(
                                 label = stringResource(R.string.task_badge_workout),
                                 icon = Icons.Default.FitnessCenter,
                             )
                         }
                         task.categoryNames.take(3).forEach { tag ->
-                            com.moltrax.personalnoteapp.ui.components.DhStatusChip(label = tag)
+                            DhStatusChip(label = tag)
                         }
                         if (task.subtaskCount > 0) {
                             Text(
@@ -678,9 +875,43 @@ fun TaskItem(
                     )
                 }
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.action_delete),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            dragHandle?.invoke()
+        }
+    }
+}
+
+/** Round Things-style checkbox with a full 48dp touch target (26dp visual circle). */
+@Composable
+private fun DhRoundCheck(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    contentDescription: String?,
+) {
+    Box(
+        modifier = Modifier.size(48.dp).clickable(
+            role = Role.Button,
+            onClickLabel = contentDescription,
+            onClick = onToggle,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier.size(26.dp).clip(CircleShape)
+                .background(if (checked) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .border(
+                    1.5.dp,
+                    if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
     }

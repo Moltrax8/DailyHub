@@ -5,10 +5,9 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
@@ -26,18 +26,19 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +70,7 @@ import com.moltrax.personalnoteapp.ui.components.DhSection
 import com.moltrax.personalnoteapp.ui.components.DhSegmentedControl
 import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
 import com.moltrax.personalnoteapp.ui.components.DhStatusChip
+import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
 import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.i18n.AppLanguage
@@ -92,8 +94,9 @@ private fun reminderLabel(context: Context, m: Int): String = when {
     else -> context.getString(R.string.reminder_hours_minutes_before, m / 60, m % 60)
 }
 
-/** Compact chip label for a preset (short units, localized). */
+/** Compact chip label for a preset: short consistent units (5 m … 1 d). */
 private fun reminderShortLabel(context: Context, m: Int): String = when {
+    m == 90 -> context.getString(R.string.settings_reminder_hour_half)
     m < 60 -> context.getString(R.string.settings_reminder_min, m)
     m % 1440 == 0 -> context.getString(R.string.settings_reminder_day, m / 1440)
     m % 60 == 0 -> context.getString(R.string.settings_reminder_hour, m / 60)
@@ -104,7 +107,7 @@ private const val URL_PRIVACY = "https://github.com/Moltrax8/DailyHub/blob/main/
 private const val URL_TERMS = "https://github.com/Moltrax8/DailyHub/blob/main/TERMS.md"
 private const val URL_RELEASES = "https://github.com/Moltrax8/DailyHub/releases"
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     nav: NavController,
@@ -163,9 +166,9 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            // --- Account (links to Profile) ---
-            val accountSupporting = accountEmail ?: vm.accountEmail
-                ?: stringResource(R.string.profile_account_offline_desc)
+            // --- Account (links to Profile): short status, details live on Profile. ---
+            val signedOutLabel = stringResource(R.string.profile_status_offline)
+            val accountSupporting = accountEmail ?: vm.accountEmail ?: signedOutLabel
             DhSection(title = stringResource(R.string.settings_section_account)) {
                 DhSettingsRow(
                     title = profileState.displayName,
@@ -247,7 +250,10 @@ fun SettingsScreen(
                     supporting = stringResource(R.string.settings_task_reminders_desc),
                     leading = { DhTonalIcon(Icons.Filled.Notifications, contentDescription = null) },
                     trailing = {
-                        Switch(checked = systemAlerts, onCheckedChange = { vm.setSystemAlertsEnabled(it) })
+                        DhSwitch(
+                            checked = systemAlerts,
+                            onCheckedChange = { vm.setSystemAlertsEnabled(it) },
+                        )
                     },
                     onClick = { vm.setSystemAlertsEnabled(!systemAlerts) },
                 )
@@ -264,8 +270,9 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    // One scrollable row of equal chips (short consistent labels).
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         reminderPresets.forEach { preset ->
@@ -374,7 +381,12 @@ fun SettingsScreen(
                         else R.string.settings_state_off,
                     ),
                     leading = { DhTonalIcon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                    trailing = { Switch(checked = autoUpdate, onCheckedChange = { vm.setAutoUpdate(it) }) },
+                    trailing = {
+                        DhSwitch(
+                            checked = autoUpdate,
+                            onCheckedChange = { vm.setAutoUpdate(it) },
+                        )
+                    },
                     onClick = { vm.setAutoUpdate(!autoUpdate) },
                 )
                 DhDivider()
@@ -421,7 +433,7 @@ fun SettingsScreen(
                 DhSettingsRow(
                     title = stringResource(R.string.settings_about_build),
                     supporting = BuildConfig.BUILD_TYPE,
-                    leading = { DhTonalIcon(Icons.Filled.Code, contentDescription = null) },
+                    leading = { DhTonalIcon(Icons.Filled.Build, contentDescription = null) },
                 )
                 DhDivider()
                 AboutLinkRow(
@@ -438,7 +450,7 @@ fun SettingsScreen(
                 DhDivider()
                 AboutLinkRow(
                     title = stringResource(R.string.settings_releases),
-                    icon = Icons.Filled.CloudSync,
+                    icon = Icons.Filled.OpenInNew,
                     onClick = { context.openUrl(URL_RELEASES) },
                 )
             }
@@ -548,33 +560,43 @@ private fun GitHubRow(ghVm: GithubSettingsViewModel = hiltViewModel()) {
         ghVm.finishLink(cb.code, cb.state)
     }
 
+    // One row: title "GitHub", neutral status line, trailing tonal action.
+    // Ordinary states stay in onSurfaceVariant — error red is only for real failures.
+    // Signed-out is NOT an error: the repo throws "Not signed in." when there is
+    // no app session, which we render as a neutral hint with no connect button
+    // (ViewModel/data logic untouched).
+    val signedOut = state.login == null && state.error == "Not signed in."
     DhSettingsRow(
-        title = state.login?.let { context.getString(R.string.github_connected_as, "@$it") }
-            ?: stringResource(R.string.github_connect),
-        supporting = if (state.login == null) stringResource(R.string.github_not_connected_desc)
-        else null,
-        leading = { DhTonalIcon(Icons.Filled.CloudSync, contentDescription = null) },
+        title = stringResource(R.string.settings_section_github),
+        supporting = state.login?.let { context.getString(R.string.github_connected_as, "@$it") }
+            ?: if (signedOut) stringResource(R.string.github_sign_in_to_connect)
+            else stringResource(R.string.github_not_connected_title),
+        leading = { DhTonalIcon(Icons.Filled.Code, contentDescription = null) },
         trailing = {
             if (state.login == null) {
-                OutlinedButton(
-                    onClick = { ghVm.startConnect(openUrl) },
-                    enabled = !state.busy,
-                ) { Text(stringResource(R.string.github_connect)) }
+                if (!signedOut) {
+                    FilledTonalButton(
+                        onClick = { ghVm.startConnect(openUrl) },
+                        enabled = !state.busy,
+                    ) { Text(stringResource(R.string.github_connect_short)) }
+                }
             } else {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { showDisconnect = true },
                     enabled = !state.busy,
                 ) { Text(stringResource(R.string.github_disconnect)) }
             }
         },
     )
-    state.error?.let {
-        Text(
-            it,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
-        )
+    if (!signedOut) {
+        state.error?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+            )
+        }
     }
 
     if (showDisconnect) {

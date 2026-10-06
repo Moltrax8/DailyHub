@@ -55,6 +55,7 @@ import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
 import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.screen.space.SpaceViewModel
 import com.moltrax.personalnoteapp.ui.screen.social.SocialViewModel
+import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -588,7 +589,7 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                         DhSettingsRow(
                             title = com.moltrax.personalnoteapp.domain.model.githubActivityTitle(kind),
                             trailing = {
-                                androidx.compose.material3.Switch(
+                                DhSwitch(
                                     checked = enabled,
                                     onCheckedChange = { vm.togglePref(spaceId, kind, it) },
                                 )
