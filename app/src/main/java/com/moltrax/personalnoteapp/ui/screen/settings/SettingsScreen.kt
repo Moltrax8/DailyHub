@@ -7,30 +7,32 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.SettingsSuggest
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,16 +40,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -57,18 +59,28 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.moltrax.personalnoteapp.BuildConfig
 import com.moltrax.personalnoteapp.FeatureFlags
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.ui.AppViewModel
-import com.moltrax.personalnoteapp.ui.components.DhCard
-import com.moltrax.personalnoteapp.ui.components.DhSectionHeader
+import com.moltrax.personalnoteapp.ui.components.DhDivider
+import com.moltrax.personalnoteapp.ui.components.DhFilterChip
+import com.moltrax.personalnoteapp.ui.components.DhSection
 import com.moltrax.personalnoteapp.ui.components.DhSegmentedControl
 import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
+import com.moltrax.personalnoteapp.ui.components.DhStatusChip
+import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.i18n.AppLanguage
-import com.moltrax.personalnoteapp.ui.navigation.Login
+import com.moltrax.personalnoteapp.ui.navigation.Profile
+import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthViewModel
+import com.moltrax.personalnoteapp.ui.screen.profile.ProfileViewModel
 import com.moltrax.personalnoteapp.ui.theme.DhThemeMode
+import kotlinx.coroutines.launch
 
-// Meaningful reminder presets (minutes)
+// Reminder presets (minutes). Stored values stay backward compatible: any
+// previously saved value still resolves via reminderLabel(), even when it is
+// not one of these chips.
 private val reminderPresets = listOf(5, 10, 15, 30, 45, 60, 90, 120, 180, 360, 720, 1440)
 
 private fun reminderLabel(context: Context, m: Int): String = when {
@@ -80,13 +92,33 @@ private fun reminderLabel(context: Context, m: Int): String = when {
     else -> context.getString(R.string.reminder_hours_minutes_before, m / 60, m % 60)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Compact chip label for a preset (short units, localized). */
+private fun reminderShortLabel(context: Context, m: Int): String = when {
+    m < 60 -> context.getString(R.string.settings_reminder_min, m)
+    m % 1440 == 0 -> context.getString(R.string.settings_reminder_day, m / 1440)
+    m % 60 == 0 -> context.getString(R.string.settings_reminder_hour, m / 60)
+    else -> context.getString(R.string.reminder_hours_minutes_before, m / 60, m % 60)
+}
+
+private const val URL_PRIVACY = "https://github.com/Moltrax8/DailyHub/blob/main/PRIVACY.md"
+private const val URL_TERMS = "https://github.com/Moltrax8/DailyHub/blob/main/TERMS.md"
+private const val URL_RELEASES = "https://github.com/Moltrax8/DailyHub/releases"
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    nav: NavController,
+    vm: SettingsViewModel = hiltViewModel(),
+    profileVm: ProfileViewModel = hiltViewModel(),
+    authVm: SupabaseAuthViewModel = hiltViewModel(),
+) {
     val reminderMinutes by vm.reminderMinutes.collectAsStateWithLifecycle()
     val systemAlerts by vm.systemAlertsEnabled.collectAsStateWithLifecycle()
     val lastSyncAt by vm.lastSyncAt.collectAsStateWithLifecycle()
     val language by vm.language.collectAsStateWithLifecycle()
+    val autoUpdate by vm.autoUpdate.collectAsStateWithLifecycle()
+    val accountEmail by authVm.userEmail.collectAsStateWithLifecycle()
+    val profileState by profileVm.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     var exactAlarmGranted by remember { mutableStateOf(vm.canScheduleExactAlarms()) }
@@ -107,15 +139,19 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     var showKeyDialog by remember { mutableStateOf(false) }
     var keyInput by remember { mutableStateOf("") }
 
+    val scope = rememberCoroutineScope()
+    var checkingUpdates by rememberSaveable { mutableStateOf(false) }
+    var updateResult by rememberSaveable { mutableStateOf<String?>(null) }
+    val upToDateText = stringResource(R.string.settings_up_to_date)
+    val unavailableText = stringResource(R.string.settings_update_unavailable)
+    val checkingText = stringResource(R.string.settings_checking)
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleMedium) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            DhTopBar(
+                title = stringResource(R.string.settings_title),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
             )
         },
     ) { padding ->
@@ -125,194 +161,316 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            // --- Appearance ---
-            SettingsGroup(title = stringResource(R.string.settings_section_appearance), icon = Icons.Filled.SettingsSuggest) {
-                Text(
-                    stringResource(R.string.settings_appearance_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                val options = listOf(
-                    stringResource(R.string.settings_appearance_system),
-                    stringResource(R.string.settings_appearance_light),
-                    stringResource(R.string.settings_appearance_dark),
-                )
-                val selected = when (themeMode) {
-                    DhThemeMode.LIGHT -> 1
-                    DhThemeMode.DARK -> 2
-                    else -> 0
-                }
-                DhSegmentedControl(
-                    options = options,
-                    selectedIndex = selected,
-                    onSelect = {
-                        appVm.setThemeMode(
-                            when (it) {
-                                1 -> DhThemeMode.LIGHT
-                                2 -> DhThemeMode.DARK
-                                else -> DhThemeMode.SYSTEM
-                            },
+            // --- Account (links to Profile) ---
+            val accountSupporting = accountEmail ?: vm.accountEmail
+                ?: stringResource(R.string.profile_account_offline_desc)
+            DhSection(title = stringResource(R.string.settings_section_account)) {
+                DhSettingsRow(
+                    title = profileState.displayName,
+                    supporting = accountSupporting,
+                    leading = {
+                        DhTonalIcon(
+                            Icons.Filled.AccountCircle,
+                            contentDescription = null,
                         )
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    trailing = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    onClick = { nav.navigate(Profile) },
                 )
+            }
+
+            // --- Appearance ---
+            DhSection(title = stringResource(R.string.settings_section_appearance)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DhTonalIcon(Icons.Filled.Palette, contentDescription = null)
+                    val options = listOf(
+                        stringResource(R.string.settings_appearance_system),
+                        stringResource(R.string.settings_appearance_light),
+                        stringResource(R.string.settings_appearance_dark),
+                    )
+                    val selected = when (themeMode) {
+                        DhThemeMode.LIGHT -> 1
+                        DhThemeMode.DARK -> 2
+                        else -> 0
+                    }
+                    DhSegmentedControl(
+                        options = options,
+                        selectedIndex = selected,
+                        onSelect = {
+                            appVm.setThemeMode(
+                                when (it) {
+                                    1 -> DhThemeMode.LIGHT
+                                    2 -> DhThemeMode.DARK
+                                    else -> DhThemeMode.SYSTEM
+                                },
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp),
+                    )
+                }
             }
 
             // --- Language ---
-            SettingsGroup(title = stringResource(R.string.settings_section_language), icon = Icons.Filled.Language) {
-                Text(
-                    stringResource(R.string.settings_language_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                LanguageSelector(current = language, onSelect = { appVm.setLanguage(it) })
+            DhSection(title = stringResource(R.string.settings_section_language)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DhTonalIcon(Icons.Filled.Language, contentDescription = null)
+                    LanguageSelector(
+                        current = language,
+                        onSelect = { appVm.setLanguage(it) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp),
+                    )
+                }
             }
 
             // --- Notifications ---
-            SettingsGroup(title = stringResource(R.string.settings_section_notifications), icon = Icons.Filled.Notifications) {
+            DhSection(title = stringResource(R.string.settings_section_notifications)) {
                 DhSettingsRow(
                     title = stringResource(R.string.settings_task_reminders),
                     supporting = stringResource(R.string.settings_task_reminders_desc),
-                    trailing = { Switch(checked = systemAlerts, onCheckedChange = { vm.setSystemAlertsEnabled(it) }) },
+                    leading = { DhTonalIcon(Icons.Filled.Notifications, contentDescription = null) },
+                    trailing = {
+                        Switch(checked = systemAlerts, onCheckedChange = { vm.setSystemAlertsEnabled(it) })
+                    },
+                    onClick = { vm.setSystemAlertsEnabled(!systemAlerts) },
                 )
-                Column {
+                DhDivider()
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text(
-                        stringResource(R.string.settings_default_alert),
-                        style = MaterialTheme.typography.titleSmall,
+                        text = stringResource(R.string.settings_default_alert),
+                        style = MaterialTheme.typography.bodyLarge,
                         color = if (systemAlerts) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     )
                     Text(
-                        reminderLabel(context, reminderMinutes),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (systemAlerts) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        text = reminderLabel(context, reminderMinutes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    val currentIdx = reminderPresets.indexOfFirst { it >= reminderMinutes }
-                        .let { if (it < 0) reminderPresets.lastIndex else it }
-                    androidx.compose.material3.Slider(
-                        value = currentIdx.toFloat(),
-                        onValueChange = {
-                            val idx = it.toInt().coerceIn(0, reminderPresets.lastIndex)
-                            vm.setReminderMinutes(reminderPresets[idx])
-                        },
-                        valueRange = 0f..(reminderPresets.size - 1).toFloat(),
-                        steps = reminderPresets.size - 2,
-                        enabled = systemAlerts,
-                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        reminderPresets.forEach { preset ->
+                            DhFilterChip(
+                                selected = reminderMinutes == preset,
+                                onClick = { vm.setReminderMinutes(preset) },
+                                label = reminderShortLabel(context, preset),
+                                enabled = systemAlerts,
+                            )
+                        }
+                    }
                 }
-                // System-settings actions are outlined + full-width, visually distinct from toggles.
-                OutlinedButton(
+                DhDivider()
+                DhSettingsRow(
+                    title = stringResource(R.string.settings_notif_status_title),
+                    supporting = null,
+                    leading = {
+                        DhTonalIcon(
+                            if (notifEnabled) Icons.Filled.Notifications
+                            else Icons.Filled.NotificationsOff,
+                            contentDescription = null,
+                        )
+                    },
+                    trailing = {
+                        DhStatusChip(
+                            label = stringResource(
+                                if (notifEnabled) R.string.settings_state_on
+                                else R.string.settings_state_off,
+                            ),
+                        )
+                    },
                     onClick = {
                         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.settings_notif_permission)) }
-                Text(
-                    stringResource(if (notifEnabled) R.string.settings_notif_status_on else R.string.settings_notif_status_off),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (notifEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 )
                 if (!exactAlarmGranted) {
-                    OutlinedButton(
+                    DhDivider()
+                    DhSettingsRow(
+                        title = stringResource(R.string.settings_exact_alarm_title),
+                        supporting = stringResource(R.string.settings_exact_alarm_desc),
+                        trailing = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
                         onClick = { vm.openExactAlarmSettings() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.settings_exact_alarm_action)) }
-                    Text(
-                        stringResource(R.string.settings_exact_alarm_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            // --- Automatic updates ---
-            SettingsGroup(title = stringResource(R.string.settings_section_updates), icon = Icons.Filled.SystemUpdate) {
-                val autoUpdate by vm.autoUpdate.collectAsStateWithLifecycle()
+            // --- Sync & backup (existing behaviour: push/pull) ---
+            if (FeatureFlags.DRIVE_SYNC_ENABLED) {
+                DhSection(title = stringResource(R.string.settings_section_sync)) {
+                    DhSettingsRow(
+                        title = stringResource(R.string.settings_sync_status),
+                        supporting = lastSyncAt?.let { stringResource(R.string.settings_last_sync, it) }
+                            ?: stringResource(R.string.settings_never_synced),
+                        leading = { DhTonalIcon(Icons.Filled.CloudSync, contentDescription = null) },
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedButton(onClick = { vm.syncNow() }, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_push))
+                        }
+                        OutlinedButton(onClick = { vm.pullNow() }, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_pull))
+                        }
+                    }
+                }
+            }
+
+            // --- Integrations (GitHub link + exercise demo key) ---
+            DhSection(title = stringResource(R.string.settings_section_github)) {
+                GitHubRow()
+                DhDivider()
+                val apiKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
+                DhSettingsRow(
+                    title = stringResource(R.string.settings_exercisedb_title),
+                    supporting = apiKey?.let { "••••" + it.takeLast(4) }
+                        ?: stringResource(R.string.settings_exercisedb_not_set),
+                    leading = { DhTonalIcon(Icons.Filled.FitnessCenter, contentDescription = null) },
+                    trailing = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    onClick = { keyInput = apiKey.orEmpty(); showKeyDialog = true },
+                )
+            }
+
+            // --- Updates ---
+            DhSection(title = stringResource(R.string.settings_section_updates)) {
                 DhSettingsRow(
                     title = stringResource(R.string.settings_auto_update),
-                    supporting = stringResource(R.string.settings_auto_update_desc),
+                    supporting = stringResource(
+                        if (autoUpdate) R.string.settings_state_on
+                        else R.string.settings_state_off,
+                    ),
+                    leading = { DhTonalIcon(Icons.Filled.SystemUpdate, contentDescription = null) },
                     trailing = { Switch(checked = autoUpdate, onCheckedChange = { vm.setAutoUpdate(it) }) },
+                    onClick = { vm.setAutoUpdate(!autoUpdate) },
+                )
+                DhDivider()
+                DhSettingsRow(
+                    title = stringResource(R.string.settings_check_updates),
+                    supporting = if (checkingUpdates) checkingText else updateResult,
+                    leading = { DhTonalIcon(Icons.Filled.Refresh, contentDescription = null) },
+                    trailing = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    onClick = {
+                        if (checkingUpdates) return@DhSettingsRow
+                        checkingUpdates = true
+                        scope.launch {
+                            val result = vm.checkForUpdatesNow()
+                            checkingUpdates = false
+                            updateResult = when (result) {
+                                UpdateCheck.UpToDate -> upToDateText
+                                UpdateCheck.Unavailable -> unavailableText
+                                is UpdateCheck.Available ->
+                                    context.getString(R.string.settings_update_available, result.release.versionName)
+                            }
+                        }
+                    },
                 )
             }
 
-            // --- GitHub link (repo picking only; sign-in stays Google-only) ---
-            GitHubSettingsGroup()
-
-            // --- Exercise demo videos ---
-            SettingsGroup(title = stringResource(R.string.settings_exercisedb_title), icon = Icons.Filled.FitnessCenter) {
-                val apiKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
-                Text(
-                    stringResource(R.string.settings_exercisedb_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // --- About ---
+            DhSection(title = stringResource(R.string.settings_section_about)) {
+                DhSettingsRow(
+                    title = stringResource(R.string.app_name),
+                    supporting = context.getString(
+                        R.string.settings_about_version_value,
+                        BuildConfig.VERSION_NAME,
+                        BuildConfig.VERSION_CODE,
+                    ),
+                    leading = { DhTonalIcon(Icons.Filled.Info, contentDescription = null) },
                 )
-                Text(
-                    apiKey?.let { "••••" + it.takeLast(4) }
-                        ?: stringResource(R.string.settings_exercisedb_not_set),
-                    style = MaterialTheme.typography.titleSmall,
+                DhDivider()
+                DhSettingsRow(
+                    title = stringResource(R.string.settings_about_build),
+                    supporting = BuildConfig.BUILD_TYPE,
+                    leading = { DhTonalIcon(Icons.Filled.Code, contentDescription = null) },
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { keyInput = apiKey.orEmpty(); showKeyDialog = true },
-                        modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(R.string.action_save)) }
-                    if (!apiKey.isNullOrBlank()) {
-                        OutlinedButton(
-                            onClick = { vm.setExerciseDbKey(null) },
-                            modifier = Modifier.weight(1f),
-                        ) { Text(stringResource(R.string.settings_exercisedb_clear)) }
-                    }
-                }
-            }
-
-            // --- Sync + Account ---
-            if (FeatureFlags.DRIVE_SYNC_ENABLED) {
-                SettingsGroup(title = stringResource(R.string.settings_section_sync), icon = Icons.Filled.CloudSync) {
-                    Text(
-                        lastSyncAt?.let { stringResource(R.string.settings_last_sync, it) }
-                            ?: stringResource(R.string.settings_never_synced),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { vm.syncNow() }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.settings_push)) }
-                        OutlinedButton(onClick = { vm.pullNow() }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.settings_pull)) }
-                    }
-                }
-
-                OutlinedButton(
-                    onClick = { vm.signOut { nav.navigate(Login) { popUpTo(0) { inclusive = true } } } },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_sign_out))
-                }
-                Spacer(Modifier.height(8.dp))
+                DhDivider()
+                AboutLinkRow(
+                    title = stringResource(R.string.settings_privacy),
+                    icon = Icons.Filled.Security,
+                    onClick = { context.openUrl(URL_PRIVACY) },
+                )
+                DhDivider()
+                AboutLinkRow(
+                    title = stringResource(R.string.settings_terms),
+                    icon = Icons.Filled.Description,
+                    onClick = { context.openUrl(URL_TERMS) },
+                )
+                DhDivider()
+                AboutLinkRow(
+                    title = stringResource(R.string.settings_releases),
+                    icon = Icons.Filled.CloudSync,
+                    onClick = { context.openUrl(URL_RELEASES) },
+                )
             }
         }
     }
 
     if (showKeyDialog) {
+        val apiKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
         AlertDialog(
             onDismissRequest = { showKeyDialog = false },
             title = { Text(stringResource(R.string.settings_exercisedb_title), style = MaterialTheme.typography.titleMedium) },
             text = {
-                OutlinedTextField(
-                    value = keyInput,
-                    onValueChange = { keyInput = it },
-                    label = { Text(stringResource(R.string.settings_exercisedb_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_exercisedb_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = { keyInput = it },
+                        label = { Text(stringResource(R.string.settings_exercisedb_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.small,
+                    )
+                    if (!apiKey.isNullOrBlank()) {
+                        TextButton(
+                            onClick = { vm.setExerciseDbKey(null); showKeyDialog = false },
+                        ) { Text(stringResource(R.string.settings_exercisedb_clear)) }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -328,18 +486,45 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     }
 }
 
+@Composable
+private fun AboutLinkRow(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    DhSettingsRow(
+        title = title,
+        supporting = null,
+        leading = { DhTonalIcon(icon, contentDescription = null) },
+        trailing = {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        onClick = onClick,
+    )
+}
+
+private fun Context.openUrl(url: String) {
+    runCatching {
+        startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
 /** Bilingual picker: segmented two-option control. Applies instantly. */
 @Composable
-private fun LanguageSelector(current: String, onSelect: (String) -> Unit) {
+private fun LanguageSelector(current: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     val codes = AppLanguage.entries.map { it.code }
     val names = AppLanguage.entries.map { it.nativeName }
     val selected = codes.indexOf(current).let { if (it < 0) 0 else it }
-    DhSegmentedControl(options = names, selectedIndex = selected, onSelect = { onSelect(codes[it]) }, modifier = Modifier.fillMaxWidth())
+    DhSegmentedControl(options = names, selectedIndex = selected, onSelect = { onSelect(codes[it]) }, modifier = modifier)
 }
 
 /** GitHub connect/disconnect row: links the account for repo picking (Projects tab). */
 @Composable
-private fun GitHubSettingsGroup(ghVm: GithubSettingsViewModel = hiltViewModel()) {
+private fun GitHubRow(ghVm: GithubSettingsViewModel = hiltViewModel()) {
     val state by ghVm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showDisconnect by remember { mutableStateOf(false) }
@@ -363,35 +548,33 @@ private fun GitHubSettingsGroup(ghVm: GithubSettingsViewModel = hiltViewModel())
         ghVm.finishLink(cb.code, cb.state)
     }
 
-    SettingsGroup(
-        title = stringResource(R.string.settings_section_github),
-        icon = Icons.Filled.CloudSync,
-    ) {
-        DhSettingsRow(
-            title = state.login?.let { context.getString(R.string.github_connected_as, "@$it") }
-                ?: stringResource(R.string.github_connect),
-            supporting = stringResource(R.string.github_not_connected_desc),
-            trailing = {
-                if (state.login == null) {
-                    OutlinedButton(
-                        onClick = { ghVm.startConnect(openUrl) },
-                        enabled = !state.busy,
-                    ) { Text(stringResource(R.string.github_connect)) }
-                } else {
-                    OutlinedButton(
-                        onClick = { showDisconnect = true },
-                        enabled = !state.busy,
-                    ) { Text(stringResource(R.string.github_disconnect)) }
-                }
-            },
+    DhSettingsRow(
+        title = state.login?.let { context.getString(R.string.github_connected_as, "@$it") }
+            ?: stringResource(R.string.github_connect),
+        supporting = if (state.login == null) stringResource(R.string.github_not_connected_desc)
+        else null,
+        leading = { DhTonalIcon(Icons.Filled.CloudSync, contentDescription = null) },
+        trailing = {
+            if (state.login == null) {
+                OutlinedButton(
+                    onClick = { ghVm.startConnect(openUrl) },
+                    enabled = !state.busy,
+                ) { Text(stringResource(R.string.github_connect)) }
+            } else {
+                OutlinedButton(
+                    onClick = { showDisconnect = true },
+                    enabled = !state.busy,
+                ) { Text(stringResource(R.string.github_disconnect)) }
+            }
+        },
+    )
+    state.error?.let {
+        Text(
+            it,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
         )
-        state.error?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
     }
 
     if (showDisconnect) {
@@ -403,15 +586,6 @@ private fun GitHubSettingsGroup(ghVm: GithubSettingsViewModel = hiltViewModel())
             onDismiss = { showDisconnect = false },
             dismissLabel = stringResource(R.string.action_cancel),
         )
-    }
-}
-
-/** Settings group: section header + single bordered card (not a giant floating card per row). */
-@Composable
-private fun SettingsGroup(title: String, icon: ImageVector, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        DhSectionHeader(title = title)
-        DhCard { content() }
     }
 }
 
