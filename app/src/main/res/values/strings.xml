@@ -603,6 +603,8 @@
     <string name="social_results_title">Sonuçlar</string>
     <string name="social_view_all">Tümünü gör</string>
     <string name="social_section_requests">İstekler</string>
+    <string name="social_remove_title">Arkadaşlıktan çıkar?</string>
+    <string name="social_remove_confirm">“%1$s” arkadaş listesinden çıkarılacak.</string>
     <string name="spaces_leave_title">Bu alandan ayrıl?</string>
     <string name="spaces_leave_confirm">Bu ortak alandan ayrılacaksın. Tekrar katılmak için yeni davet gerekir.</string>
     <string name="spaces_remove_title">Üye çıkarılsın mı?</string>

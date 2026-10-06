@@ -603,6 +603,8 @@
     <string name="social_results_title">Results</string>
     <string name="social_view_all">See all</string>
     <string name="social_section_requests">Requests</string>
+    <string name="social_remove_title">Remove friend?</string>
+    <string name="social_remove_confirm">“%1$s” will be removed from your friends.</string>
     <string name="spaces_leave_title">Leave this hub?</string>
     <string name="spaces_leave_confirm">You will leave this shared hub. You can only rejoin with a new invite.</string>
     <string name="spaces_remove_title">Remove this member?</string>
