@@ -3,6 +3,7 @@ package com.moltrax.personalnoteapp.ui.shell
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -97,7 +98,12 @@ fun DailyHubScaffold(
                 Box(Modifier.weight(1f)) { content(Modifier.fillMaxSize()) }
             }
         } else {
+            // Foundation: the shell owns ONLY the bottom (navigation-bar) inset via
+            // its bottomBar. Status-bar insets belong to each screen's own top bar
+            // (DhTopBar / TopAppBarDefaults.windowInsets) exactly once — so the
+            // shell consumes no system insets itself (avoids the double top band).
             Scaffold(
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
                     if (showChrome) {
                         NavigationBar {
