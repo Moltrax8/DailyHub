@@ -171,6 +171,8 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    // Real org.json for JVM unit tests (android.jar only ships throwing stubs).
+    testImplementation("org.json:json:20180813")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso)
     androidTestImplementation(libs.androidx.test.rules)

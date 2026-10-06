@@ -45,9 +45,14 @@ class DriveApiService @Inject constructor(private val http: OkHttpClient) {
         // Drive API v3 only accepts "appDataFolder", "drive" or "photos" as spaces values.
         val primary = if (BuildConfig.DRIVE_SCOPE.contains("appdata")) "appDataFolder" else "drive"
         findIn(token, primary) ?: run {
-            // The scope may have changed: the file might live in the other space.
-            val fallback = if (primary == "appDataFolder") "drive" else "appDataFolder"
-            findIn(token, fallback)
+            // "No file found" is a normal answer on the first sync. Only look in the other
+            // space when the granted scope can reach it: the narrow drive.appdata scope can
+            // ONLY access appDataFolder, and asking for "drive" then fails with
+            // "HTTP 403 The granted scopes do not give access to all of the requested spaces",
+            // which used to abort the very first sync. A full-drive token (primary == "drive")
+            // can also read appDataFolder, and a failure there just means "not found".
+            if (primary == "appDataFolder") null
+            else runCatching { findIn(token, "appDataFolder") }.getOrNull()
         }
     }
 
