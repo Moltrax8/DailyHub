@@ -46,6 +46,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -362,6 +364,45 @@ fun DhSettingsRow(
         leadingContent = leading,
         trailingContent = trailing,
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Switch: ONE shared switch with explicit on/off colours (no muddy off state)
+// ---------------------------------------------------------------------------
+
+/**
+ * The single shared switch for the whole app (Settings, Task detail,
+ * GitHub/Project toggles, ...). Checked = primary track + onPrimary thumb.
+ * Unchecked = surfaceVariant track with outline thumb + border. Disabled
+ * states stay explicit theme colours — never the muddy default.
+ */
+@Composable
+fun DhSwitch(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        enabled = enabled,
+        colors = SwitchDefaults.colors(
+            checkedTrackColor = MaterialTheme.colorScheme.primary,
+            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+            checkedBorderColor = MaterialTheme.colorScheme.primary,
+            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+            uncheckedBorderColor = MaterialTheme.colorScheme.outline,
+            disabledCheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledCheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            disabledCheckedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledUncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            disabledUncheckedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+        ),
     )
 }
 

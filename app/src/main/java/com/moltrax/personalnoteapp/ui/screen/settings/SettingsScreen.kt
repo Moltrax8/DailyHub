@@ -39,8 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -72,6 +70,7 @@ import com.moltrax.personalnoteapp.ui.components.DhSection
 import com.moltrax.personalnoteapp.ui.components.DhSegmentedControl
 import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
 import com.moltrax.personalnoteapp.ui.components.DhStatusChip
+import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
 import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.i18n.AppLanguage
@@ -251,16 +250,9 @@ fun SettingsScreen(
                     supporting = stringResource(R.string.settings_task_reminders_desc),
                     leading = { DhTonalIcon(Icons.Filled.Notifications, contentDescription = null) },
                     trailing = {
-                        Switch(
+                        DhSwitch(
                             checked = systemAlerts,
                             onCheckedChange = { vm.setSystemAlertsEnabled(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                uncheckedBorderColor = MaterialTheme.colorScheme.outline,
-                            ),
                         )
                     },
                     onClick = { vm.setSystemAlertsEnabled(!systemAlerts) },
@@ -390,16 +382,9 @@ fun SettingsScreen(
                     ),
                     leading = { DhTonalIcon(Icons.Filled.SystemUpdate, contentDescription = null) },
                     trailing = {
-                        Switch(
+                        DhSwitch(
                             checked = autoUpdate,
                             onCheckedChange = { vm.setAutoUpdate(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                uncheckedBorderColor = MaterialTheme.colorScheme.outline,
-                            ),
                         )
                     },
                     onClick = { vm.setAutoUpdate(!autoUpdate) },

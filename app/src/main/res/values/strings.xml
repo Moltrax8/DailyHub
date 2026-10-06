@@ -598,4 +598,14 @@
     <string name="task_reminder_default_off">Kapalı</string>
     <!-- Takvim gündem başlığı (rd2) -->
     <string name="calendar_tasks_count">%1$d görev</string>
+    <!-- Düzeltmeler (rd4): switch birliği, nötr çıkış durumu, kaydır-sil, gündem, görev düzenleyici -->
+    <string name="github_sign_in_to_connect">Bağlanmak için giriş yap</string>
+    <string name="github_connect_short">Bağlan</string>
+    <string name="calendar_empty_title">Planlanan bir şey yok</string>
+    <string name="task_title_hint">Ne yapılması gerekiyor?</string>
+    <string name="task_due_today">Bugün, %1$s</string>
+    <string name="task_due_tomorrow">Yarın, %1$s</string>
+    <string name="task_keep_when_empty">Boşken kategoriyi koru</string>
+    <string name="task_delete_title">Bu görev silinsin mi?</string>
+    <string name="task_delete_message">“%1$s” silinecek. Bu işlem geri alınamaz.</string>
 </resources>

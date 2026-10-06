@@ -28,6 +28,7 @@ import com.moltrax.personalnoteapp.ui.components.DhDivider
 import com.moltrax.personalnoteapp.ui.components.DhFilterChip
 import com.moltrax.personalnoteapp.ui.components.DhSection
 import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
+import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
 import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.screen.settings.SettingsViewModel
@@ -174,16 +175,9 @@ fun TaskDetailScreen(
                     supporting = repeatSummary,
                     leading = { DhTonalIcon(Icons.Default.Repeat, contentDescription = null) },
                     trailing = {
-                        Switch(
+                        DhSwitch(
                             checked = state.isRecurring,
                             onCheckedChange = { vm.update { copy(isRecurring = it) } },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                uncheckedBorderColor = MaterialTheme.colorScheme.outline,
-                            ),
                         )
                     },
                     onClick = { vm.update { copy(isRecurring = !state.isRecurring) } },

@@ -598,4 +598,14 @@
     <string name="task_reminder_default_off">Off</string>
     <!-- Calendar agenda header (rd2) -->
     <string name="calendar_tasks_count">%1$d tasks</string>
+    <!-- Corrections (rd4): switch unification, neutral signed-out states, swipe delete, agenda, task editor -->
+    <string name="github_sign_in_to_connect">Sign in to connect</string>
+    <string name="github_connect_short">Connect</string>
+    <string name="calendar_empty_title">Nothing planned</string>
+    <string name="task_title_hint">What needs to be done?</string>
+    <string name="task_due_today">Today, %1$s</string>
+    <string name="task_due_tomorrow">Tomorrow, %1$s</string>
+    <string name="task_keep_when_empty">Keep category when empty</string>
+    <string name="task_delete_title">Delete this task?</string>
+    <string name="task_delete_message">“%1$s” will be deleted. This cannot be undone.</string>
 </resources>

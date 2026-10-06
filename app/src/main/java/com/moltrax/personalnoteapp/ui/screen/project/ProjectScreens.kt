@@ -35,6 +35,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import com.moltrax.personalnoteapp.ui.components.DhFab
+import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -512,7 +513,7 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                androidx.compose.material3.Switch(
+                DhSwitch(
                     checked = enabled,
                     onCheckedChange = { vm.togglePref(spaceId, kind, it) },
                 )
