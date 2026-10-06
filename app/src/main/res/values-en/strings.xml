@@ -583,4 +583,28 @@
     <string name="profile_section_integrations">Integrations</string>
     <string name="profile_sync_title">Sync</string>
     <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
+
+    <!-- Screen redesign rd3: Workout / Projects / Social / Space -->
+    <string name="live_col_set">Set</string>
+    <string name="live_col_previous">Previous</string>
+    <string name="live_rest">Rest</string>
+    <string name="live_rest_add">+30s</string>
+    <string name="live_rest_skip">Skip</string>
+    <string name="live_no_sets_yet">No sets logged yet — check the first set.</string>
+    <string name="workout_delete_workout_title">Delete this workout?</string>
+    <string name="workout_delete_workout_confirm">“%1$s” will be removed from the program.</string>
+    <string name="workout_section_workouts">Workouts</string>
+    <string name="projects_section_projects">Projects</string>
+    <string name="projects_open_count">%1$d open</string>
+    <string name="projects_all_done">All done</string>
+    <string name="projects_no_cards">No cards yet</string>
+    <string name="projects_hub_members">Members</string>
+    <string name="projects_section_connection">Connection</string>
+    <string name="social_results_title">Results</string>
+    <string name="social_view_all">See all</string>
+    <string name="social_section_requests">Requests</string>
+    <string name="spaces_leave_title">Leave this hub?</string>
+    <string name="spaces_leave_confirm">You will leave this shared hub. You can only rejoin with a new invite.</string>
+    <string name="spaces_remove_title">Remove this member?</string>
+    <string name="spaces_remove_confirm">“%1$s” will be removed from this hub.</string>
 </resources>

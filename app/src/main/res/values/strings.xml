@@ -583,4 +583,28 @@
     <string name="profile_section_integrations">Entegrasyonlar</string>
     <string name="profile_sync_title">Senkronizasyon</string>
     <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
+
+    <!-- Screen redesign rd3: Workout / Projects / Social / Space -->
+    <string name="live_col_set">Set</string>
+    <string name="live_col_previous">Önceki</string>
+    <string name="live_rest">Dinlen</string>
+    <string name="live_rest_add">+30 sn</string>
+    <string name="live_rest_skip">Atla</string>
+    <string name="live_no_sets_yet">Henüz set kaydedilmedi — ilk seti işaretle.</string>
+    <string name="workout_delete_workout_title">Antrenman silinsin mi?</string>
+    <string name="workout_delete_workout_confirm">“%1$s” programdan kaldırılacak.</string>
+    <string name="workout_section_workouts">Antrenmanlar</string>
+    <string name="projects_section_projects">Projeler</string>
+    <string name="projects_open_count">%1$d açık</string>
+    <string name="projects_all_done">Tamamlandı</string>
+    <string name="projects_no_cards">Henüz kart yok</string>
+    <string name="projects_hub_members">Üyeler</string>
+    <string name="projects_section_connection">Bağlantı</string>
+    <string name="social_results_title">Sonuçlar</string>
+    <string name="social_view_all">Tümünü gör</string>
+    <string name="social_section_requests">İstekler</string>
+    <string name="spaces_leave_title">Bu alandan ayrıl?</string>
+    <string name="spaces_leave_confirm">Bu ortak alandan ayrılacaksın. Tekrar katılmak için yeni davet gerekir.</string>
+    <string name="spaces_remove_title">Üye çıkarılsın mı?</string>
+    <string name="spaces_remove_confirm">“%1$s” bu alandan çıkarılacak.</string>
 </resources>
