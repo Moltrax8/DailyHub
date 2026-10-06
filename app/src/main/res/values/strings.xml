@@ -551,4 +551,36 @@
     <string name="cd_import">Program içe aktar</string>
     <string name="cd_export">JSON dışa aktar</string>
     <string name="cd_more">Seçenekler</string>
+
+    <!-- Ayarlar yeniden tasarım (rd1): gruplu liste + Hakkında -->
+    <string name="settings_section_account">Hesap</string>
+    <string name="settings_reminder_min">%1$d dk</string>
+    <string name="settings_reminder_hour">%1$d sa</string>
+    <string name="settings_reminder_day">%1$d gün</string>
+    <string name="settings_notif_status_title">İzin durumu</string>
+    <string name="settings_state_on">Açık</string>
+    <string name="settings_state_off">Kapalı</string>
+    <string name="settings_sync_status">Durum</string>
+    <string name="settings_check_updates">Güncellemeleri denetle</string>
+    <string name="settings_checking">Denetleniyor…</string>
+    <string name="settings_up_to_date">Uygulama güncel</string>
+    <string name="settings_update_available">%1$s yayında</string>
+    <string name="settings_update_unavailable">Denetlenemedi — çevrimdışı olabilirsin.</string>
+    <string name="settings_section_about">Hakkında</string>
+    <string name="settings_about_version">Sürüm</string>
+    <string name="settings_about_version_value">%1$s (%2$d)</string>
+    <string name="settings_about_build">Derleme</string>
+    <string name="settings_privacy">Gizlilik Politikası</string>
+    <string name="settings_terms">Kullanım Şartları</string>
+    <string name="settings_releases">Kaynak / Sürümler</string>
+
+    <!-- Profil yeniden tasarım (rd1) -->
+    <string name="profile_status_signed_in">Giriş yapıldı</string>
+    <string name="profile_status_offline">Çevrimdışı</string>
+    <string name="profile_section_personal">Kişisel</string>
+    <string name="profile_section_account">Hesap</string>
+    <string name="profile_section_sync">Senkronizasyon ve yedekleme</string>
+    <string name="profile_section_integrations">Entegrasyonlar</string>
+    <string name="profile_sync_title">Senkronizasyon</string>
+    <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
 </resources>
