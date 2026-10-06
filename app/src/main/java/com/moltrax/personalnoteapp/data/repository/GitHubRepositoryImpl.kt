@@ -1,12 +1,16 @@
 package com.moltrax.personalnoteapp.data.repository
 
+import com.moltrax.personalnoteapp.data.remote.github.GitHubConnectApi
 import com.moltrax.personalnoteapp.data.remote.github.GitHubPublicApi
+import com.moltrax.personalnoteapp.data.remote.github.ConnectActionBody
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseDbApi
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
 import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
+import com.moltrax.personalnoteapp.domain.model.GithubReposResult
+import com.moltrax.personalnoteapp.domain.repository.GithubNotConnectedException
 import com.moltrax.personalnoteapp.domain.repository.GitHubRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +27,7 @@ class GitHubRepositoryImpl @Inject constructor(
     private val db: SupabaseDbApi?,
     private val auth: SupabaseAuthService,
     private val publicApi: GitHubPublicApi,
+    private val connectApi: GitHubConnectApi?,
 ) : GitHubRepository {
 
     private fun api(): SupabaseDbApi =
@@ -134,5 +139,43 @@ class GitHubRepositoryImpl @Inject constructor(
             body = mapOf("user_id" to myId(), "token" to clean),
         )
         if (!res.isSuccessful) throw IOException("Token register failed (HTTP ${res.code()}).")
+    }
+
+    // -- GitHub App linking (Edge Functions; token stays server-side) --------
+
+    private fun functions(): GitHubConnectApi =
+        connectApi ?: throw IllegalStateException("Supabase is not configured.")
+
+    override suspend fun connectStart(): String {
+        val res = functions().connect(bearer(), ConnectActionBody(action = "start"))
+        if (!res.isSuccessful) throw IOException("GitHub connect failed (HTTP ${res.code()}).")
+        val url = res.body()?.url?.trim().orEmpty()
+        if (url.isEmpty()) throw IOException("GitHub connect failed (empty authorize URL).")
+        return url
+    }
+
+    override suspend fun connectFinish(code: String, state: String): String {
+        require(code.isNotBlank() && state.isNotBlank()) { "Invalid GitHub callback." }
+        val res = functions().connect(bearer(), ConnectActionBody(action = "finish", code = code, state = state))
+        if (!res.isSuccessful) throw IOException("GitHub link failed (HTTP ${res.code()}).")
+        val body = res.body()
+        if (body?.error != null) throw IOException("GitHub link failed (${body.error}).")
+        val login = body?.login?.trim().orEmpty()
+        if (login.isEmpty()) throw IOException("GitHub link failed (empty login).")
+        return login
+    }
+
+    override suspend fun disconnectGitHub() {
+        val res = functions().connect(bearer(), ConnectActionBody(action = "disconnect"))
+        if (!res.isSuccessful) throw IOException("GitHub disconnect failed (HTTP ${res.code()}).")
+    }
+
+    override suspend fun appRepos(): GithubReposResult {
+        val res = functions().repos(bearer())
+        if (!res.isSuccessful) {
+            if (res.code() == 404) throw GithubNotConnectedException()
+            throw IOException("Repos load failed (HTTP ${res.code()}).")
+        }
+        return res.body() ?: GithubReposResult()
     }
 }
