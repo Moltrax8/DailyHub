@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -375,31 +376,82 @@ private fun BoardTab(
     }
 }
 
-/** GitHub tab (Phase 7): connection badge, linked repos, per-kind toggles, activity feed. */
+/** GitHub tab (Phase 7): account link, linked repos, per-kind toggles, activity feed. */
 @Composable
 private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
     val gh by vm.githubState.collectAsStateWithLifecycle()
-    var showLink by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showMine by remember { mutableStateOf(false) }
     var showBrowse by remember { mutableStateOf(false) }
+    var showDisconnect by remember { mutableStateOf(false) }
+    val openFailed = stringResource(R.string.github_open_failed)
+    val openUrl: (String) -> Unit = { url ->
+        runCatching {
+            context.startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url),
+                ),
+            )
+        }.onFailure { vm.reportGithubError(openFailed) }
+    }
+
+    // Deep link finish: dailyhub://github-callback?code=...&state=... (from MainActivity).
+    val pendingCallback by com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus.pending
+        .collectAsStateWithLifecycle()
+    LaunchedEffect(pendingCallback) {
+        val cb = pendingCallback ?: return@LaunchedEffect
+        com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus.consume()
+        vm.finishGithubLink(spaceId, cb.code, cb.state)
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (gh.connected?.githubLogin == null) {
-            item {
-                Text(
-                    stringResource(R.string.github_connect_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        item {
+            com.moltrax.personalnoteapp.ui.components.DhCard {
+                if (gh.connected?.githubLogin == null) {
+                    Text(
+                        stringResource(R.string.github_connect_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = { vm.startGithubConnect(openUrl) },
+                        enabled = !gh.connectBusy,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                    ) {
+                        if (gh.connectBusy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(stringResource(R.string.github_connect))
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            stringResource(R.string.github_connected_as, "@${gh.connected!!.githubLogin!!}"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(
+                            onClick = { showDisconnect = true },
+                            enabled = !gh.connectBusy,
+                            modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                        ) { Text(stringResource(R.string.github_disconnect)) }
+                    }
+                }
             }
-        } else {
+        }
+        if (gh.busy) {
             item {
-                Text(
-                    stringResource(R.string.github_connected_as, gh.connected!!.githubLogin!!),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                com.moltrax.personalnoteapp.ui.components.DhLoadingRow(message = stringResource(R.string.loading))
             }
         }
         item {
@@ -407,10 +459,27 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                 Text(
                     stringResource(R.string.github_repos),
                     style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { showBrowse = true }) { Text(stringResource(R.string.github_browse)) }
-                TextButton(onClick = { showLink = true }) { Text(stringResource(R.string.github_link)) }
+                TextButton(
+                    onClick = { showMine = true },
+                    modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                ) { Text(stringResource(R.string.github_my_repos_title), maxLines = 1) }
+                TextButton(
+                    onClick = { showBrowse = true },
+                    modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                ) { Text(stringResource(R.string.github_browse), maxLines = 1) }
+            }
+        }
+        if (gh.repos.isEmpty() && !gh.busy) {
+            item {
+                Text(
+                    stringResource(R.string.github_browse_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         items(gh.repos, key = { it.id }) { repo ->
@@ -419,7 +488,13 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(repo.fullName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        repo.fullName,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
                     IconButton(onClick = { vm.unlinkRepo(spaceId, repo.id) }) {
                         Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.github_unlink))
                     }
@@ -490,79 +565,205 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
                 }
             }
         }
-        gh.error?.let {
-            item { Text(it, color = MaterialTheme.colorScheme.error) }
+        gh.error?.let { msg ->
+            item {
+                com.moltrax.personalnoteapp.ui.components.DhErrorState(
+                    title = stringResource(R.string.sync_error_title),
+                    description = msg,
+                    retryLabel = stringResource(R.string.action_retry),
+                    onRetry = { vm.loadGitHub(spaceId); vm.loadAppRepos(spaceId) },
+                )
+            }
         }
     }
 
-    if (showLink) {
-        var repoId by remember { mutableStateOf("") }
-        var fullName by remember { mutableStateOf("") }
-        var isPrivate by remember { mutableStateOf(false) }
-        var formError by remember { mutableStateOf<String?>(null) }
-        val errId = stringResource(R.string.github_err_id)
-        val errName = stringResource(R.string.github_err_name)
-        AlertDialog(
-            onDismissRequest = { showLink = false },
-            title = { Text(stringResource(R.string.github_link_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.github_link_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = repoId,
-                        onValueChange = { repoId = it },
-                        label = { Text(stringResource(R.string.github_repo_id)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = fullName,
-                        onValueChange = { fullName = it },
-                        label = { Text(stringResource(R.string.github_repo_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.material3.Checkbox(
-                            checked = isPrivate,
-                            onCheckedChange = { isPrivate = it },
-                        )
-                        Text(stringResource(R.string.github_private))
-                    }
-                    formError?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val id = repoId.toLongOrNull()?.takeIf { it > 0 }
-                        val name = fullName.trim()
-                        formError = when {
-                            id == null -> errId
-                            !name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) -> errName
-                            else -> null
-                        }
-                        if (formError == null) {
-                            vm.linkRepo(spaceId, id!!, name, isPrivate) { showLink = false }
-                        }
-                    },
-                    enabled = repoId.isNotBlank() && fullName.isNotBlank(),
-                ) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = { TextButton(onClick = { showLink = false }) { Text(stringResource(R.string.action_cancel)) } },
+    if (showDisconnect) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.github_disconnect_title),
+            message = stringResource(R.string.github_disconnect_confirm),
+            confirmLabel = stringResource(R.string.github_disconnect),
+            onConfirm = { showDisconnect = false; vm.disconnectGithub(spaceId) },
+            onDismiss = { showDisconnect = false },
+            dismissLabel = stringResource(R.string.action_cancel),
         )
+    }
+
+    if (showMine) {
+        MyReposDialog(spaceId = spaceId, vm = vm, onDismiss = { showMine = false })
     }
 
     if (showBrowse) {
         BrowseReposDialog(spaceId = spaceId, vm = vm, onDismiss = { showBrowse = false })
     }
+}
+
+/** The linked account's repos BY NAME: search, private/fork badges, multi-select. */
+@Composable
+private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -> Unit) {
+    val state by vm.appReposState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val openFailed = stringResource(R.string.github_open_failed)
+
+    LaunchedEffect(spaceId) { vm.loadAppRepos(spaceId) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.github_my_repos_title),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().imePadding(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when {
+                    state.busy && state.repos.isEmpty() -> {
+                        com.moltrax.personalnoteapp.ui.components.DhLoadingRow(
+                            message = stringResource(R.string.loading),
+                        )
+                    }
+                    state.notConnected -> {
+                        com.moltrax.personalnoteapp.ui.components.DhEmptyState(
+                            icon = Icons.Default.Hub,
+                            title = stringResource(R.string.github_not_connected_title),
+                            description = stringResource(R.string.github_not_connected_desc),
+                            actionLabel = stringResource(R.string.github_connect),
+                            onAction = {
+                                vm.startGithubConnect { url ->
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(url),
+                                            ),
+                                        )
+                                    }.onFailure { vm.reportGithubError(openFailed) }
+                                }
+                            },
+                        )
+                    }
+                    state.error != null -> {
+                        com.moltrax.personalnoteapp.ui.components.DhErrorState(
+                            title = stringResource(R.string.github_my_repos_title),
+                            description = state.error!!,
+                            retryLabel = stringResource(R.string.action_retry),
+                            onRetry = { vm.loadAppRepos(spaceId) },
+                        )
+                    }
+                    else -> {
+                        Text(
+                            stringResource(R.string.github_my_repos_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = state.query,
+                            onValueChange = { vm.setAppRepoQuery(it) },
+                            label = { Text(stringResource(R.string.github_search_repos)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = state.hideForks,
+                                onCheckedChange = { vm.toggleHideAppForks() },
+                            )
+                            Text(
+                                stringResource(R.string.github_hide_forks),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        if (state.visibleRepos.isEmpty()) {
+                            Text(
+                                stringResource(R.string.github_my_repos_empty),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            items(state.visibleRepos, key = { it.id }) { repo ->
+                                val checked = repo.id in state.selectedIds
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget)
+                                        .clickable { vm.toggleAppRepo(repo.id) },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    androidx.compose.material3.Checkbox(
+                                        checked = checked,
+                                        onCheckedChange = { vm.toggleAppRepo(repo.id) },
+                                    )
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            repo.fullName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                        repo.description?.takeIf { it.isNotBlank() }?.let {
+                                            Text(
+                                                it,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            if (repo.private) {
+                                                com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                                    label = stringResource(R.string.github_private_badge),
+                                                )
+                                            }
+                                            if (repo.fork) {
+                                                com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                                    label = stringResource(R.string.github_fork_badge),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state.installUrl?.takeIf { it.isNotBlank() }?.let { installUrl ->
+                            TextButton(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(installUrl),
+                                            ),
+                                        )
+                                    }.onFailure { vm.reportGithubError(openFailed) }
+                                },
+                                modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                            ) { Text(stringResource(R.string.github_add_more)) }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            val freshCount = state.selectedIds.minus(state.trackedIds).size
+            TextButton(
+                onClick = { vm.applyAppRepos(spaceId) { onDismiss() } },
+                enabled = !state.busy && !state.notConnected && state.repos.isNotEmpty(),
+                modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+            ) { Text(stringResource(R.string.github_link_selected, freshCount)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable

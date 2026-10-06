@@ -462,7 +462,7 @@
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
-    <string name="github_connect_hint">No GitHub account linked yet — this build links repos manually per space below. The token never lives on-device; live activity needs the repo webhook pointed at the Supabase function.</string>
+    <string name="github_connect_hint">No GitHub account linked yet — connect with the button above, then pick repos by name. The token never lives on-device and your sign-in stays unchanged.</string>
     <string name="github_connected_as">Connected as %1$s</string>
     <string name="github_repos">Linked repos</string>
     <string name="github_link">Link repo</string>
@@ -474,7 +474,7 @@
     <string name="github_err_name">Enter the repo as owner/name (e.g. moltrax8/DailyHub).</string>
     <string name="github_browse">Browse repos</string>
     <string name="github_browse_title">Track GitHub repos</string>
-    <string name="github_browse_hint">Enter a GitHub username to list public repos. Tick to track in this space, untick to stop tracking. Private repos still need manual linking.</string>
+    <string name="github_browse_hint">Enter a GitHub username to list public repos. Tick to track in this space, untick to stop tracking. For your own private repos use the “My repos” list.</string>
     <string name="github_browse_user">GitHub username</string>
     <string name="github_browse_fetch">Fetch</string>
     <string name="github_browse_empty">No public repos found for this user.</string>
@@ -488,6 +488,21 @@
     <string name="github_repo_name">owner/repo</string>
     <string name="github_private">Private repo</string>
     <string name="github_push_title">Developer activity</string>
+    <string name="github_connect">Connect GitHub</string>
+    <string name="github_disconnect">Disconnect</string>
+    <string name="github_disconnect_title">Disconnect GitHub?</string>
+    <string name="github_disconnect_confirm">Your account will be unlinked. Already linked repos stay in the project but stop receiving updates.</string>
+    <string name="github_my_repos_title">My GitHub repos</string>
+    <string name="github_my_repos_hint">Repos your linked account can access. Tick and Save to link them into this project. For missing private repos, install the app on them on GitHub first.</string>
+    <string name="github_search_repos">Search repos…</string>
+    <string name="github_add_more">Add more repos on GitHub</string>
+    <string name="github_private_badge">private</string>
+    <string name="github_not_connected_title">GitHub not connected</string>
+    <string name="github_not_connected_desc">Connect your GitHub account first to pick repos by name. Your sign-in stays Google-only.</string>
+    <string name="github_my_repos_empty">No repos match the search.</string>
+    <string name="github_link_selected">Link selected (%1$d)</string>
+    <string name="github_open_failed">No browser found to open the link.</string>
+    <string name="settings_section_github">GitHub</string>
 
     <!-- Profile default -->
     <string name="profile_default_name">User</string>
