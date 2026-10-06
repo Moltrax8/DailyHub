@@ -478,6 +478,25 @@ fun DhContentColumn(
     }
 }
 
+/**
+ * Design-system FAB: bright primary container (not the muted default
+ * primaryContainer), so Tasks / Projects / Duo-hub / Workout all match.
+ */
+@Composable
+fun DhFab(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.material3.FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        content = content,
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Previews (no Hilt/network dependencies)
 // ---------------------------------------------------------------------------

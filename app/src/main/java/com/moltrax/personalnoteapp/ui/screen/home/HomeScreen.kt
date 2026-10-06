@@ -54,6 +54,7 @@ import com.moltrax.personalnoteapp.domain.model.LoggedSet
 import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.ui.SyncViewModel
+import com.moltrax.personalnoteapp.ui.components.DhFab
 import com.moltrax.personalnoteapp.ui.i18n.label
 import com.moltrax.personalnoteapp.ui.navigation.*
 import com.moltrax.personalnoteapp.ui.theme.AppColors
@@ -192,7 +193,7 @@ fun HomeScreen(
         floatingActionButton = {
             // FAB only on the Tasks tab (add new task); hidden on the Calendar tab.
             if (homeTab == 0) {
-                FloatingActionButton(onClick = { nav.navigate(TaskDetail("new")) }) {
+                DhFab(onClick = { nav.navigate(TaskDetail("new")) }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.home_new_task))
                 }
             }

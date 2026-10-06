@@ -33,8 +33,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import com.moltrax.personalnoteapp.ui.components.DhFab
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -84,7 +84,7 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.projects_title)) }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreate = true }) {
+            DhFab(onClick = { showCreate = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
             }
         },
@@ -245,7 +245,7 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
         },
         floatingActionButton = {
             if (mainTab == 0) {
-                FloatingActionButton(onClick = { showAdd = true }) {
+                DhFab(onClick = { showAdd = true }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
                 }
             }

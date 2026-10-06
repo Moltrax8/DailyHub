@@ -166,8 +166,14 @@
     <string name="settings_push">Push to Drive</string>
     <string name="settings_pull">Pull from Drive</string>
     <string name="settings_sign_out">Sign Out</string>
-    <string name="reminder_minutes_before">%1$d minutes before</string>
-    <string name="reminder_hours_before">%1$d hours before</string>
+    <plurals name="reminder_minutes_before">
+        <item quantity="one">%1$d minute before</item>
+        <item quantity="other">%1$d minutes before</item>
+    </plurals>
+    <plurals name="reminder_hours_before">
+        <item quantity="one">%1$d hour before</item>
+        <item quantity="other">%1$d hours before</item>
+    </plurals>
     <string name="reminder_hours_minutes_before">%1$d h %2$d min before</string>
 
     <!-- Stats -->

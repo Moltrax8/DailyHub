@@ -249,8 +249,28 @@ Deno.serve(async (req: Request) => {
     return json(200, { login });
   }
 
-  // ---- disconnect: delete tokens + connection row ----
+  // ---- disconnect: best-effort GitHub revoke, then delete tokens + connection row ----
   if (action === "disconnect") {
+    try {
+      const { data: tokRow } = await admin.from("github_tokens").select("access_token").eq("user_id", userId).maybeSingle();
+      const stored = (tokRow as { access_token?: unknown } | null)?.access_token;
+      if (typeof stored === "string" && stored.length > 0) {
+        const basic = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
+        await fetch(`https://api.github.com/applications/${encodeURIComponent(CLIENT_ID)}/grant`, {
+          method: "DELETE",
+          headers: {
+            Accept: "application/vnd.github+json",
+            Authorization: `Basic ${basic}`,
+            "Content-Type": "application/json",
+            "User-Agent": "DailyHub",
+            "X-GitHub-Api-Version": "2022-11-28",
+          },
+          body: JSON.stringify({ access_token: stored }),
+        }).catch(() => null);
+      }
+    } catch {
+      // Best-effort revoke: never block local row deletion.
+    }
     await admin.from("github_tokens").delete().eq("user_id", userId);
     await admin.from("github_connections").delete().eq("user_id", userId);
     return json(200, { ok: true });

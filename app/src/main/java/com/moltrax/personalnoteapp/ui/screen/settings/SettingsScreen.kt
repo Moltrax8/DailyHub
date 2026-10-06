@@ -72,8 +72,11 @@ import com.moltrax.personalnoteapp.ui.theme.DhThemeMode
 private val reminderPresets = listOf(5, 10, 15, 30, 45, 60, 90, 120, 180, 360, 720, 1440)
 
 private fun reminderLabel(context: Context, m: Int): String = when {
-    m < 60 -> context.getString(R.string.reminder_minutes_before, m)
-    m % 60 == 0 -> context.getString(R.string.reminder_hours_before, m / 60)
+    m < 60 -> context.resources.getQuantityString(R.plurals.reminder_minutes_before, m, m)
+    m % 60 == 0 -> {
+        val h = m / 60
+        context.resources.getQuantityString(R.plurals.reminder_hours_before, h, h)
+    }
     else -> context.getString(R.string.reminder_hours_minutes_before, m / 60, m % 60)
 }
 
