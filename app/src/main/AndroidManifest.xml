@@ -51,6 +51,17 @@
                     android:host="auth"
                     android:path="/callback" />
             </intent-filter>
+            <!-- GitHub App link callback (github-connect finish): carries
+                 ?code=...&state=... back from the browser. Handled in
+                 MainActivity → GitHubCallbackBus; never a login method. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="dailyhub"
+                    android:host="github-callback" />
+            </intent-filter>
         </activity>
 
         <!-- Notification channel setup worker -->

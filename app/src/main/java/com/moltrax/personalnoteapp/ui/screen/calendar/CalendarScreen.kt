@@ -4,12 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.Task
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
+import com.moltrax.personalnoteapp.ui.components.DhSectionHeader
 import com.moltrax.personalnoteapp.ui.navigation.TaskDetail
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -84,7 +87,7 @@ fun CalendarContent(
         map
     }
 
-    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(MaterialTheme.colorScheme.background)) {
         MonthHeader(
             month = currentMonth,
             onPrev = { currentMonthIso = currentMonth.minusMonths(1).toString() },
@@ -103,6 +106,7 @@ fun CalendarContent(
             date = selectedDate,
             tasks = occurrences[selectedDate].orEmpty(),
             onTap = { nav.navigate(TaskDetail(it.id)) },
+            onAdd = { nav.navigate(TaskDetail("new")) },
         )
     }
 }
@@ -130,7 +134,7 @@ private fun MonthHeader(month: YearMonth, onPrev: () -> Unit, onNext: () -> Unit
 
 @Composable
 private fun WeekdayRow() {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         listOf(
             R.string.weekday_mon, R.string.weekday_tue, R.string.weekday_wed, R.string.weekday_thu,
             R.string.weekday_fri, R.string.weekday_sat, R.string.weekday_sun,
@@ -155,7 +159,7 @@ private fun MonthGrid(
     val daysInMonth = month.lengthOfMonth()
     val totalCells = ((leading + daysInMonth + 6) / 7) * 7
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         var cell = 0
         while (cell < totalCells) {
             Row(Modifier.fillMaxWidth()) {
@@ -167,7 +171,7 @@ private fun MonthGrid(
                             day = dayNum,
                             isToday = date == today,
                             isSelected = date == selected,
-                            hasTasks = occurrences.containsKey(date),
+                            taskCount = occurrences[date]?.size ?: 0,
                             modifier = Modifier.weight(1f),
                             onClick = { onSelect(date) },
                         )
@@ -186,7 +190,7 @@ private fun DayCell(
     day: Int,
     isToday: Boolean,
     isSelected: Boolean,
-    hasTasks: Boolean,
+    taskCount: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -217,20 +221,30 @@ private fun DayCell(
                 color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onBackground,
             )
-            // Small dot when there are tasks.
-            Box(
-                Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape)
-                    .background(
-                        if (hasTasks) MaterialTheme.colorScheme.primary
-                        else androidx.compose.ui.graphics.Color.Transparent
+            // Small dot when there are tasks, plus a count when more than one.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Box(
+                    Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape)
+                        .background(
+                            if (taskCount > 0) MaterialTheme.colorScheme.primary
+                            else androidx.compose.ui.graphics.Color.Transparent
+                        )
+                )
+                if (taskCount > 1) {
+                    Text(
+                        taskCount.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
                     )
-            )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Unit) {
+private fun DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Unit, onAdd: () -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val header = remember(date, locale) {
         val d = Date(date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
@@ -238,22 +252,27 @@ private fun ColumnScope.DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (
     }
     // Time label depends on the composition locale; recreated when the language changes.
     val dayTimeFmt = remember(locale) { SimpleDateFormat("HH:mm", locale) }
-    Text(header, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onBackground)
+    DhSectionHeader(
+        title = header,
+        subtitle = stringResource(R.string.calendar_tasks_count, tasks.size),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
 
     if (tasks.isEmpty()) {
-        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.calendar_no_tasks), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        DhEmptyState(
+            icon = Icons.Default.CalendarMonth,
+            title = stringResource(R.string.calendar_empty_title),
+            description = stringResource(R.string.calendar_no_tasks),
+            actionLabel = stringResource(R.string.home_new_task),
+            onAction = onAdd,
+        )
         return
     }
-    LazyColumn(
-        Modifier.fillMaxWidth().weight(1f),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(tasks, key = { it.id }) { task ->
+        tasks.forEach { task ->
             com.moltrax.personalnoteapp.ui.components.DhCard(onClick = { onTap(task) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

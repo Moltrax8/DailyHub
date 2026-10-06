@@ -166,8 +166,14 @@
     <string name="settings_push">Drive\'a Gönder</string>
     <string name="settings_pull">Drive\'dan Al</string>
     <string name="settings_sign_out">Çıkış Yap</string>
-    <string name="reminder_minutes_before">%1$d dakika önce</string>
-    <string name="reminder_hours_before">%1$d saat önce</string>
+    <plurals name="reminder_minutes_before">
+        <item quantity="one">%1$d dakika önce</item>
+        <item quantity="other">%1$d dakika önce</item>
+    </plurals>
+    <plurals name="reminder_hours_before">
+        <item quantity="one">%1$d saat önce</item>
+        <item quantity="other">%1$d saat önce</item>
+    </plurals>
     <string name="reminder_hours_minutes_before">%1$d sa %2$d dk önce</string>
 
     <!-- İstatistikler -->
@@ -462,7 +468,7 @@
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
-    <string name="github_connect_hint">Henüz GitHub hesabı bağlı değil — bu sürümde depolar alan bazında elle bağlanır. Token cihazda tutulmaz; canlı hareketler için depo webhook’unun Supabase fonksiyonuna bakması gerekir.</string>
+    <string name="github_connect_hint">Henüz GitHub hesabı bağlı değil — yukarıdaki düğmeyle bağla, sonra depoları isme göre seç. Token cihazda tutulmaz, giriş yöntemin değişmez.</string>
     <string name="github_connected_as">%1$s olarak bağlı</string>
     <string name="github_repos">Bağlı depolar</string>
     <string name="github_link">Depo bağla</string>
@@ -474,7 +480,7 @@
     <string name="github_err_name">Depoyu owner/ad olarak gir (ör. moltrax8/DailyHub).</string>
     <string name="github_browse">Depolara göz at</string>
     <string name="github_browse_title">GitHub depolarını izle</string>
-    <string name="github_browse_hint">Herkese açık depoları listelemek için bir GitHub kullanıcı adı gir. İzlemek için işaretle, izlemeyi bırakmak için işareti kaldır. Özel depolar elle bağlanmalı.</string>
+    <string name="github_browse_hint">Herkese açık depoları listelemek için bir GitHub kullanıcı adı gir. İzlemek için işaretle, izlemeyi bırakmak için işareti kaldır. Kendi hesabındaki özel depolar için “Depolarım” listesini kullan.</string>
     <string name="github_browse_user">GitHub kullanıcı adı</string>
     <string name="github_browse_fetch">Getir</string>
     <string name="github_browse_empty">Bu kullanıcıda herkese açık depo yok.</string>
@@ -488,6 +494,21 @@
     <string name="github_repo_name">owner/repo</string>
     <string name="github_private">Özel depo</string>
     <string name="github_push_title">Geliştirici hareketi</string>
+    <string name="github_connect">GitHub\'ı Bağla</string>
+    <string name="github_disconnect">Bağlantıyı Kes</string>
+    <string name="github_disconnect_title">GitHub bağlantısı kesilsin mi?</string>
+    <string name="github_disconnect_confirm">Hesabın bağlantısı kesilecek. Zaten bağlı depolar projede kalır ama güncelleme almaz.</string>
+    <string name="github_my_repos_title">GitHub depolarım</string>
+    <string name="github_my_repos_hint">Bağlı hesabın erişebildiği depolar. İşaretle, Kaydet ile bu projeye bağla. Listede olmayan özel depolar için önce GitHub\'da uygulamayı o depolara kur.</string>
+    <string name="github_search_repos">Depo ara…</string>
+    <string name="github_add_more">GitHub\'da daha fazla depo ekle</string>
+    <string name="github_private_badge">özel</string>
+    <string name="github_not_connected_title">GitHub bağlı değil</string>
+    <string name="github_not_connected_desc">Depoları isme göre seçmek için önce GitHub hesabını bağla. Giriş yöntemin değişmez, Google ile devam edersin.</string>
+    <string name="github_my_repos_empty">Aramayla eşleşen depo yok.</string>
+    <string name="github_link_selected">Seçilenleri bağla (%1$d)</string>
+    <string name="github_open_failed">Bağlantıyı açacak tarayıcı bulunamadı.</string>
+    <string name="settings_section_github">GitHub</string>
 
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>
@@ -530,4 +551,86 @@
     <string name="cd_import">Program içe aktar</string>
     <string name="cd_export">JSON dışa aktar</string>
     <string name="cd_more">Seçenekler</string>
+
+    <!-- Ayarlar yeniden tasarım (rd1): gruplu liste + Hakkında -->
+    <string name="settings_section_account">Hesap</string>
+    <string name="settings_reminder_min">%1$d dk</string>
+    <string name="settings_reminder_hour">%1$d sa</string>
+    <string name="settings_reminder_hour_half">1,5 sa</string>
+    <string name="settings_reminder_day">%1$d gün</string>
+    <string name="settings_notif_status_title">İzin durumu</string>
+    <string name="settings_state_on">Açık</string>
+    <string name="settings_state_off">Kapalı</string>
+    <string name="settings_sync_status">Durum</string>
+    <string name="settings_check_updates">Güncellemeleri denetle</string>
+    <string name="settings_checking">Denetleniyor…</string>
+    <string name="settings_up_to_date">Uygulama güncel</string>
+    <string name="settings_update_available">%1$s yayında</string>
+    <string name="settings_update_unavailable">Denetlenemedi — çevrimdışı olabilirsin.</string>
+    <string name="settings_section_about">Hakkında</string>
+    <string name="settings_about_version">Sürüm</string>
+    <string name="settings_about_version_value">%1$s (%2$d)</string>
+    <string name="settings_about_build">Derleme</string>
+    <string name="settings_privacy">Gizlilik Politikası</string>
+    <string name="settings_terms">Kullanım Şartları</string>
+    <string name="settings_releases">Kaynak / Sürümler</string>
+
+    <!-- Profil yeniden tasarım (rd1) -->
+    <string name="profile_status_signed_in">Giriş yapıldı</string>
+    <string name="profile_status_offline">Çevrimdışı</string>
+    <string name="profile_section_personal">Kişisel</string>
+    <string name="profile_section_account">Hesap</string>
+    <string name="profile_section_sync">Senkronizasyon ve yedekleme</string>
+    <string name="profile_section_sync_integrations">Senkronizasyon ve entegrasyonlar</string>
+    <string name="profile_section_integrations">Entegrasyonlar</string>
+    <string name="profile_sync_title">Senkronizasyon</string>
+    <string name="profile_version_footer">%1$s %2$s (%3$d) • %4$s</string>
+
+    <!-- Screen redesign rd3: Workout / Projects / Social / Space -->
+    <string name="live_col_set">Set</string>
+    <string name="live_col_previous">Önceki</string>
+    <string name="live_rest">Dinlen</string>
+    <string name="live_rest_add">+30 sn</string>
+    <string name="live_rest_skip">Atla</string>
+    <string name="live_no_sets_yet">Henüz set kaydedilmedi — ilk seti işaretle.</string>
+    <string name="workout_delete_workout_title">Antrenman silinsin mi?</string>
+    <string name="workout_delete_workout_confirm">“%1$s” programdan kaldırılacak.</string>
+    <string name="workout_section_workouts">Antrenmanlar</string>
+    <string name="projects_section_projects">Projeler</string>
+    <string name="projects_open_count">%1$d açık</string>
+    <string name="projects_all_done">Tamamlandı</string>
+    <string name="projects_no_cards">Henüz kart yok</string>
+    <string name="projects_hub_members">Üyeler</string>
+    <string name="projects_section_connection">Bağlantı</string>
+    <string name="social_results_title">Sonuçlar</string>
+    <string name="social_view_all">Tümünü gör</string>
+    <string name="social_section_requests">İstekler</string>
+    <string name="social_remove_title">Arkadaşlıktan çıkar?</string>
+    <string name="social_remove_confirm">“%1$s” arkadaş listesinden çıkarılacak.</string>
+    <string name="spaces_leave_title">Bu alandan ayrıl?</string>
+    <string name="spaces_leave_confirm">Bu ortak alandan ayrılacaksın. Tekrar katılmak için yeni davet gerekir.</string>
+    <string name="spaces_remove_title">Üye çıkarılsın mı?</string>
+    <string name="spaces_remove_confirm">“%1$s” bu alandan çıkarılacak.</string>
+    <!-- Görev listesi grupları + boş durum (rd2) -->
+    <string name="tasks_group_overdue">Geciken</string>
+    <string name="tasks_group_today">Bugün</string>
+    <string name="tasks_group_upcoming">Yaklaşan</string>
+    <string name="tasks_group_no_date">Tarihsiz</string>
+    <string name="tasks_empty_desc">Başlamak için ilk görevini ekle — birkaç saniye sürer.</string>
+    <string name="tasks_empty_done_desc">Tamamladığın görevler burada görünür.</string>
+    <!-- Görev detayı hatırlatma satırı (rd2, salt okunur — değer Ayarlar\'dan gelir) -->
+    <string name="task_reminder_title">Hatırlatma</string>
+    <string name="task_reminder_default_off">Kapalı</string>
+    <!-- Takvim gündem başlığı (rd2) -->
+    <string name="calendar_tasks_count">%1$d görev</string>
+    <!-- Düzeltmeler (rd4): switch birliği, nötr çıkış durumu, kaydır-sil, gündem, görev düzenleyici -->
+    <string name="github_sign_in_to_connect">Bağlanmak için giriş yap</string>
+    <string name="github_connect_short">Bağlan</string>
+    <string name="calendar_empty_title">Planlanan bir şey yok</string>
+    <string name="task_title_hint">Ne yapılması gerekiyor?</string>
+    <string name="task_due_today">Bugün, %1$s</string>
+    <string name="task_due_tomorrow">Yarın, %1$s</string>
+    <string name="task_keep_when_empty">Boşken kategoriyi koru</string>
+    <string name="task_delete_title">Bu görev silinsin mi?</string>
+    <string name="task_delete_message">“%1$s” silinecek. Bu işlem geri alınamaz.</string>
 </resources>

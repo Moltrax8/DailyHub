@@ -5,11 +5,15 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,7 +29,6 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -33,8 +36,26 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import com.moltrax.personalnoteapp.ui.components.DhAvatarStack
+import com.moltrax.personalnoteapp.ui.components.DhCard
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
+import com.moltrax.personalnoteapp.ui.components.DhDivider
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
+import com.moltrax.personalnoteapp.ui.components.DhErrorState
+import com.moltrax.personalnoteapp.ui.components.DhFab
+import com.moltrax.personalnoteapp.ui.components.DhFormDialog
+import com.moltrax.personalnoteapp.ui.components.DhLoadingRow
+import com.moltrax.personalnoteapp.ui.components.DhScrollTabs
+import com.moltrax.personalnoteapp.ui.components.DhSection
+import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
+import com.moltrax.personalnoteapp.ui.components.DhStatusChip
+import com.moltrax.personalnoteapp.ui.components.DhTextField
+import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
+import com.moltrax.personalnoteapp.ui.screen.space.SpaceViewModel
+import com.moltrax.personalnoteapp.ui.screen.social.SocialViewModel
+import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,7 +75,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -81,78 +104,36 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
     var showCreate by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.projects_title)) }) },
+        topBar = { DhTopBar(title = stringResource(R.string.projects_title)) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreate = true }) {
+            DhFab(onClick = { showCreate = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
             }
         },
     ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (projects.isEmpty()) {
                 item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.Dashboard,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(40.dp),
-                            )
-                            Text(
-                                stringResource(R.string.projects_empty_title),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Text(
-                                stringResource(R.string.projects_empty_desc),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Button(onClick = { showCreate = true }) {
-                                Text(stringResource(R.string.projects_new))
-                            }
-                        }
-                    }
+                    DhEmptyState(
+                        icon = Icons.Default.Dashboard,
+                        title = stringResource(R.string.projects_empty_title),
+                        description = stringResource(R.string.projects_empty_desc),
+                        actionLabel = stringResource(R.string.projects_new),
+                        onAction = { showCreate = true },
+                    )
                 }
             }
             items(projects, key = { it.id }) { space ->
-                Card(Modifier.fillMaxWidth().clickable { nav.navigate(ProjectDetail(space.id)) }) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Default.Dashboard,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                space.name?.takeIf { it.isNotBlank() }
-                                    ?: stringResource(R.string.projects_untitled),
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                            Text(
-                                stringResource(R.string.projects_open),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+                ProjectListCard(
+                    spaceId = space.id,
+                    spaceName = space.name,
+                    vm = vm,
+                    onOpen = { nav.navigate(ProjectDetail(space.id)) },
+                )
             }
         }
     }
@@ -160,51 +141,90 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
     if (showCreate) {
         var name by remember { mutableStateOf("") }
         var desc by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCreate = false },
-            title = { Text(stringResource(R.string.projects_new)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.projects_new_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text(stringResource(R.string.projects_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = desc,
-                        onValueChange = { desc = it },
-                        label = { Text(stringResource(R.string.projects_description)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+        DhFormDialog(
+            title = stringResource(R.string.projects_new),
+            onDismiss = { showCreate = false },
+            confirmLabel = stringResource(R.string.action_save),
+            onConfirm = {
+                vm.createProject(name.trim(), desc) { id ->
+                    showCreate = false
+                    nav.navigate(ProjectDetail(id))
                 }
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        vm.createProject(name, desc) { id ->
-                            showCreate = false
-                            nav.navigate(ProjectDetail(id))
-                        }
-                    },
-                    enabled = name.isNotBlank(),
-                ) { Text(stringResource(R.string.action_save)) }
+            dismissLabel = stringResource(R.string.action_cancel),
+            confirmEnabled = name.isNotBlank(),
+            message = stringResource(R.string.projects_new_hint),
+            modifier = Modifier.imePadding(),
+            content = {
+                DhTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.projects_name),
+                    singleLine = true,
+                )
+                DhTextField(
+                    value = desc,
+                    onValueChange = { desc = it },
+                    label = stringResource(R.string.projects_description),
+                    singleLine = false,
+                )
             },
-            dismissButton = { TextButton(onClick = { showCreate = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
 
-/** One project: lightweight board (Idea → Planned → Developing → Finished). */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Project list card: name + description + chevron (board/repo detail lives in the hub). */
 @Composable
-fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
+private fun ProjectListCard(
+    spaceId: String,
+    spaceName: String?,
+    vm: ProjectViewModel,
+    onOpen: () -> Unit,
+) {
+    // Read-only lookups (no behaviour change): description for the supporting line.
+    val project by remember(spaceId) { vm.observeProject(spaceId) }
+        .collectAsStateWithLifecycle(initialValue = null)
+    DhCard(onClick = onOpen) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DhTonalIcon(Icons.Default.Dashboard, contentDescription = null)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    spaceName?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.projects_untitled),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                project?.descriptionMd?.takeIf { it.isNotBlank() }?.let { desc ->
+                    Text(
+                        desc,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** One project: lightweight board (Idea → Planned → Developing → Finished). */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun ProjectDetailScreen(
+    spaceId: String,
+    nav: NavController,
+    vm: ProjectViewModel = hiltViewModel(),
+    spaceVm: SpaceViewModel = hiltViewModel(),
+    socialVm: SocialViewModel = hiltViewModel(),
+) {
     val state by vm.detail.collectAsStateWithLifecycle()
     var showAdd by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<ProjectItem?>(null) }
@@ -213,17 +233,21 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
     var showDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(spaceId) { vm.openProject(spaceId); vm.loadGitHub(spaceId) }
+    // Read-only hub identity (name + members); the board itself stays on ProjectViewModel.
+    LaunchedEffect(spaceId) { spaceVm.openSpace(spaceId); socialVm.refresh() }
+    val spaceState by spaceVm.detail.collectAsStateWithLifecycle()
+    val gh by vm.githubState.collectAsStateWithLifecycle()
     val board = groupBoardItems(state.items)
+    val hubName = spaceState.space?.name?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.projects_board)
+    val memberNames = spaceState.members.map { socialVm.displayNameOf(it.userId) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.projects_board)) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            DhTopBar(
+                title = hubName,
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
                 actions = {
                     IconButton(onClick = { nav.navigate(DuoHub(spaceId)) }) {
                         Icon(Icons.Default.Hub, contentDescription = stringResource(R.string.projects_open_hub))
@@ -244,21 +268,24 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
         },
         floatingActionButton = {
             if (mainTab == 0) {
-                FloatingActionButton(onClick = { showAdd = true }) {
+                DhFab(onClick = { showAdd = true }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
                 }
             }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
+            ProjectHubHeader(
+                memberNames = memberNames,
+                repos = gh.repos.map { it.fullName },
+            )
+            DhScrollTabs(
                 options = listOf(
                     stringResource(R.string.projects_board),
                     stringResource(R.string.projects_github),
                 ),
                 selectedIndex = mainTab,
                 onSelect = { mainTab = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             )
             if (mainTab == 0) {
                 BoardTab(vm = vm, spaceId = spaceId, state = state, board = board,
@@ -271,25 +298,22 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
 
     if (showAdd) {
         var title by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAdd = false },
-            title = { Text(stringResource(R.string.projects_new_item)) },
-            text = {
-                OutlinedTextField(
+        DhFormDialog(
+            title = stringResource(R.string.projects_new_item),
+            onDismiss = { showAdd = false },
+            confirmLabel = stringResource(R.string.action_save),
+            onConfirm = { vm.addItem(spaceId, title.trim()) { showAdd = false } },
+            dismissLabel = stringResource(R.string.action_cancel),
+            confirmEnabled = title.isNotBlank(),
+            modifier = Modifier.imePadding(),
+            content = {
+                DhTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.task_title_field)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.task_title_field),
                     singleLine = true,
                 )
             },
-            confirmButton = {
-                TextButton(
-                    onClick = { vm.addItem(spaceId, title) { showAdd = false } },
-                    enabled = title.isNotBlank(),
-                ) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = { TextButton(onClick = { showAdd = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 
@@ -302,18 +326,58 @@ fun ProjectDetailScreen(spaceId: String, nav: NavController, vm: ProjectViewMode
     }
 
     if (showDelete) {
-        AlertDialog(
-            onDismissRequest = { showDelete = false },
-            title = { Text(stringResource(R.string.projects_delete_title)) },
-            text = { Text(stringResource(R.string.projects_delete_confirm)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDelete = false
-                    vm.deleteProject(spaceId) { nav.popBackStack() }
-                }) { Text(stringResource(R.string.projects_delete)) }
+        DhConfirmDialog(
+            title = stringResource(R.string.projects_delete_title),
+            message = stringResource(R.string.projects_delete_confirm),
+            confirmLabel = stringResource(R.string.projects_delete),
+            onConfirm = {
+                showDelete = false
+                vm.deleteProject(spaceId) { nav.popBackStack() }
             },
-            dismissButton = { TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
+            onDismiss = { showDelete = false },
+            dismissLabel = stringResource(R.string.action_cancel),
         )
+    }
+}
+
+/** Hub identity strip: member avatars + linked repo chips (read-only summary). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProjectHubHeader(
+    memberNames: List<String>,
+    repos: List<String>,
+) {
+    if (memberNames.isEmpty() && repos.isEmpty()) return
+    DhCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                if (memberNames.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.projects_hub_members),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    DhAvatarStack(names = memberNames)
+                }
+                if (repos.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(top = if (memberNames.isNotEmpty()) 8.dp else 0.dp),
+                    ) {
+                        repos.take(3).forEach { fullName ->
+                            DhStatusChip(label = fullName)
+                        }
+                        if (repos.size > 3) {
+                            DhStatusChip(label = "+${repos.size - 3}")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -326,9 +390,14 @@ private fun BoardTab(
     onAdd: () -> Unit,
     onSelect: (ProjectItem) -> Unit,
 ) {
-    if (state.busy) CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+    if (state.busy) DhLoadingRow(message = stringResource(R.string.loading))
     state.error?.let {
-        Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+        DhErrorState(
+            title = stringResource(R.string.sync_error_title),
+            description = it,
+            retryLabel = stringResource(R.string.action_retry),
+            onRetry = { vm.openProject(spaceId) },
+        )
     }
     // Mobile-first board: vertical status sections with a "Move to" status
     // picker per card (accessible, no tiny arrow buttons). Wide screens get
@@ -375,194 +444,402 @@ private fun BoardTab(
     }
 }
 
-/** GitHub tab (Phase 7): connection badge, linked repos, per-kind toggles, activity feed. */
+/** GitHub tab (Phase 7): account link, linked repos, per-kind toggles, activity feed. */
 @Composable
 private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
     val gh by vm.githubState.collectAsStateWithLifecycle()
-    var showLink by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showMine by remember { mutableStateOf(false) }
     var showBrowse by remember { mutableStateOf(false) }
+    var showDisconnect by remember { mutableStateOf(false) }
+    val openFailed = stringResource(R.string.github_open_failed)
+    val openUrl: (String) -> Unit = { url ->
+        runCatching {
+            context.startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url),
+                ),
+            )
+        }.onFailure { vm.reportGithubError(openFailed) }
+    }
+
+    // Deep link finish: dailyhub://github-callback?code=...&state=... (from MainActivity).
+    val pendingCallback by com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus.pending
+        .collectAsStateWithLifecycle()
+    LaunchedEffect(pendingCallback) {
+        val cb = pendingCallback ?: return@LaunchedEffect
+        com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus.consume()
+        vm.finishGithubLink(spaceId, cb.code, cb.state)
+    }
 
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        if (gh.connected?.githubLogin == null) {
-            item {
-                Text(
-                    stringResource(R.string.github_connect_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        item {
+            DhSection(title = stringResource(R.string.projects_section_connection)) {
+                if (gh.connected?.githubLogin == null) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.github_connect_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = { vm.startGithubConnect(openUrl) },
+                            enabled = !gh.connectBusy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        ) {
+                            if (gh.connectBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(stringResource(R.string.github_connect), maxLines = 1)
+                        }
+                    }
+                } else {
+                    DhSettingsRow(
+                        title = stringResource(
+                            R.string.github_connected_as,
+                            "@${gh.connected!!.githubLogin!!}",
+                        ),
+                        leading = {
+                            DhTonalIcon(Icons.Default.Hub, contentDescription = null)
+                        },
+                        trailing = {
+                            TextButton(
+                                onClick = { showDisconnect = true },
+                                enabled = !gh.connectBusy,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) { Text(stringResource(R.string.github_disconnect), maxLines = 1) }
+                        },
+                    )
+                }
             }
-        } else {
+        }
+        if (gh.busy) {
             item {
-                Text(
-                    stringResource(R.string.github_connected_as, gh.connected!!.githubLogin!!),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                DhLoadingRow(message = stringResource(R.string.loading))
             }
         }
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.github_repos),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = { showBrowse = true }) { Text(stringResource(R.string.github_browse)) }
-                TextButton(onClick = { showLink = true }) { Text(stringResource(R.string.github_link)) }
-            }
-        }
-        items(gh.repos, key = { it.id }) { repo ->
-            Card(Modifier.fillMaxWidth()) {
+            DhSection(
+                title = stringResource(R.string.github_repos),
+                subtitle = if (gh.repos.isEmpty()) null
+                    else stringResource(R.string.projects_open_count, gh.repos.size),
+            ) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(repo.fullName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { vm.unlinkRepo(spaceId, repo.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.github_unlink))
-                    }
+                    OutlinedButton(
+                        onClick = { showMine = true },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) { Text(stringResource(R.string.github_my_repos_title), maxLines = 1) }
+                    OutlinedButton(
+                        onClick = { showBrowse = true },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) { Text(stringResource(R.string.github_browse), maxLines = 1) }
+                }
+                if (gh.repos.isEmpty() && !gh.busy) {
+                    Text(
+                        stringResource(R.string.github_browse_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+                gh.repos.forEachIndexed { index, repo ->
+                    if (index > 0) DhDivider()
+                    DhSettingsRow(
+                        title = repo.fullName,
+                        leading = {
+                            DhTonalIcon(Icons.Default.Hub, contentDescription = null)
+                        },
+                        trailing = {
+                            IconButton(
+                                onClick = { vm.unlinkRepo(spaceId, repo.id) },
+                                modifier = Modifier.size(48.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.github_unlink),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                    )
                 }
             }
         }
         item {
-            Text(stringResource(R.string.github_prefs), style = MaterialTheme.typography.titleSmall)
-        }
-        items(com.moltrax.personalnoteapp.domain.repository.GitHubRepository.KINDS, key = { it }) { kind ->
-            val enabled = gh.prefs[kind] ?: true
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    com.moltrax.personalnoteapp.domain.model.githubActivityTitle(kind),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                androidx.compose.material3.Switch(
-                    checked = enabled,
-                    onCheckedChange = { vm.togglePref(spaceId, kind, it) },
-                )
+            DhSection(title = stringResource(R.string.github_prefs)) {
+                com.moltrax.personalnoteapp.domain.repository.GitHubRepository.KINDS
+                    .forEachIndexed { index, kind ->
+                        if (index > 0) DhDivider()
+                        val enabled = gh.prefs[kind] ?: true
+                        DhSettingsRow(
+                            title = com.moltrax.personalnoteapp.domain.model.githubActivityTitle(kind),
+                            trailing = {
+                                DhSwitch(
+                                    checked = enabled,
+                                    onCheckedChange = { vm.togglePref(spaceId, kind, it) },
+                                )
+                            },
+                            onClick = { vm.togglePref(spaceId, kind, !enabled) },
+                        )
+                    }
             }
         }
         item {
             OutlinedButton(
                 onClick = { vm.enablePush() },
                 enabled = !gh.busy,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
                 Text(
                     stringResource(
                         if (gh.pushDone) R.string.github_push_done
                         else R.string.github_enable_push
-                    )
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
         item {
-            Text(stringResource(R.string.github_activity), style = MaterialTheme.typography.titleSmall)
+            DhSection(title = stringResource(R.string.github_activity)) {
+                if (gh.activity.isEmpty()) {
+                    Text(
+                        stringResource(R.string.github_activity_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+                gh.activity.forEachIndexed { index, act ->
+                    if (index > 0) DhDivider()
+                    DhSettingsRow(
+                        title = com.moltrax.personalnoteapp.domain.model.githubActivityTitle(act.kind),
+                        supporting = buildString {
+                            val summary = act.summary()
+                            if (summary != act.kind) append(summary)
+                            act.repoFull?.let {
+                                if (isNotEmpty()) append(" · ")
+                                append(it)
+                            }
+                        }.takeIf { it.isNotBlank() },
+                    )
+                }
+            }
         }
-        if (gh.activity.isEmpty()) {
+        gh.error?.let { msg ->
             item {
-                Text(
-                    stringResource(R.string.github_activity_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                DhErrorState(
+                    title = stringResource(R.string.sync_error_title),
+                    description = msg,
+                    retryLabel = stringResource(R.string.action_retry),
+                    onRetry = { vm.loadGitHub(spaceId); vm.loadAppRepos(spaceId) },
                 )
             }
         }
-        items(gh.activity, key = { it.id }) { act ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                    Text(
-                        com.moltrax.personalnoteapp.domain.model.githubActivityTitle(act.kind),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    val summary = act.summary()
-                    if (summary != act.kind) {
-                        Text(
-                            summary,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    act.repoFull?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-        }
-        gh.error?.let {
-            item { Text(it, color = MaterialTheme.colorScheme.error) }
-        }
     }
 
-    if (showLink) {
-        var repoId by remember { mutableStateOf("") }
-        var fullName by remember { mutableStateOf("") }
-        var isPrivate by remember { mutableStateOf(false) }
-        var formError by remember { mutableStateOf<String?>(null) }
-        val errId = stringResource(R.string.github_err_id)
-        val errName = stringResource(R.string.github_err_name)
-        AlertDialog(
-            onDismissRequest = { showLink = false },
-            title = { Text(stringResource(R.string.github_link_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.github_link_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = repoId,
-                        onValueChange = { repoId = it },
-                        label = { Text(stringResource(R.string.github_repo_id)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = fullName,
-                        onValueChange = { fullName = it },
-                        label = { Text(stringResource(R.string.github_repo_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.material3.Checkbox(
-                            checked = isPrivate,
-                            onCheckedChange = { isPrivate = it },
-                        )
-                        Text(stringResource(R.string.github_private))
-                    }
-                    formError?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val id = repoId.toLongOrNull()?.takeIf { it > 0 }
-                        val name = fullName.trim()
-                        formError = when {
-                            id == null -> errId
-                            !name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) -> errName
-                            else -> null
-                        }
-                        if (formError == null) {
-                            vm.linkRepo(spaceId, id!!, name, isPrivate) { showLink = false }
-                        }
-                    },
-                    enabled = repoId.isNotBlank() && fullName.isNotBlank(),
-                ) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = { TextButton(onClick = { showLink = false }) { Text(stringResource(R.string.action_cancel)) } },
+    if (showDisconnect) {
+        DhConfirmDialog(
+            title = stringResource(R.string.github_disconnect_title),
+            message = stringResource(R.string.github_disconnect_confirm),
+            confirmLabel = stringResource(R.string.github_disconnect),
+            onConfirm = { showDisconnect = false; vm.disconnectGithub(spaceId) },
+            onDismiss = { showDisconnect = false },
+            dismissLabel = stringResource(R.string.action_cancel),
         )
+    }
+
+    if (showMine) {
+        MyReposDialog(spaceId = spaceId, vm = vm, onDismiss = { showMine = false })
     }
 
     if (showBrowse) {
         BrowseReposDialog(spaceId = spaceId, vm = vm, onDismiss = { showBrowse = false })
     }
+}
+
+/** The linked account's repos BY NAME: search, private/fork badges, multi-select. */
+@Composable
+private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -> Unit) {
+    val state by vm.appReposState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val openFailed = stringResource(R.string.github_open_failed)
+
+    LaunchedEffect(spaceId) { vm.loadAppRepos(spaceId) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.github_my_repos_title),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().imePadding(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when {
+                    state.busy && state.repos.isEmpty() -> {
+                        com.moltrax.personalnoteapp.ui.components.DhLoadingRow(
+                            message = stringResource(R.string.loading),
+                        )
+                    }
+                    state.notConnected -> {
+                        com.moltrax.personalnoteapp.ui.components.DhEmptyState(
+                            icon = Icons.Default.Hub,
+                            title = stringResource(R.string.github_not_connected_title),
+                            description = stringResource(R.string.github_not_connected_desc),
+                            actionLabel = stringResource(R.string.github_connect),
+                            onAction = {
+                                vm.startGithubConnect { url ->
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(url),
+                                            ),
+                                        )
+                                    }.onFailure { vm.reportGithubError(openFailed) }
+                                }
+                            },
+                        )
+                    }
+                    state.error != null -> {
+                        com.moltrax.personalnoteapp.ui.components.DhErrorState(
+                            title = stringResource(R.string.github_my_repos_title),
+                            description = state.error!!,
+                            retryLabel = stringResource(R.string.action_retry),
+                            onRetry = { vm.loadAppRepos(spaceId) },
+                        )
+                    }
+                    else -> {
+                        Text(
+                            stringResource(R.string.github_my_repos_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = state.query,
+                            onValueChange = { vm.setAppRepoQuery(it) },
+                            label = { Text(stringResource(R.string.github_search_repos)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = state.hideForks,
+                                onCheckedChange = { vm.toggleHideAppForks() },
+                            )
+                            Text(
+                                stringResource(R.string.github_hide_forks),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        if (state.visibleRepos.isEmpty()) {
+                            Text(
+                                stringResource(R.string.github_my_repos_empty),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            items(state.visibleRepos, key = { it.id }) { repo ->
+                                val checked = repo.id in state.selectedIds
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget)
+                                        .clickable { vm.toggleAppRepo(repo.id) },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    androidx.compose.material3.Checkbox(
+                                        checked = checked,
+                                        onCheckedChange = { vm.toggleAppRepo(repo.id) },
+                                    )
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            repo.fullName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                        repo.description?.takeIf { it.isNotBlank() }?.let {
+                                            Text(
+                                                it,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            if (repo.private) {
+                                                com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                                    label = stringResource(R.string.github_private_badge),
+                                                )
+                                            }
+                                            if (repo.fork) {
+                                                com.moltrax.personalnoteapp.ui.components.DhStatusChip(
+                                                    label = stringResource(R.string.github_fork_badge),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state.installUrl?.takeIf { it.isNotBlank() }?.let { installUrl ->
+                            TextButton(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(installUrl),
+                                            ),
+                                        )
+                                    }.onFailure { vm.reportGithubError(openFailed) }
+                                },
+                                modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+                            ) { Text(stringResource(R.string.github_add_more)) }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            val freshCount = state.selectedIds.minus(state.trackedIds).size
+            TextButton(
+                onClick = { vm.applyAppRepos(spaceId) { onDismiss() } },
+                enabled = !state.busy && !state.notConnected && state.repos.isNotEmpty(),
+                modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
+            ) { Text(stringResource(R.string.github_link_selected, freshCount)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable
@@ -573,7 +850,10 @@ private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: 
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.github_browse_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.imePadding(),
+            ) {
                 Text(
                     stringResource(R.string.github_browse_hint),
                     style = MaterialTheme.typography.bodySmall,
@@ -646,10 +926,8 @@ private fun BrowseReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: 
                                     )
                                 }
                                 if (repo.fork) {
-                                    Text(
-                                        stringResource(R.string.github_fork_badge),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    DhStatusChip(
+                                        label = stringResource(R.string.github_fork_badge),
                                     )
                                 }
                             }
@@ -679,26 +957,41 @@ private fun BoardSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text(
-                items.size.toString(),
-                style = MaterialTheme.typography.labelMedium,
+                label,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+            DhStatusChip(label = items.size.toString())
         }
         if (items.isEmpty()) {
-            Text("--", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Text(
+                stringResource(R.string.projects_no_cards),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         items.forEach { item ->
-            Card(Modifier.fillMaxWidth().clickable { onTap(item) }) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            DhCard(onClick = { onTap(item) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(item.title, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            item.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                         item.bodyMd?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                     Box {
@@ -736,39 +1029,43 @@ private fun ItemDetailDialog(
     val comments by vm.observeComments(spaceId, item.id).collectAsStateWithLifecycle(initialValue = emptyList())
     var comment by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(item.title) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                item.bodyMd?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium)
-                }
-                item.linkedUrl?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
-                comments.forEach { c ->
-                    Text(
-                        "• ${c.bodyMd.orEmpty()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                OutlinedTextField(
-                    value = comment,
-                    onValueChange = { comment = it },
-                    label = { Text(stringResource(R.string.projects_comment_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                TextButton(
-                    onClick = { vm.addComment(spaceId, item.id, comment) { comment = "" } },
-                    enabled = comment.isNotBlank(),
-                ) { Text(stringResource(R.string.projects_comment_add)) }
+    DhFormDialog(
+        title = item.title,
+        onDismiss = onDismiss,
+        confirmLabel = stringResource(R.string.action_close),
+        onConfirm = onDismiss,
+        modifier = Modifier.imePadding(),
+        content = {
+            item.bodyMd?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium)
             }
+            item.linkedUrl?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            comments.forEach { c ->
+                Text(
+                    "• ${c.bodyMd.orEmpty()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            DhTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                label = stringResource(R.string.projects_comment_hint),
+                singleLine = false,
+            )
+            TextButton(
+                onClick = { vm.addComment(spaceId, item.id, comment.trim()) { comment = "" } },
+                enabled = comment.isNotBlank(),
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.projects_comment_add)) }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_save)) } },
     )
 }

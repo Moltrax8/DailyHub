@@ -30,6 +30,17 @@ import com.moltrax.personalnoteapp.domain.model.Exercise
 import com.moltrax.personalnoteapp.domain.model.ExerciseType
 import com.moltrax.personalnoteapp.domain.model.PlannedSet
 import com.moltrax.personalnoteapp.domain.model.WorkoutExercise
+import com.moltrax.personalnoteapp.ui.components.DhCard
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
+import com.moltrax.personalnoteapp.ui.components.DhDivider
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
+import com.moltrax.personalnoteapp.ui.components.DhFab
+import com.moltrax.personalnoteapp.ui.components.DhFilterChip
+import com.moltrax.personalnoteapp.ui.components.DhFormDialog
+import com.moltrax.personalnoteapp.ui.components.DhStatusChip
+import com.moltrax.personalnoteapp.ui.components.DhTextField
+import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.components.ExerciseMediaPlayer
 import com.moltrax.personalnoteapp.ui.components.ExerciseThumb
 import com.moltrax.personalnoteapp.ui.i18n.label
@@ -52,29 +63,27 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
 
     // Add-workout dialog
     if (showAddWorkoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddWorkoutDialog = false; newWorkoutName = "" },
-            title = { Text(stringResource(R.string.workout_new_workout)) },
-            text = {
-                OutlinedTextField(
+        DhFormDialog(
+            title = stringResource(R.string.workout_new_workout),
+            onDismiss = { showAddWorkoutDialog = false; newWorkoutName = "" },
+            confirmLabel = stringResource(R.string.action_add),
+            onConfirm = {
+                if (newWorkoutName.isNotBlank() && group != null) {
+                    vm.addWorkout(group, newWorkoutName.trim())
+                    newWorkoutName = ""
+                    showAddWorkoutDialog = false
+                }
+            },
+            dismissLabel = stringResource(R.string.action_cancel),
+            confirmEnabled = newWorkoutName.isNotBlank(),
+            modifier = Modifier.imePadding(),
+            content = {
+                DhTextField(
                     value = newWorkoutName,
                     onValueChange = { newWorkoutName = it },
-                    label = { Text(stringResource(R.string.workout_workout_name_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.workout_workout_name_hint),
                     singleLine = true,
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (newWorkoutName.isNotBlank() && group != null) {
-                        vm.addWorkout(group, newWorkoutName)
-                        newWorkoutName = ""
-                        showAddWorkoutDialog = false
-                    }
-                }) { Text(stringResource(R.string.action_add)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddWorkoutDialog = false; newWorkoutName = "" }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -126,21 +135,15 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(group?.name ?: stringResource(R.string.workout_program_fallback),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
-                    }
-                },
+            DhTopBar(
+                title = group?.name ?: stringResource(R.string.workout_program_fallback),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            DhFab(
                 onClick = { showAddWorkoutDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
                 Icon(Icons.Default.Add, stringResource(R.string.workout_add_workout))
             }
@@ -149,19 +152,16 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
         if (group == null) {
             // Show a not-found + back affordance instead of an endless spinner for an invalid/deleted groupId.
             Column(
-                Modifier.fillMaxSize().padding(padding).padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    stringResource(R.string.workout_program_not_found),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                DhEmptyState(
+                    icon = Icons.Default.SearchOff,
+                    title = stringResource(R.string.workout_program_not_found),
+                    description = stringResource(R.string.workout_empty_desc),
+                    actionLabel = stringResource(R.string.action_back),
+                    onAction = { nav.popBackStack() },
                 )
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = { nav.popBackStack() }) {
-                    Text(stringResource(R.string.action_back))
-                }
             }
             return@Scaffold
         }
@@ -173,84 +173,135 @@ fun WorkoutDetailScreen(nav: NavController, groupId: String, vm: WorkoutViewMode
         ) {
             if (group.workouts.isEmpty()) {
                 item {
-                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.workout_no_workouts),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    DhEmptyState(
+                        icon = Icons.Default.FitnessCenter,
+                        title = stringResource(R.string.workout_new_workout),
+                        description = stringResource(R.string.workout_no_workouts),
+                        actionLabel = stringResource(R.string.workout_add_workout),
+                        onAction = { showAddWorkoutDialog = true },
+                    )
                 }
             }
             items(group.workouts, key = { it.id }) { workout ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(workout.name, style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            IconButton(onClick = { showAddExerciseForWorkoutId = workout.id }) {
-                                Icon(Icons.Default.AddCircle, stringResource(R.string.workout_add_exercise),
-                                    tint = MaterialTheme.colorScheme.primary)
-                            }
-                            IconButton(onClick = { vm.deleteWorkout(group, workout.id) }) {
-                                Icon(Icons.Default.Delete, stringResource(R.string.action_delete),
-                                    tint = MaterialTheme.colorScheme.error)
-                            }
-                        }
-
-                        if (workout.exercises.isEmpty()) {
-                            Text(stringResource(R.string.workout_no_exercises_hint),
+                var showDeleteWorkout by remember { mutableStateOf(false) }
+                DhCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                workout.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                stringResource(R.string.workout_exercise_count, workout.exercises.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp))
-                        } else {
-                            workout.exercises.forEach { ex ->
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        IconButton(
+                            onClick = { showAddExerciseForWorkoutId = workout.id },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.AddCircle,
+                                contentDescription = stringResource(R.string.workout_add_exercise),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(
+                            onClick = { showDeleteWorkout = true },
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.action_delete),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    if (workout.exercises.isEmpty()) {
+                        Text(
+                            stringResource(R.string.workout_no_exercises_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Column {
+                            workout.exercises.forEachIndexed { index, ex ->
+                                if (index > 0) DhDivider()
                                 Row(
-                                    Modifier.fillMaxWidth().padding(top = 4.dp)
+                                    Modifier.fillMaxWidth()
+                                        .defaultMinSize(minHeight = 48.dp)
                                         // Tapping the exercise opens the editor.
                                         .clickable { editExercise = workout.id to ex },
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Default.FitnessCenter, null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.primary)
-                                    Spacer(Modifier.width(6.dp))
+                                    DhTonalIcon(
+                                        Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp),
+                                    )
+                                    Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
-                                        Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            ex.exerciseName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
                                         val planText = plannedSummary(LocalContext.current, ex.type, ex.plannedSets)
                                         if (planText != null) {
-                                            Text(planText, style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                planText,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
                                         }
                                     }
-                                    IconButton(
-                                        onClick = { editExercise = workout.id to ex },
-                                    ) {
-                                        Icon(Icons.Default.Edit, stringResource(R.string.workout_edit_exercise),
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = stringResource(R.string.workout_edit_exercise),
+                                        modifier = Modifier.size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             }
                         }
-
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = {
-                                vm.startSession(workout)
-                                nav.navigate(LiveWorkout(workout.id, groupId))
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = workout.exercises.isNotEmpty(),
-                        ) {
-                            Icon(Icons.Default.PlayArrow, stringResource(R.string.workout_start))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.workout_start))
-                        }
                     }
+
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = {
+                            vm.startSession(workout)
+                            nav.navigate(LiveWorkout(workout.id, groupId))
+                        },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        enabled = workout.exercises.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.workout_start),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                if (showDeleteWorkout) {
+                    DhConfirmDialog(
+                        title = stringResource(R.string.workout_delete_workout_title),
+                        message = stringResource(R.string.workout_delete_workout_confirm, workout.name),
+                        confirmLabel = stringResource(R.string.action_delete),
+                        onConfirm = { showDeleteWorkout = false; vm.deleteWorkout(group, workout.id) },
+                        onDismiss = { showDeleteWorkout = false },
+                        dismissLabel = stringResource(R.string.action_cancel),
+                    )
                 }
             }
         }
@@ -301,6 +352,7 @@ private fun AddExerciseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.imePadding(),
         title = { Text(stringResource(if (hasSelection) R.string.workout_plan_values else R.string.workout_add_exercise_title)) },
         text = {
             // Long exercise description + 180dp preview used to push the set/reps/kg fields below the
@@ -315,10 +367,10 @@ private fun AddExerciseDialog(
                     Text(stringResource(R.string.workout_type_manual), style = MaterialTheme.typography.labelMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ExerciseType.entries.forEach { type ->
-                            FilterChip(
+                            DhFilterChip(
                                 selected = manualType == type,
                                 onClick = { manualType = type },
-                                label = { Text(type.label()) },
+                                label = type.label(),
                             )
                         }
                     }
@@ -367,8 +419,7 @@ if (exerciseResults.isNotEmpty()) {
                 } else {
                     // Stage 2: plan value entry (picked exercise + type)
                     Text(selectedName!!, style = MaterialTheme.typography.titleSmall)
-                    AssistChip(onClick = {}, enabled = false,
-                        label = { Text(selectedType.label()) })
+                    DhStatusChip(label = selectedType.label())
                     // Demo media of the search-picked exercise (preview — still played from the remote URL).
                     picked?.let { ex ->
                         val source = ex.localMediaPath ?: ex.mediaUrl
@@ -493,6 +544,7 @@ private fun EditExerciseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.imePadding(),
         title = { Text(stringResource(R.string.workout_edit_exercise_title)) },
         text = {
             // Content is scrollable since the 180dp preview + fields can exceed the dialog height.
@@ -508,10 +560,10 @@ private fun EditExerciseDialog(
                 Text(stringResource(R.string.workout_type), style = MaterialTheme.typography.labelMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ExerciseType.entries.forEach { t ->
-                        FilterChip(
+                        DhFilterChip(
                             selected = type == t,
                             onClick = { type = t },
-                            label = { Text(t.label()) },
+                            label = t.label(),
                         )
                     }
                 }

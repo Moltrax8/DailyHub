@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -33,6 +35,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -43,6 +46,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -204,7 +209,11 @@ fun EmptyState(icon: ImageVector, title: String, description: String, modifier: 
 // Structure: section header / card / list row / segmented control
 // ---------------------------------------------------------------------------
 
-/** Screen section header: title + optional subtitle + optional trailing action. */
+/**
+ * Screen section label: small and quiet (sentence case by callers), with an
+ * optional one-line subtitle and trailing action. Shared by Settings/Profile
+ * and every later screen — never restyle per screen.
+ */
 @Composable
 fun DhSectionHeader(
     title: String,
@@ -214,12 +223,74 @@ fun DhSectionHeader(
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         action?.let { Row(verticalAlignment = Alignment.CenterVertically) { it() } }
+    }
+}
+
+/**
+ * Grouped-settings section: a quiet label above ONE rounded surfaceContainer
+ * block with hairline dividers inset from the leading icon. Not one card per row.
+ */
+@Composable
+fun DhSection(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        DhSectionHeader(title = title, subtitle = subtitle)
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.fillMaxWidth()) { content() }
+        }
+    }
+}
+
+/** Hairline divider inset from the leading icon (56dp), for use inside [DhSection]. */
+@Composable
+fun DhDivider(modifier: Modifier = Modifier) {
+    androidx.compose.material3.HorizontalDivider(
+        modifier = modifier.padding(start = 56.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
+/** Leading icon in a 40dp tonal circle (Settings/Profile style, app-wide). */
+@Composable
+fun DhTonalIcon(
+    icon: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = modifier.size(40.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 
@@ -250,7 +321,11 @@ fun ModernCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, con
     DhCard(modifier = modifier, onClick = onClick) { content() }
 }
 
-/** Settings-style row: title + supporting text + trailing control. */
+/**
+ * Settings-style row: [icon] Title / status line ... [switch | value | chevron].
+ * Tapping the row does the main action. Minimum 48dp touch target; long text
+ * truncates with ellipsis. Works at font scale 1.3 (rows grow vertically).
+ */
 @Composable
 fun DhSettingsRow(
     title: String,
@@ -265,12 +340,115 @@ fun DhSettingsRow(
         modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
     } else modifier
     ListItem(
-        modifier = rowModifier,
-        headlineContent = { Text(title, style = MaterialTheme.typography.titleSmall) },
-        supportingContent = supporting?.let { { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        modifier = rowModifier.defaultMinSize(minHeight = 48.dp),
+        headlineContent = {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (enabled) Color.Unspecified else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+            )
+        },
+        supportingContent = supporting?.let { text ->
+            {
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        },
         leadingContent = leading,
         trailingContent = trailing,
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Switch: ONE shared switch with explicit on/off colours (no muddy off state)
+// ---------------------------------------------------------------------------
+
+/**
+ * The single shared switch for the whole app (Settings, Task detail,
+ * GitHub/Project toggles, ...). Checked = primary track + onPrimary thumb.
+ * Unchecked = surfaceVariant track with outline thumb + border. Disabled
+ * states stay explicit theme colours — never the muddy default.
+ */
+@Composable
+fun DhSwitch(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        enabled = enabled,
+        colors = SwitchDefaults.colors(
+            checkedTrackColor = MaterialTheme.colorScheme.primary,
+            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+            checkedBorderColor = MaterialTheme.colorScheme.primary,
+            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+            uncheckedBorderColor = MaterialTheme.colorScheme.outline,
+            disabledCheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledCheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            disabledCheckedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledUncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            disabledUncheckedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+        ),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Top bar: one shared small (64dp) bar — title titleLarge, back at start,
+// actions at end. Used by every screen with a top bar so heights and title
+// styles match. The bar owns the ONE status-bar inset (via
+// TopAppBarDefaults.windowInsets); screens must not add statusBarsPadding.
+// ---------------------------------------------------------------------------
+
+/**
+ * Shared top bar. [onBack] shows the back arrow at the start; [actions] sit
+ * at the end. Exactly one status-bar inset lives here — callers inside
+ * DailyHubScaffold must not add their own top inset.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DhTopBar(
+    title: String,
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
+    backContentDescription: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    androidx.compose.material3.TopAppBar(
+        title = {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        modifier = modifier,
+        navigationIcon = {
+            if (onBack != null) {
+                androidx.compose.material3.IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = backContentDescription,
+                    )
+                }
+            }
+        },
+        actions = actions,
+        windowInsets = androidx.compose.material3.TopAppBarDefaults.windowInsets,
     )
 }
 
@@ -335,10 +513,12 @@ fun DhFilterChip(
     label: String,
     modifier: Modifier = Modifier,
     leadingIcon: @Composable (() -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     FilterChip(
         selected = selected,
         onClick = onClick,
+        enabled = enabled,
         label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingIcon = leadingIcon,
         modifier = modifier,
@@ -476,6 +656,25 @@ fun DhContentColumn(
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxWidth().padding(padding), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
     }
+}
+
+/**
+ * Design-system FAB: bright primary container (not the muted default
+ * primaryContainer), so Tasks / Projects / Duo-hub / Workout all match.
+ */
+@Composable
+fun DhFab(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.material3.FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        content = content,
+    )
 }
 
 // ---------------------------------------------------------------------------

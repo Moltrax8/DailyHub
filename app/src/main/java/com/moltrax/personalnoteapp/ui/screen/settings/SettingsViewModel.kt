@@ -8,6 +8,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.data.remote.drive.DriveAuthService
+import com.moltrax.personalnoteapp.data.repository.UpdateRepository
+import com.moltrax.personalnoteapp.domain.model.AppRelease
 import com.moltrax.personalnoteapp.domain.repository.SyncRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.domain.util.BirthdayUtils
@@ -22,6 +24,13 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
+/** Manual "Check for updates" result (About section; read-only, no behavior change). */
+sealed interface UpdateCheck {
+    data object Unavailable : UpdateCheck
+    data object UpToDate : UpdateCheck
+    data class Available(val release: AppRelease) : UpdateCheck
+}
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefs: AppPreferences,
@@ -30,6 +39,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val taskRepo: TaskRepository,
     private val notifService: NotificationService,
+    private val updates: UpdateRepository,
 ) : ViewModel() {
 
     val language       = prefs.language.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "en")
@@ -112,6 +122,13 @@ class SettingsViewModel @Inject constructor(
 
     fun syncNow() = viewModelScope.launch { syncRepo.sync(manual = true) }
     fun pullNow() = viewModelScope.launch { syncRepo.pullFromDrive(manual = true) }
+
+    /** One-shot manual update check for the About section. Null fetch = Unavailable. */
+    suspend fun checkForUpdatesNow(): UpdateCheck {
+        val release = runCatching { updates.checkNow() }.getOrNull() ?: return UpdateCheck.Unavailable
+        return if (updates.isNewerThanInstalled(release)) UpdateCheck.Available(release)
+        else UpdateCheck.UpToDate
+    }
 
     fun signOut(onDone: () -> Unit) {
         viewModelScope.launch {

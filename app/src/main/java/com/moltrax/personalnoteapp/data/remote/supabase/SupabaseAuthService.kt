@@ -92,6 +92,10 @@ class SupabaseAuthService @Inject constructor(
         _session.value = SessionState.SignedOut
     }
 
+    /** Stored account email for display (Profile header); null when signed out. Read-only. */
+    suspend fun currentUserEmail(): String? =
+        runCatching { tokens.load()?.session?.user?.email }.getOrNull()
+
     suspend fun currentUserId(): String? = when (val s = _session.value) {
         is SessionState.SignedIn -> s.userId
         SessionState.SignedOut -> tokens.load()?.session?.user?.id?.also {

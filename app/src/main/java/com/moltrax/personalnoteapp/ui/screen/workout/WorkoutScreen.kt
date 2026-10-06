@@ -1,26 +1,64 @@
 package com.moltrax.personalnoteapp.ui.screen.workout
 
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.json.WorkoutJsonCodec
 import com.moltrax.personalnoteapp.domain.model.WorkoutGroup
+import com.moltrax.personalnoteapp.ui.components.DhCard
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
+import com.moltrax.personalnoteapp.ui.components.DhFab
+import com.moltrax.personalnoteapp.ui.components.DhFormDialog
+import com.moltrax.personalnoteapp.ui.components.DhTextField
+import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.navigation.WorkoutDetail
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,64 +91,77 @@ fun WorkoutScreen(nav: NavController, vm: WorkoutViewModel = hiltViewModel()) {
     }
 
     if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text(stringResource(R.string.workout_new_program)) },
-            text = {
-                OutlinedTextField(newGroupName, { newGroupName = it }, label = { Text(stringResource(R.string.workout_program_name)) },
-                    modifier = Modifier.fillMaxWidth())
+        DhFormDialog(
+            title = stringResource(R.string.workout_new_program),
+            onDismiss = { showAddDialog = false; newGroupName = "" },
+            confirmLabel = stringResource(R.string.action_add),
+            onConfirm = {
+                if (newGroupName.isNotBlank()) {
+                    vm.addGroup(newGroupName.trim())
+                    newGroupName = ""
+                    showAddDialog = false
+                }
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (newGroupName.isNotBlank()) { vm.addGroup(newGroupName); newGroupName = ""; showAddDialog = false }
-                }) { Text(stringResource(R.string.action_add)) }
+            dismissLabel = stringResource(R.string.action_cancel),
+            confirmEnabled = newGroupName.isNotBlank(),
+            modifier = Modifier.imePadding(),
+            content = {
+                DhTextField(
+                    value = newGroupName,
+                    onValueChange = { newGroupName = it },
+                    label = stringResource(R.string.workout_program_name),
+                    singleLine = true,
+                )
             },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.workout_my_workouts)) },
+            DhTopBar(
+                title = stringResource(R.string.workout_my_workouts),
                 actions = {
                     IconButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }) {
-                        Icon(Icons.Filled.Upload, stringResource(R.string.cd_import))
+                        Icon(Icons.Filled.Upload, contentDescription = stringResource(R.string.cd_import))
                     }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            DhFab(
                 onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) { Icon(Icons.Default.Add, stringResource(R.string.workout_new_program)) }
+            ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.workout_new_program)) }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(groups, key = { it.id }) { group ->
-                GroupCard(
-                    group,
-                    onTap = { nav.navigate(WorkoutDetail(group.id)) },
-                    onExport = {
-                        val filename = WorkoutJsonCodec.programFilename(group.name)
-                        pendingExport = group to filename
-                        exportLauncher.launch(filename)
-                    },
-                    onDelete = { vm.deleteGroup(group.id) },
+        if (groups.isEmpty()) {
+            Column(
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                DhEmptyState(
+                    icon = Icons.Filled.FitnessCenter,
+                    title = stringResource(R.string.workout_no_programs),
+                    description = stringResource(R.string.workout_empty_desc),
+                    actionLabel = stringResource(R.string.workout_new_program),
+                    onAction = { showAddDialog = true },
                 )
             }
-            if (groups.isEmpty()) {
-                item {
-                    com.moltrax.personalnoteapp.ui.components.DhEmptyState(
-                        icon = Icons.Filled.FitnessCenter,
-                        title = stringResource(R.string.workout_no_programs),
-                        description = stringResource(R.string.workout_empty_desc),
-                        actionLabel = stringResource(R.string.workout_new_program),
-                        onAction = { showAddDialog = true },
+        } else {
+            LazyColumn(
+                Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(groups, key = { it.id }) { group ->
+                    GroupCard(
+                        group,
+                        onTap = { nav.navigate(WorkoutDetail(group.id)) },
+                        onExport = {
+                            val filename = WorkoutJsonCodec.programFilename(group.name)
+                            pendingExport = group to filename
+                            exportLauncher.launch(filename)
+                        },
+                        onDelete = { vm.deleteGroup(group.id) },
                     )
                 }
             }
@@ -129,23 +180,33 @@ private fun GroupCard(
     var showDelete by remember { mutableStateOf(false) }
     val exerciseCount = group.workouts.sumOf { it.exercises.size }
     val totalSets = group.workouts.sumOf { w -> w.exercises.sumOf { it.plannedSets.size } }
-    com.moltrax.personalnoteapp.ui.components.DhCard(onClick = onTap) {
+    DhCard(onClick = onTap) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            DhTonalIcon(Icons.Filled.FitnessCenter, contentDescription = null)
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(group.name, style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    group.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     stringResource(R.string.workout_count, group.workouts.size) +
                         " · " + stringResource(R.string.workout_exercise_count, exerciseCount) +
                         " · " + stringResource(R.string.workout_set_count, totalSets),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            TextButton(onClick = onTap) { Text(stringResource(R.string.projects_open)) }
             Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Filled.MoreHoriz, stringResource(R.string.cd_more))
+                IconButton(
+                    onClick = { menuOpen = true },
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
@@ -159,9 +220,15 @@ private fun GroupCard(
                 }
             }
         }
+        Button(
+            onClick = onTap,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        ) {
+            Text(stringResource(R.string.workout_start), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
     if (showDelete) {
-        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+        DhConfirmDialog(
             title = stringResource(R.string.workout_delete_title),
             message = stringResource(R.string.workout_delete_confirm, group.name),
             confirmLabel = stringResource(R.string.action_delete),

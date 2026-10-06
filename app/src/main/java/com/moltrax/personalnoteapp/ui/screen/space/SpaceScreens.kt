@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,15 +32,33 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Stream
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import com.moltrax.personalnoteapp.ui.components.DhDivider
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
+import com.moltrax.personalnoteapp.ui.components.DhErrorState
+import com.moltrax.personalnoteapp.ui.components.DhFab
+import com.moltrax.personalnoteapp.ui.components.DhFormDialog
+import com.moltrax.personalnoteapp.ui.components.DhLoadingRow
+import com.moltrax.personalnoteapp.ui.components.DhScrollTabs
+import com.moltrax.personalnoteapp.ui.components.DhSection
+import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
+import com.moltrax.personalnoteapp.ui.components.DhTextField
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
+import com.moltrax.personalnoteapp.ui.components.DhAvatarStack
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -60,6 +81,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -111,14 +133,11 @@ fun DuoHubScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(state.space?.name ?: stringResource(R.string.spaces_duo), style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            DhTopBar(
+                title = state.space?.name?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.spaces_duo),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
                 actions = {
                     IconButton(onClick = { vm.refresh(spaceId) }) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
@@ -128,14 +147,14 @@ fun DuoHubScreen(
         },
         floatingActionButton = {
             if (showFab) {
-                FloatingActionButton(onClick = { showAdd = true }) {
+                DhFab(onClick = { showAdd = true }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
                 }
             }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            // Primary space navigation: 5 sections instead of 7 scrolling tabs.
+            // Primary space navigation: 5 sections in a clean scrollable tab row.
             val sections = listOf(
                 stringResource(R.string.spaces_overview),
                 stringResource(R.string.spaces_plan),
@@ -143,18 +162,11 @@ fun DuoHubScreen(
                 stringResource(R.string.spaces_library),
                 stringResource(R.string.spaces_people),
             )
-            androidx.compose.foundation.layout.FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                sections.forEachIndexed { index, label ->
-                    com.moltrax.personalnoteapp.ui.components.DhFilterChip(
-                        selected = section == index,
-                        onClick = { section = index },
-                        label = label,
-                    )
-                }
-            }
+            DhScrollTabs(
+                options = sections,
+                selectedIndex = section,
+                onSelect = { section = it },
+            )
             // Secondary switchers live inside Plan + Library only.
             if (section == SEC_PLAN) {
                 com.moltrax.personalnoteapp.ui.components.DhSegmentedControl(
@@ -177,18 +189,21 @@ fun DuoHubScreen(
                 )
             }
             if (state.busy) {
-                Box(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
+                DhLoadingRow(message = stringResource(R.string.loading))
             }
             state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+                DhErrorState(
+                    title = stringResource(R.string.sync_error_title),
+                    description = it,
+                    retryLabel = stringResource(R.string.action_retry),
+                    onRetry = { vm.refresh(spaceId) },
+                )
             }
             // Space identity strip: who the space is for + what changed recently.
             if (section == SEC_OVERVIEW) {
                 SpaceOverview(
                     state = state,
+                    memberNames = state.members.map { socialVm.displayNameOf(it.userId) },
                     onGoTasks = { section = SEC_PLAN; planSub = 0 },
                     onGoChat = { section = SEC_DISCUSS },
                     onGoLibrary = { section = SEC_LIBRARY },
@@ -196,14 +211,14 @@ fun DuoHubScreen(
             }
             when (section) {
                 SEC_PLAN -> if (planSub == 0) {
-                    SharedTasksList(vm = vm, spaceId = spaceId, state = state)
+                    SharedTasksList(vm = vm, spaceId = spaceId, state = state, onAdd = { showAdd = true })
                 } else {
-                    EventsTab(vm = vm, spaceId = spaceId, state = state)
+                    EventsTab(vm = vm, spaceId = spaceId, state = state, onAdd = { showAdd = true })
                 }
                 SEC_DISCUSS -> ChatTab(vm = vm, spaceId = spaceId, state = state)
                 SEC_LIBRARY -> when (librarySub) {
-                    0 -> SharedNotesList(vm = vm, spaceId = spaceId, state = state)
-                    1 -> SharedLinksList(vm = vm, spaceId = spaceId, state = state)
+                    0 -> SharedNotesList(vm = vm, spaceId = spaceId, state = state, onAdd = { showAdd = true })
+                    1 -> SharedLinksList(vm = vm, spaceId = spaceId, state = state, onAdd = { showAdd = true })
                     else -> FilesTab(vm = vm, spaceId = spaceId, state = state)
                 }
                 SEC_PEOPLE -> MembersTab(vm = vm, socialVm = socialVm, spaceId = spaceId, state = state, nav = nav)
@@ -240,6 +255,7 @@ fun DuoHubScreen(
 @Composable
 private fun SpaceOverview(
     state: SpaceDetailUiState,
+    memberNames: List<String>,
     onGoTasks: () -> Unit,
     onGoChat: () -> Unit,
     onGoLibrary: () -> Unit,
@@ -250,20 +266,36 @@ private fun SpaceOverview(
     ) {
         val openTasks = state.tasks.count { !it.isDone }
         com.moltrax.personalnoteapp.ui.components.DhCard {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    state.space?.name ?: "",
+                    state.space?.name?.takeIf { it.isNotBlank() } ?: "",
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                if (memberNames.isNotEmpty()) {
+                    DhAvatarStack(names = memberNames)
+                }
                 Text(
                     stringResource(R.string.spaces_overview_summary, state.tasks.size, openTasks, state.notes.size, state.files.size),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onGoTasks, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.spaces_tasks)) }
-                    OutlinedButton(onClick = onGoChat, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.spaces_chat)) }
-                    OutlinedButton(onClick = onGoLibrary, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.spaces_files)) }
+                    OutlinedButton(
+                        onClick = onGoTasks,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) { Text(stringResource(R.string.spaces_tasks), maxLines = 1) }
+                    OutlinedButton(
+                        onClick = onGoChat,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) { Text(stringResource(R.string.spaces_chat), maxLines = 1) }
+                    OutlinedButton(
+                        onClick = onGoLibrary,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) { Text(stringResource(R.string.spaces_files), maxLines = 1) }
                 }
             }
         }
@@ -271,29 +303,44 @@ private fun SpaceOverview(
 }
 
 @Composable
-private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState) {
+private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (state.notes.isEmpty()) {
-            item { Text(stringResource(R.string.spaces_empty_notes)) }
-        }
-        items(state.notes, key = { it.id }) { note ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            note.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.spaces_untitled),
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.weight(1f),
+            item {
+                DhEmptyState(
+                    icon = Icons.Default.Description,
+                    title = stringResource(R.string.spaces_notes),
+                    description = stringResource(R.string.spaces_empty_notes),
+                    actionLabel = stringResource(R.string.spaces_new_note),
+                    onAction = onAdd,
+                )
+            }
+        } else {
+            item {
+                DhSection(title = stringResource(R.string.spaces_notes)) {
+                    state.notes.forEachIndexed { index, note ->
+                        if (index > 0) DhDivider()
+                        DhSettingsRow(
+                            title = note.title?.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.spaces_untitled),
+                            supporting = note.bodyMd?.takeIf { it.isNotBlank() },
+                            trailing = {
+                                IconButton(
+                                    onClick = { vm.deleteNote(spaceId, note.id) },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.action_delete),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
                         )
-                        IconButton(onClick = { vm.deleteNote(spaceId, note.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
-                        }
-                    }
-                    note.bodyMd?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -302,31 +349,60 @@ private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
 }
 
 @Composable
-private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState) {
+private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (state.tasks.isEmpty()) {
-            item { Text(stringResource(R.string.spaces_empty_tasks)) }
-        }
-        items(state.tasks, key = { it.id }) { task ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = task.isDone,
-                        onCheckedChange = { vm.toggleSharedTask(spaceId, task) },
-                    )
-                    Text(
-                        task.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = { vm.deleteSharedTask(spaceId, task.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+            item {
+                DhEmptyState(
+                    icon = Icons.Default.Checklist,
+                    title = stringResource(R.string.spaces_tasks),
+                    description = stringResource(R.string.spaces_empty_tasks),
+                    actionLabel = stringResource(R.string.spaces_new_task),
+                    onAction = onAdd,
+                )
+            }
+        } else {
+            item {
+                DhSection(title = stringResource(R.string.spaces_tasks)) {
+                    state.tasks.forEachIndexed { index, task ->
+                        if (index > 0) DhDivider()
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = task.isDone,
+                                onCheckedChange = { vm.toggleSharedTask(spaceId, task) },
+                            )
+                            Text(
+                                task.title,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+                                ),
+                                color = if (task.isDone) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier.weight(1f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            IconButton(
+                                onClick = { vm.deleteSharedTask(spaceId, task.id) },
+                                modifier = Modifier.size(48.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.action_delete),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -335,35 +411,43 @@ private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
 }
 
 @Composable
-private fun SharedLinksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState) {
+private fun SharedLinksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (state.links.isEmpty()) {
-            item { Text(stringResource(R.string.spaces_empty_links)) }
-        }
-        items(state.links, key = { it.id }) { link ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            link.title?.takeIf { it.isNotBlank() } ?: link.url,
-                            style = MaterialTheme.typography.titleSmall,
+            item {
+                DhEmptyState(
+                    icon = Icons.Default.Link,
+                    title = stringResource(R.string.spaces_links),
+                    description = stringResource(R.string.spaces_empty_links),
+                    actionLabel = stringResource(R.string.spaces_new_link),
+                    onAction = onAdd,
+                )
+            }
+        } else {
+            item {
+                DhSection(title = stringResource(R.string.spaces_links)) {
+                    state.links.forEachIndexed { index, link ->
+                        if (index > 0) DhDivider()
+                        DhSettingsRow(
+                            title = link.title?.takeIf { it.isNotBlank() } ?: link.url,
+                            supporting = if (!link.title.isNullOrBlank()) link.url else null,
+                            trailing = {
+                                IconButton(
+                                    onClick = { vm.deleteLink(spaceId, link.id) },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.action_delete),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
                         )
-                        if (!link.title.isNullOrBlank()) {
-                            Text(
-                                link.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    IconButton(onClick = { vm.deleteLink(spaceId, link.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -382,9 +466,12 @@ private fun MembersTab(
 ) {
     val social by socialVm.state.collectAsStateWithLifecycle()
     var showInvite by remember { mutableStateOf(false) }
+    var showLeaveConfirm by remember { mutableStateOf(false) }
+    var removeTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Text(
@@ -397,73 +484,84 @@ private fun MembersTab(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = { showInvite = true },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.spaces_invite)) }
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                ) { Text(stringResource(R.string.spaces_invite), maxLines = 1) }
                 OutlinedButton(
-                    onClick = { vm.leaveSpace(spaceId) { nav.popBackStack() } },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.spaces_leave)) }
+                    onClick = { showLeaveConfirm = true },
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                ) { Text(stringResource(R.string.spaces_leave), maxLines = 1) }
             }
         }
-        items(state.members, key = { it.userId }) { member ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            socialVm.displayNameOf(member.userId) +
-                                if (member.userId == social.myId) stringResource(R.string.spaces_you_suffix) else "",
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            stringResource(
-                                if (member.isOwner) R.string.spaces_role_owner
-                                else R.string.spaces_role_member
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (member.userId != social.myId) {
-                        IconButton(onClick = { vm.removeMember(spaceId, member.userId) }) {
-                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.spaces_remove))
-                        }
-                    }
+        item {
+            DhSection(title = stringResource(R.string.spaces_members)) {
+                state.members.forEachIndexed { index, member ->
+                    if (index > 0) DhDivider()
+                    val name = socialVm.displayNameOf(member.userId) +
+                        if (member.userId == social.myId) stringResource(R.string.spaces_you_suffix) else ""
+                    DhSettingsRow(
+                        title = name,
+                        supporting = stringResource(
+                            if (member.isOwner) R.string.spaces_role_owner
+                            else R.string.spaces_role_member,
+                        ),
+                        trailing = {
+                            if (member.userId != social.myId) {
+                                IconButton(
+                                    onClick = { removeTarget = member.userId to name },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.spaces_remove),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                    )
                 }
             }
         }
     }
+    if (showLeaveConfirm) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.spaces_leave_title),
+            message = stringResource(R.string.spaces_leave_confirm),
+            confirmLabel = stringResource(R.string.spaces_leave),
+            onConfirm = { showLeaveConfirm = false; vm.leaveSpace(spaceId) { nav.popBackStack() } },
+            onDismiss = { showLeaveConfirm = false },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
+    }
+    removeTarget?.let { (userId, name) ->
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.spaces_remove_title),
+            message = stringResource(R.string.spaces_remove_confirm, name),
+            confirmLabel = stringResource(R.string.spaces_remove),
+            onConfirm = { removeTarget = null; vm.removeMember(spaceId, userId) },
+            onDismiss = { removeTarget = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
+    }
     if (showInvite) {
         var username by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showInvite = false },
-            title = { Text(stringResource(R.string.spaces_invite_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.spaces_invite_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text(stringResource(R.string.spaces_username)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                }
+        DhFormDialog(
+            title = stringResource(R.string.spaces_invite_title),
+            onDismiss = { showInvite = false },
+            confirmLabel = stringResource(R.string.spaces_invite),
+            onConfirm = { vm.inviteByUsername(spaceId, username.trim()) { showInvite = false } },
+            dismissLabel = stringResource(R.string.action_cancel),
+            confirmEnabled = username.isNotBlank(),
+            message = stringResource(R.string.spaces_invite_hint),
+            modifier = Modifier.imePadding(),
+            content = {
+                DhTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = stringResource(R.string.spaces_username),
+                    singleLine = true,
+                )
             },
-            confirmButton = {
-                TextButton(
-                    onClick = { vm.inviteByUsername(spaceId, username) { showInvite = false } },
-                    enabled = username.isNotBlank(),
-                ) { Text(stringResource(R.string.spaces_invite)) }
-            },
-            dismissButton = { TextButton(onClick = { showInvite = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -472,59 +570,51 @@ private fun MembersTab(
 private fun NoteDialog(onDismiss: () -> Unit, onConfirm: (String?, String?) -> Unit) {
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.spaces_new_note)) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.spaces_note_title)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = body,
-                    onValueChange = { body = it },
-                    label = { Text(stringResource(R.string.spaces_note_body)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+    DhFormDialog(
+        title = stringResource(R.string.spaces_new_note),
+        onDismiss = onDismiss,
+        confirmLabel = stringResource(R.string.action_save),
+        onConfirm = {
+            onConfirm(title.takeIf { it.isNotBlank() }, body.takeIf { it.isNotBlank() })
         },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(title.takeIf { it.isNotBlank() }, body.takeIf { it.isNotBlank() })
-            }) { Text(stringResource(R.string.action_save)) }
+        dismissLabel = stringResource(R.string.action_cancel),
+        modifier = Modifier.imePadding(),
+        content = {
+            DhTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = stringResource(R.string.spaces_note_title),
+                singleLine = true,
+            )
+            DhTextField(
+                value = body,
+                onValueChange = { body = it },
+                label = stringResource(R.string.spaces_note_body),
+                singleLine = false,
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
 @Composable
 private fun TaskDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var title by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.spaces_new_task)) },
-        text = {
-            OutlinedTextField(
+    DhFormDialog(
+        title = stringResource(R.string.spaces_new_task),
+        onDismiss = onDismiss,
+        confirmLabel = stringResource(R.string.action_save),
+        onConfirm = { onConfirm(title.trim()) },
+        dismissLabel = stringResource(R.string.action_cancel),
+        confirmEnabled = title.isNotBlank(),
+        modifier = Modifier.imePadding(),
+        content = {
+            DhTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text(stringResource(R.string.task_title_field)) },
-                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.task_title_field),
                 singleLine = true,
             )
         },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(title.trim()) }, enabled = title.isNotBlank()) {
-                Text(stringResource(R.string.action_save))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -533,36 +623,32 @@ private fun LinkDialog(onDismiss: () -> Unit, onConfirm: (String, String?) -> Un
     var url by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     val valid = url.trim().startsWith("http://") || url.trim().startsWith("https://")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.spaces_new_link)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text(stringResource(R.string.spaces_link_url)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    isError = url.isNotBlank() && !valid,
-                )
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.spaces_link_title)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-            }
+    DhFormDialog(
+        title = stringResource(R.string.spaces_new_link),
+        onDismiss = onDismiss,
+        confirmLabel = stringResource(R.string.action_save),
+        onConfirm = { onConfirm(url.trim(), title.takeIf { it.isNotBlank() }) },
+        dismissLabel = stringResource(R.string.action_cancel),
+        confirmEnabled = valid,
+        modifier = Modifier.imePadding(),
+        content = {
+            OutlinedTextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text(stringResource(R.string.spaces_link_url)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = url.isNotBlank() && !valid,
+                shape = MaterialTheme.shapes.small,
+            )
+            DhTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = stringResource(R.string.spaces_link_title),
+                singleLine = true,
+            )
         },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(url.trim(), title.takeIf { it.isNotBlank() }) },
-                enabled = valid,
-            ) { Text(stringResource(R.string.action_save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -576,21 +662,38 @@ private fun ChatTab(
     var draft by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.fillMaxWidth().weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (state.messages.isEmpty()) {
-                item { Text(stringResource(R.string.spaces_empty_chat)) }
-            }
-            items(state.messages, key = { it.id }) { msg ->
-                Card(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(msg.body, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        IconButton(onClick = { vm.deleteMessage(spaceId, msg.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                item {
+                    DhEmptyState(
+                        icon = Icons.Default.ChatBubbleOutline,
+                        title = stringResource(R.string.spaces_chat),
+                        description = stringResource(R.string.spaces_empty_chat),
+                    )
+                }
+            } else {
+                item {
+                    DhSection(title = stringResource(R.string.spaces_chat)) {
+                        state.messages.forEachIndexed { index, msg ->
+                            if (index > 0) DhDivider()
+                            DhSettingsRow(
+                                title = msg.body,
+                                trailing = {
+                                    IconButton(
+                                        onClick = { vm.deleteMessage(spaceId, msg.id) },
+                                        modifier = Modifier.size(48.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.action_delete),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                            )
                         }
                     }
                 }
@@ -622,31 +725,44 @@ private fun EventsTab(
     vm: SpaceViewModel,
     spaceId: String,
     state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDetailUiState,
+    onAdd: () -> Unit,
 ) {
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (state.events.isEmpty()) {
-            item { Text(stringResource(R.string.spaces_empty_events)) }
-        }
-        items(state.events, key = { it.id }) { event ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(event.title, style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            fmtRange(event.startAt, event.endAt),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            item {
+                DhEmptyState(
+                    icon = Icons.Default.Event,
+                    title = stringResource(R.string.spaces_events),
+                    description = stringResource(R.string.spaces_empty_events),
+                    actionLabel = stringResource(R.string.spaces_new_event),
+                    onAction = onAdd,
+                )
+            }
+        } else {
+            item {
+                DhSection(title = stringResource(R.string.spaces_events)) {
+                    state.events.forEachIndexed { index, event ->
+                        if (index > 0) DhDivider()
+                        DhSettingsRow(
+                            title = event.title,
+                            supporting = fmtRange(event.startAt, event.endAt),
+                            trailing = {
+                                IconButton(
+                                    onClick = { vm.deleteEvent(spaceId, event.id) },
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.action_delete),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
                         )
-                    }
-                    IconButton(onClick = { vm.deleteEvent(spaceId, event.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -681,38 +797,56 @@ private fun FilesTab(
     Column(Modifier.fillMaxSize()) {
         Button(
             onClick = { picker.launch("*/*") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        ) { Text(stringResource(R.string.spaces_upload)) }
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                .heightIn(min = 48.dp),
+        ) {
+            Text(
+                stringResource(R.string.spaces_upload),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (state.files.isEmpty()) {
-                item { Text(stringResource(R.string.spaces_empty_files)) }
-            }
-            items(state.files, key = { it.id }) { file ->
-                Card(Modifier.fillMaxWidth().clickable {
-                    scope.launch {
-                        runCatching { vm.downloadBytes(file) }.onSuccess { bytes ->
-                            openBytes(context, file.displayName, bytes)
-                        }
-                    }
-                }) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(file.displayName, style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                kbLabel(file.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                item {
+                    DhEmptyState(
+                        icon = Icons.Default.FolderOpen,
+                        title = stringResource(R.string.spaces_files),
+                        description = stringResource(R.string.spaces_empty_files),
+                    )
+                }
+            } else {
+                item {
+                    DhSection(title = stringResource(R.string.spaces_files)) {
+                        state.files.forEachIndexed { index, file ->
+                            if (index > 0) DhDivider()
+                            DhSettingsRow(
+                                title = file.displayName,
+                                supporting = kbLabel(file.size),
+                                trailing = {
+                                    IconButton(
+                                        onClick = { vm.deleteFile(spaceId, file) },
+                                        modifier = Modifier.size(48.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.action_delete),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    scope.launch {
+                                        runCatching { vm.downloadBytes(file) }.onSuccess { bytes ->
+                                            openBytes(context, file.displayName, bytes)
+                                        }
+                                    }
+                                },
                             )
-                        }
-                        IconButton(onClick = { vm.deleteFile(spaceId, file) }) {
-                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                         }
                     }
                 }
@@ -725,24 +859,28 @@ private fun FilesTab(
 @Composable
 private fun FeedTab(state: com.moltrax.personalnoteapp.ui.screen.space.SpaceDetailUiState) {
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (state.feed.isEmpty()) {
-            item { Text(stringResource(R.string.spaces_empty_feed)) }
-        }
-        items(state.feed, key = { it.id }) { entry ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                    Text(
-                        com.moltrax.personalnoteapp.domain.model.feedKindTitle(entry.kind),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        feedTime(entry.createdAt),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            item {
+                DhEmptyState(
+                    icon = Icons.Default.Stream,
+                    title = stringResource(R.string.spaces_feed),
+                    description = stringResource(R.string.spaces_empty_feed),
+                )
+            }
+        } else {
+            item {
+                DhSection(title = stringResource(R.string.spaces_feed)) {
+                    state.feed.forEachIndexed { index, entry ->
+                        if (index > 0) DhDivider()
+                        DhSettingsRow(
+                            title = com.moltrax.personalnoteapp.domain.model.feedKindTitle(entry.kind),
+                            supporting = feedTime(entry.createdAt),
+                        )
+                    }
                 }
             }
         }
