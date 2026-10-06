@@ -24,6 +24,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
+import com.moltrax.personalnoteapp.ui.components.DhDivider
+import com.moltrax.personalnoteapp.ui.components.DhFilterChip
+import com.moltrax.personalnoteapp.ui.components.DhSection
+import com.moltrax.personalnoteapp.ui.components.DhSettingsRow
+import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
+import com.moltrax.personalnoteapp.ui.screen.settings.SettingsViewModel
 import com.moltrax.personalnoteapp.ui.theme.AppColors
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -32,10 +39,17 @@ import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel = hiltViewModel()) {
+fun TaskDetailScreen(
+    nav: NavController,
+    taskId: String,
+    vm: TaskDetailViewModel = hiltViewModel(),
+    settingsVm: SettingsViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     val workoutGroups by vm.workoutGroups.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
+    val reminderMinutes by settingsVm.reminderMinutes.collectAsStateWithLifecycle()
+    val systemAlerts by settingsVm.systemAlertsEnabled.collectAsStateWithLifecycle()
 
     // Due-date label depends on the composition locale; recreated when the language changes.
     val locale = LocalConfiguration.current.locales[0]
@@ -61,13 +75,10 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.task_new else R.string.task_edit)) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            DhTopBar(
+                title = stringResource(if (state.isNew) R.string.task_new else R.string.task_edit),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
                 actions = {
                     TextButton(
                         onClick = { vm.save { nav.popBackStack() } },
@@ -80,228 +91,290 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
         Column(
             modifier = Modifier.fillMaxSize().padding(padding)
                 .imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            Text(
-                stringResource(R.string.task_section_core),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            // Large title field first (frictionless capture/editing).
             OutlinedTextField(
                 value = state.title,
                 onValueChange = { vm.update { copy(title = it) } },
                 label = { Text(stringResource(R.string.task_title_field)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = MaterialTheme.shapes.small,
-            )
-            OutlinedTextField(
-                value = state.notes,
-                onValueChange = { vm.update { copy(notes = it) } },
-                label = { Text(stringResource(R.string.task_notes_field)) },
-                modifier = Modifier.fillMaxWidth().height(120.dp),
-                maxLines = 5,
+                textStyle = MaterialTheme.typography.titleLarge,
                 shape = MaterialTheme.shapes.small,
             )
 
-            // Subtasks (Checklist)
-            SubtaskSection(
-                subtasks = state.subtasks,
-                onAdd = vm::addSubtask,
-                onToggle = vm::toggleSubtask,
-                onRemove = vm::removeSubtask,
-            )
-
-            // Due Date & Time (Deadline) — empty means no reminder/penalty kicks in
-            Text(
-                stringResource(R.string.task_section_schedule),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            com.moltrax.personalnoteapp.ui.components.DhCard {
-                Text(
-                    stringResource(R.string.task_deadline),
-                    style = MaterialTheme.typography.titleSmall,
-                )
+            // Schedule: due date + reminder (read-only default from Settings) as grouped rows.
             val deadlineText = state.dueDate?.let { deadlineFmt.format(Date(it)) }
                 ?: stringResource(R.string.task_deadline_unset)
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+            val reminderText = if (!systemAlerts) {
+                stringResource(R.string.task_reminder_default_off)
+            } else if (reminderMinutes < 60) {
+                context.resources.getQuantityString(R.plurals.reminder_minutes_before, reminderMinutes, reminderMinutes)
+            } else if (reminderMinutes % 60 == 0) {
+                val h = reminderMinutes / 60
+                context.resources.getQuantityString(R.plurals.reminder_hours_before, h, h)
+            } else {
+                context.getString(R.string.reminder_hours_minutes_before, reminderMinutes / 60, reminderMinutes % 60)
+            }
+            val repeatSummary = when {
+                !state.isRecurring -> stringResource(R.string.task_none)
+                state.recurrenceType == RecurrenceType.DAILY -> stringResource(R.string.recurrence_daily)
+                state.recurrenceType == RecurrenceType.WEEKLY -> stringResource(R.string.recurrence_weekly)
+                state.recurrenceType == RecurrenceType.MONTHLY -> stringResource(R.string.recurrence_monthly)
+                else -> state.intervalDays?.let { stringResource(R.string.recurrence_interval) + " · $it" }
+                    ?: stringResource(R.string.recurrence_interval)
+            }
+            DhSection(title = stringResource(R.string.task_section_schedule)) {
+                DhSettingsRow(
+                    title = stringResource(R.string.task_deadline),
+                    supporting = deadlineText,
+                    leading = { DhTonalIcon(Icons.Default.Schedule, contentDescription = null) },
+                    trailing = {
+                        if (state.dueDate != null) {
+                            IconButton(
+                                onClick = { vm.update { copy(dueDate = null) }; deadlineError = null },
+                                modifier = Modifier.size(48.dp),
+                            ) {
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.task_remove_deadline))
+                            }
+                        }
+                    },
+                    onClick = { showDatePicker = true },
+                )
+                DhDivider()
+                DhSettingsRow(
+                    title = stringResource(R.string.task_reminder_title),
+                    supporting = if (state.dueDate == null) stringResource(R.string.task_deadline_unset) else reminderText,
+                    leading = { DhTonalIcon(Icons.Default.Notifications, contentDescription = null) },
+                )
+                DhDivider()
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.Default.Schedule, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(8.dp))
-                    Text(deadlineText, modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (state.dueDate != null) {
-                        IconButton(onClick = { vm.update { copy(dueDate = null) }; deadlineError = null }) {
-                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.task_remove_deadline))
+                    OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.task_date))
+                    }
+                    OutlinedButton(
+                        onClick = { showTimePicker = true },
+                        modifier = Modifier.weight(1f),
+                        // A date is needed first for the time (otherwise we set the date at the same time).
+                    ) {
+                        Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.task_time))
+                    }
+                }
+                DhDivider()
+                DhSettingsRow(
+                    title = stringResource(R.string.task_recurring),
+                    supporting = repeatSummary,
+                    leading = { DhTonalIcon(Icons.Default.Repeat, contentDescription = null) },
+                    trailing = {
+                        Switch(
+                            checked = state.isRecurring,
+                            onCheckedChange = { vm.update { copy(isRecurring = it) } },
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline,
+                            ),
+                        )
+                    },
+                    onClick = { vm.update { copy(isRecurring = !state.isRecurring) } },
+                )
+                if (state.isRecurring) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(
+                                RecurrenceType.DAILY to stringResource(R.string.recurrence_daily),
+                                RecurrenceType.WEEKLY to stringResource(R.string.recurrence_weekly),
+                                RecurrenceType.MONTHLY to stringResource(R.string.recurrence_monthly),
+                                RecurrenceType.INTERVAL to stringResource(R.string.recurrence_interval),
+                            ).forEach { (type, label) ->
+                                DhFilterChip(
+                                    selected = state.recurrenceType == type,
+                                    onClick = { vm.update { copy(recurrenceType = type) } },
+                                    label = label,
+                                )
+                            }
                         }
+                        when (state.recurrenceType) {
+                            RecurrenceType.WEEKLY -> {
+                                Text(
+                                    stringResource(R.string.task_which_days),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (state.weeklyError) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    // ISO: 1=Monday .. 7=Sunday
+                                    listOf(
+                                        1 to R.string.weekday_mon, 2 to R.string.weekday_tue, 3 to R.string.weekday_wed,
+                                        4 to R.string.weekday_thu, 5 to R.string.weekday_fri, 6 to R.string.weekday_sat,
+                                        7 to R.string.weekday_sun,
+                                    ).forEach { (iso, labelRes) ->
+                                        DhFilterChip(
+                                            selected = iso in state.recurrenceDaysOfWeek,
+                                            onClick = { vm.toggleRecurrenceDay(iso) },
+                                            label = stringResource(labelRes),
+                                        )
+                                    }
+                                }
+                                if (state.weeklyError) {
+                                    Text(
+                                        stringResource(R.string.task_select_day_error),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                } else {
+                                    Text(
+                                        stringResource(R.string.task_no_days_hint),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            RecurrenceType.INTERVAL -> {
+                                OutlinedTextField(
+                                    value = state.intervalDays?.toString() ?: "",
+                                    onValueChange = { vm.update { copy(intervalDays = it.toIntOrNull()) } },
+                                    label = { Text(stringResource(R.string.task_every_n_days)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    isError = state.intervalError,
+                                    supportingText = if (state.intervalError) {
+                                        { Text(stringResource(R.string.task_interval_error), color = MaterialTheme.colorScheme.error) }
+                                    } else null,
+                                )
+                            }
+                            else -> Unit
+                        }
+                        Text(
+                            stringResource(R.string.task_recurring_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
             deadlineError?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.task_date))
-                }
-                OutlinedButton(
-                    onClick = { showTimePicker = true },
-                    modifier = Modifier.weight(1f),
-                    // A date is needed first for the time (otherwise we set the date at the same time).
-                ) {
-                    Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.task_time))
-                }
-            }
-            } // end schedule card
-
-            // Categories — multi-select tags (Phase 2); zero tags allowed (untracked bucket).
-            Text(stringResource(R.string.task_category), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = state.categories.isEmpty(),
-                    onClick = { vm.clearCategories() },
-                    label = { Text(stringResource(R.string.task_none)) },
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
-                categories.forEach { cat ->
-                    FilterChip(
-                        selected = state.categories.any { it.equals(cat.name, ignoreCase = true) },
-                        onClick = { vm.toggleCategory(cat.name) },
-                        label = { Text(cat.name) },
-                        leadingIcon = if (cat.isPermanent) {
-                            { Icon(Icons.Default.PushPin, contentDescription = stringResource(R.string.task_permanent),
-                                modifier = Modifier.size(16.dp)) }
-                        } else null,
+            }
+
+            // Tags — multi-select (Phase 2); zero tags allowed (untagged bucket).
+            DhSection(title = stringResource(R.string.task_category)) {
+                FlowRow(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DhFilterChip(
+                        selected = state.categories.isEmpty(),
+                        onClick = { vm.clearCategories() },
+                        label = stringResource(R.string.task_none),
+                    )
+                    categories.forEach { cat ->
+                        DhFilterChip(
+                            selected = state.categories.any { it.equals(cat.name, ignoreCase = true) },
+                            onClick = { vm.toggleCategory(cat.name) },
+                            label = cat.name,
+                            leadingIcon = if (cat.isPermanent) {
+                                {
+                                    Icon(
+                                        Icons.Default.PushPin,
+                                        contentDescription = stringResource(R.string.task_permanent),
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
+                            } else null,
+                        )
+                    }
+                }
+                var newCategory by rememberSaveable { mutableStateOf("") }
+                var newCategoryPermanent by rememberSaveable { mutableStateOf(false) }
+                OutlinedTextField(
+                    value = newCategory,
+                    onValueChange = { newCategory = it },
+                    label = { Text(stringResource(R.string.task_new_category)) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                vm.createCategory(newCategory, newCategoryPermanent)
+                                newCategory = ""
+                                newCategoryPermanent = false
+                            },
+                            enabled = newCategory.isNotBlank(),
+                            modifier = Modifier.size(48.dp),
+                        ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_category)) }
+                    },
+                )
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = newCategoryPermanent, onCheckedChange = { newCategoryPermanent = it })
+                    Text(
+                        stringResource(R.string.task_permanent_category_hint),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
 
-            var newCategory by rememberSaveable { mutableStateOf("") }
-            var newCategoryPermanent by rememberSaveable { mutableStateOf(false) }
-            OutlinedTextField(
-                value = newCategory,
-                onValueChange = { newCategory = it },
-                label = { Text(stringResource(R.string.task_new_category)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            vm.createCategory(newCategory, newCategoryPermanent)
-                            newCategory = ""
-                            newCategoryPermanent = false
-                        },
-                        enabled = newCategory.isNotBlank(),
-                    ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_category)) }
-                },
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = newCategoryPermanent, onCheckedChange = { newCategoryPermanent = it })
-                Text(stringResource(R.string.task_permanent_category_hint),
-                    style = MaterialTheme.typography.bodyMedium)
+            // Notes in their own quiet group.
+            DhSection(title = stringResource(R.string.task_notes_field)) {
+                OutlinedTextField(
+                    value = state.notes,
+                    onValueChange = { vm.update { copy(notes = it) } },
+                    label = { Text(stringResource(R.string.task_notes_field)) },
+                    modifier = Modifier.fillMaxWidth().padding(12.dp).height(120.dp),
+                    maxLines = 5,
+                    shape = MaterialTheme.shapes.small,
+                )
+            }
+
+            // Subtasks (checklist) with an add row at the bottom.
+            DhSection(title = stringResource(R.string.task_subtasks)) {
+                SubtaskSection(
+                    subtasks = state.subtasks,
+                    onAdd = vm::addSubtask,
+                    onToggle = vm::toggleSubtask,
+                    onRemove = vm::removeSubtask,
+                )
             }
 
             // Priority editor removed in v1.1 (Phase 1.2): manual sortOrder is the
             // explicit prioritization mechanism. Field kept in ViewModel/Room/Drive for compat.
 
-            // Recurrence (Recurring / Habit) + workout link live under Advanced.
-            Text(
-                stringResource(R.string.task_section_advanced),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            com.moltrax.personalnoteapp.ui.components.DhCard {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.task_recurring), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = state.isRecurring, onCheckedChange = { vm.update { copy(isRecurring = it) } })
-            }
-            if (state.isRecurring) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        RecurrenceType.DAILY to stringResource(R.string.recurrence_daily),
-                        RecurrenceType.WEEKLY to stringResource(R.string.recurrence_weekly),
-                        RecurrenceType.MONTHLY to stringResource(R.string.recurrence_monthly),
-                        RecurrenceType.INTERVAL to stringResource(R.string.recurrence_interval),
-                    ).forEach { (type, label) ->
-                        FilterChip(
-                            selected = state.recurrenceType == type,
-                            onClick = { vm.update { copy(recurrenceType = type) } },
-                            label = { Text(label) },
-                        )
-                    }
-                }
-                when (state.recurrenceType) {
-                    RecurrenceType.WEEKLY -> {
-                        Text(stringResource(R.string.task_which_days), style = MaterialTheme.typography.labelMedium,
-                            color = if (state.weeklyError) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // ISO: 1=Monday .. 7=Sunday
-                            listOf(
-                                1 to R.string.weekday_mon, 2 to R.string.weekday_tue, 3 to R.string.weekday_wed,
-                                4 to R.string.weekday_thu, 5 to R.string.weekday_fri, 6 to R.string.weekday_sat,
-                                7 to R.string.weekday_sun,
-                            ).forEach { (iso, labelRes) ->
-                                FilterChip(
-                                    selected = iso in state.recurrenceDaysOfWeek,
-                                    onClick = { vm.toggleRecurrenceDay(iso) },
-                                    label = { Text(stringResource(labelRes)) },
-                                )
-                            }
-                        }
-                        if (state.weeklyError) {
-                            Text(
-                                stringResource(R.string.task_select_day_error),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        } else {
-                            Text(
-                                stringResource(R.string.task_no_days_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    RecurrenceType.INTERVAL -> {
-                        OutlinedTextField(
-                            value = state.intervalDays?.toString() ?: "",
-                            onValueChange = { vm.update { copy(intervalDays = it.toIntOrNull()) } },
-                            label = { Text(stringResource(R.string.task_every_n_days)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            isError = state.intervalError,
-                            supportingText = if (state.intervalError) {
-                                { Text(stringResource(R.string.task_interval_error), color = MaterialTheme.colorScheme.error) }
-                            } else null,
-                        )
-                    }
-                    else -> Unit
-                }
-                Text(
-                    stringResource(R.string.task_recurring_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
+            // Workout link lives under Advanced (recurrence moved up into Schedule).
             // Focus duration editor removed in v1.1 (Phase 1.2). Field kept in
             // ViewModel/Room/Drive for compat; existing values still fire reminders.
-
-            // Workout / Program link
             if (workoutGroups.isNotEmpty()) {
-                Text(stringResource(R.string.task_link_workout), style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DhSection(title = stringResource(R.string.task_section_advanced)) {
+                Column(
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.task_link_workout),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
 
                 // Link type: None / Single workout (Day A) / Whole program (cycle)
                 val linkMode = when {
@@ -310,12 +383,12 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                     else -> LinkMode.NONE
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
+                    DhFilterChip(
                         selected = linkMode == LinkMode.NONE,
                         onClick = { vm.update { copy(linkedWorkoutId = null, linkedProgramId = null) } },
-                        label = { Text(stringResource(R.string.task_none)) },
+                        label = stringResource(R.string.task_none),
                     )
-                    FilterChip(
+                    DhFilterChip(
                         selected = linkMode == LinkMode.WORKOUT,
                         onClick = {
                             // When "Single Workout" is picked and nothing is selected yet, pre-select the first workout.
@@ -327,12 +400,12 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                                 copy(linkedProgramId = null, linkedWorkoutId = linkedWorkoutId ?: firstWorkoutId)
                             }
                         },
-                        label = { Text(stringResource(R.string.task_single_workout)) },
+                        label = stringResource(R.string.task_single_workout),
                     )
-                    FilterChip(
+                    DhFilterChip(
                         selected = linkMode == LinkMode.PROGRAM,
                         onClick = { vm.update { copy(linkedWorkoutId = null, linkedProgramId = linkedProgramId ?: workoutGroups.first().id, programStartIndex = 0) } },
-                        label = { Text(stringResource(R.string.task_whole_program)) },
+                        label = stringResource(R.string.task_whole_program),
                     )
                 }
 
@@ -388,9 +461,10 @@ fun TaskDetailScreen(nav: NavController, taskId: String, vm: TaskDetailViewModel
                             )
                         }
                     }
-                }
-            }
-            } // end advanced card
+                } // when linkMode
+                } // padded column
+            } // DhSection
+            } // if workoutGroups
         }
 
         // Date picker (Material3). The picked date is combined with the current time component.
@@ -481,8 +555,9 @@ private fun mergeTime(current: Long?, hour: Int, minute: Int): Long {
 }
 
 /**
- * Subtask (checklist) editing section: progress bar + counter, existing items (check/delete) and a
- * new-item input. Item states are kept only in this state; "Save" persists them.
+ * Subtask (checklist) editing content for the subtasks group: progress + counter,
+ * existing items (check/delete) and a new-item add row at the bottom. Item states
+ * are kept only in this state; "Save" persists them.
  */
 @Composable
 private fun SubtaskSection(
@@ -491,22 +566,25 @@ private fun SubtaskSection(
     onToggle: (String) -> Unit,
     onRemove: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         val done = subtasks.count { it.isDone }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.task_subtasks), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-            if (subtasks.isNotEmpty()) {
-                Text("$done/${subtasks.size}", style = MaterialTheme.typography.labelMedium,
-                    color = AppColors.Accent)
-            }
-        }
         if (subtasks.isNotEmpty()) {
-            LinearProgressIndicator(
-                progress = { if (subtasks.isEmpty()) 0f else done.toFloat() / subtasks.size },
-                modifier = Modifier.fillMaxWidth(),
-                color = AppColors.Accent,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LinearProgressIndicator(
+                    progress = { if (subtasks.isEmpty()) 0f else done.toFloat() / subtasks.size },
+                    modifier = Modifier.weight(1f),
+                    color = AppColors.Accent,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "$done/${subtasks.size}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         subtasks.forEach { sub ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -518,10 +596,12 @@ private fun SubtaskSection(
                     color = if (sub.isDone) MaterialTheme.colorScheme.onSurfaceVariant
                             else MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (sub.isDone) TextDecoration.LineThrough else TextDecoration.None,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                IconButton(onClick = { onRemove(sub.id) }) {
+                IconButton(onClick = { onRemove(sub.id) }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.task_remove_subtask),
-                        modifier = Modifier.size(18.dp), tint = AppColors.PriorityHigh)
+                        modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -536,6 +616,7 @@ private fun SubtaskSection(
                 IconButton(
                     onClick = { onAdd(newSub); newSub = "" },
                     enabled = newSub.isNotBlank(),
+                    modifier = Modifier.size(48.dp),
                 ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_subtask)) }
             },
         )

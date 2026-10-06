@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.Task
+import com.moltrax.personalnoteapp.ui.components.DhEmptyState
+import com.moltrax.personalnoteapp.ui.components.DhSectionHeader
 import com.moltrax.personalnoteapp.ui.navigation.TaskDetail
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -103,6 +106,7 @@ fun CalendarContent(
             date = selectedDate,
             tasks = occurrences[selectedDate].orEmpty(),
             onTap = { nav.navigate(TaskDetail(it.id)) },
+            onAdd = { nav.navigate(TaskDetail("new")) },
         )
     }
 }
@@ -130,7 +134,7 @@ private fun MonthHeader(month: YearMonth, onPrev: () -> Unit, onNext: () -> Unit
 
 @Composable
 private fun WeekdayRow() {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         listOf(
             R.string.weekday_mon, R.string.weekday_tue, R.string.weekday_wed, R.string.weekday_thu,
             R.string.weekday_fri, R.string.weekday_sat, R.string.weekday_sun,
@@ -155,7 +159,7 @@ private fun MonthGrid(
     val daysInMonth = month.lengthOfMonth()
     val totalCells = ((leading + daysInMonth + 6) / 7) * 7
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         var cell = 0
         while (cell < totalCells) {
             Row(Modifier.fillMaxWidth()) {
@@ -230,7 +234,7 @@ private fun DayCell(
 }
 
 @Composable
-private fun DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Unit) {
+private fun DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Unit, onAdd: () -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val header = remember(date, locale) {
         val d = Date(date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
@@ -238,14 +242,20 @@ private fun DayTaskList(date: LocalDate, tasks: List<Task>, onTap: (Task) -> Uni
     }
     // Time label depends on the composition locale; recreated when the language changes.
     val dayTimeFmt = remember(locale) { SimpleDateFormat("HH:mm", locale) }
-    Text(header, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onBackground)
+    DhSectionHeader(
+        title = header,
+        subtitle = stringResource(R.string.calendar_tasks_count, tasks.size),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
 
     if (tasks.isEmpty()) {
-        Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.calendar_no_tasks), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        DhEmptyState(
+            icon = Icons.Default.CalendarMonth,
+            title = header,
+            description = stringResource(R.string.calendar_no_tasks),
+            actionLabel = stringResource(R.string.home_new_task),
+            onAction = onAdd,
+        )
         return
     }
     Column(
