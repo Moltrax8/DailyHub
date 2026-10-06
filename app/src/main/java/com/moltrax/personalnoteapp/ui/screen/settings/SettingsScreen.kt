@@ -238,6 +238,9 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 )
             }
 
+            // --- GitHub link (repo picking only; sign-in stays Google-only) ---
+            GitHubSettingsGroup()
+
             // --- Exercise demo videos ---
             SettingsGroup(title = stringResource(R.string.settings_exercisedb_title), icon = Icons.Filled.FitnessCenter) {
                 val apiKey by vm.exerciseDbKey.collectAsStateWithLifecycle()
@@ -329,6 +332,75 @@ private fun LanguageSelector(current: String, onSelect: (String) -> Unit) {
     val names = AppLanguage.entries.map { it.nativeName }
     val selected = codes.indexOf(current).let { if (it < 0) 0 else it }
     DhSegmentedControl(options = names, selectedIndex = selected, onSelect = { onSelect(codes[it]) }, modifier = Modifier.fillMaxWidth())
+}
+
+/** GitHub connect/disconnect row: links the account for repo picking (Projects tab). */
+@Composable
+private fun GitHubSettingsGroup(ghVm: GithubSettingsViewModel = hiltViewModel()) {
+    val state by ghVm.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var showDisconnect by remember { mutableStateOf(false) }
+    val openFailed = stringResource(R.string.github_open_failed)
+    val openUrl: (String) -> Unit = { url ->
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.onFailure { ghVm.reportError(openFailed) }
+    }
+
+    // Finish a link started here (or in Projects): the browser returns via
+    // dailyhub://github-callback while this screen is open.
+    val pendingCallback by com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus.pending
+        .collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(pendingCallback) {
+        val cb = pendingCallback ?: return@LaunchedEffect
+        com.moltrax.personalnoteapp.ui.github.GitHubCallbackBus.consume()
+        ghVm.finishLink(cb.code, cb.state)
+    }
+
+    SettingsGroup(
+        title = stringResource(R.string.settings_section_github),
+        icon = Icons.Filled.CloudSync,
+    ) {
+        DhSettingsRow(
+            title = state.login?.let { context.getString(R.string.github_connected_as, "@$it") }
+                ?: stringResource(R.string.github_connect),
+            supporting = stringResource(R.string.github_not_connected_desc),
+            trailing = {
+                if (state.login == null) {
+                    OutlinedButton(
+                        onClick = { ghVm.startConnect(openUrl) },
+                        enabled = !state.busy,
+                    ) { Text(stringResource(R.string.github_connect)) }
+                } else {
+                    OutlinedButton(
+                        onClick = { showDisconnect = true },
+                        enabled = !state.busy,
+                    ) { Text(stringResource(R.string.github_disconnect)) }
+                }
+            },
+        )
+        state.error?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+
+    if (showDisconnect) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.github_disconnect_title),
+            message = stringResource(R.string.github_disconnect_confirm),
+            confirmLabel = stringResource(R.string.github_disconnect),
+            onConfirm = { showDisconnect = false; ghVm.disconnect() },
+            onDismiss = { showDisconnect = false },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
+    }
 }
 
 /** Settings group: section header + single bordered card (not a giant floating card per row). */

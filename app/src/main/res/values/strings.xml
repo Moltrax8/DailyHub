@@ -462,7 +462,7 @@
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
-    <string name="github_connect_hint">Henüz GitHub hesabı bağlı değil — bu sürümde depolar alan bazında elle bağlanır. Token cihazda tutulmaz; canlı hareketler için depo webhook’unun Supabase fonksiyonuna bakması gerekir.</string>
+    <string name="github_connect_hint">Henüz GitHub hesabı bağlı değil — yukarıdaki düğmeyle bağla, sonra depoları isme göre seç. Token cihazda tutulmaz, giriş yöntemin değişmez.</string>
     <string name="github_connected_as">%1$s olarak bağlı</string>
     <string name="github_repos">Bağlı depolar</string>
     <string name="github_link">Depo bağla</string>
@@ -474,7 +474,7 @@
     <string name="github_err_name">Depoyu owner/ad olarak gir (ör. moltrax8/DailyHub).</string>
     <string name="github_browse">Depolara göz at</string>
     <string name="github_browse_title">GitHub depolarını izle</string>
-    <string name="github_browse_hint">Herkese açık depoları listelemek için bir GitHub kullanıcı adı gir. İzlemek için işaretle, izlemeyi bırakmak için işareti kaldır. Özel depolar elle bağlanmalı.</string>
+    <string name="github_browse_hint">Herkese açık depoları listelemek için bir GitHub kullanıcı adı gir. İzlemek için işaretle, izlemeyi bırakmak için işareti kaldır. Kendi hesabındaki özel depolar için “Depolarım” listesini kullan.</string>
     <string name="github_browse_user">GitHub kullanıcı adı</string>
     <string name="github_browse_fetch">Getir</string>
     <string name="github_browse_empty">Bu kullanıcıda herkese açık depo yok.</string>
@@ -488,6 +488,21 @@
     <string name="github_repo_name">owner/repo</string>
     <string name="github_private">Özel depo</string>
     <string name="github_push_title">Geliştirici hareketi</string>
+    <string name="github_connect">GitHub\'ı Bağla</string>
+    <string name="github_disconnect">Bağlantıyı Kes</string>
+    <string name="github_disconnect_title">GitHub bağlantısı kesilsin mi?</string>
+    <string name="github_disconnect_confirm">Hesabın bağlantısı kesilecek. Zaten bağlı depolar projede kalır ama güncelleme almaz.</string>
+    <string name="github_my_repos_title">GitHub depolarım</string>
+    <string name="github_my_repos_hint">Bağlı hesabın erişebildiği depolar. İşaretle, Kaydet ile bu projeye bağla. Listede olmayan özel depolar için önce GitHub\'da uygulamayı o depolara kur.</string>
+    <string name="github_search_repos">Depo ara…</string>
+    <string name="github_add_more">GitHub\'da daha fazla depo ekle</string>
+    <string name="github_private_badge">özel</string>
+    <string name="github_not_connected_title">GitHub bağlı değil</string>
+    <string name="github_not_connected_desc">Depoları isme göre seçmek için önce GitHub hesabını bağla. Giriş yöntemin değişmez, Google ile devam edersin.</string>
+    <string name="github_my_repos_empty">Aramayla eşleşen depo yok.</string>
+    <string name="github_link_selected">Seçilenleri bağla (%1$d)</string>
+    <string name="github_open_failed">Bağlantıyı açacak tarayıcı bulunamadı.</string>
+    <string name="settings_section_github">GitHub</string>
 
     <!-- Profil varsayılan -->
     <string name="profile_default_name">Kullanıcı</string>

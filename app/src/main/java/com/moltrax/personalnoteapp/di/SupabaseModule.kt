@@ -2,6 +2,7 @@ package com.moltrax.personalnoteapp.di
 
 import com.moltrax.personalnoteapp.BuildConfig
 import com.moltrax.personalnoteapp.FeatureFlags
+import com.moltrax.personalnoteapp.data.remote.github.GitHubConnectApi
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthApi
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseDbApi
 import dagger.Module
@@ -82,5 +83,16 @@ object SupabaseModule {
     fun provideDbApi(config: SupabaseConfig, @javax.inject.Named("supabase") http: OkHttpClient): SupabaseDbApi? {
         if (!config.isConfigured) return null
         return retrofit(http, "${config.url}/rest/v1/").create(SupabaseDbApi::class.java)
+    }
+
+    /**
+     * Edge Functions client (github-connect / github-repos). Null when
+     * unconfigured (see above). Shares the apikey OkHttp client; the user JWT
+     * travels per-call. Never carries a GitHub token.
+     */
+    @Provides @Singleton
+    fun provideGitHubConnectApi(config: SupabaseConfig, @javax.inject.Named("supabase") http: OkHttpClient): GitHubConnectApi? {
+        if (!config.isConfigured) return null
+        return retrofit(http, "${config.url}/functions/v1/").create(GitHubConnectApi::class.java)
     }
 }

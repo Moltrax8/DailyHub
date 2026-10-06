@@ -7,9 +7,12 @@ import com.moltrax.personalnoteapp.domain.model.ProjectComment
 import com.moltrax.personalnoteapp.domain.model.ProjectItem
 import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
+import com.moltrax.personalnoteapp.domain.model.GithubAppRepo
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
 import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
+import com.moltrax.personalnoteapp.domain.model.filterGithubAppRepos
+import com.moltrax.personalnoteapp.domain.repository.GithubNotConnectedException
 import com.moltrax.personalnoteapp.domain.model.Space
 import com.moltrax.personalnoteapp.domain.model.SpaceType
 import com.moltrax.personalnoteapp.domain.repository.GitHubRepository
@@ -141,6 +144,9 @@ class ProjectViewModel @Inject constructor(
         val activity: List<GithubActivity> = emptyList(),
         val prefs: Map<String, Boolean> = emptyMap(),
         val busy: Boolean = false,
+        val connectBusy: Boolean = false,
+        /** Set when `start` returns an authorize URL — UI opens it, then consumes. */
+        val authUrl: String? = null,
         val error: String? = null,
         val pushDone: Boolean = false,
     )
@@ -188,8 +194,166 @@ class ProjectViewModel @Inject constructor(
     fun unlinkRepo(spaceId: String, repoId: Long) {
         viewModelScope.launch {
             runCatching { github.unlinkRepo(repoId) }
-                .onSuccess { loadGitHub(spaceId) }
+                .onSuccess { loadGitHub(spaceId); loadAppRepos(spaceId) }
                 .onFailure { e -> _github.update { it.copy(error = e.message) } }
+        }
+    }
+
+    // -- GitHub App linking (connect / deep-link finish / disconnect) ----------
+
+    /** Starts the link flow; on success [onUrl] receives the authorize URL to open. */
+    fun startGithubConnect(onUrl: (String) -> Unit) {
+        viewModelScope.launch {
+            _github.update { it.copy(connectBusy = true, error = null, authUrl = null) }
+            runCatching { github.connectStart() }
+                .onSuccess { url ->
+                    _github.update { it.copy(connectBusy = false, authUrl = url) }
+                    onUrl(url)
+                }
+                .onFailure { e ->
+                    _github.update { it.copy(connectBusy = false, error = e.message) }
+                }
+        }
+    }
+
+    fun consumeAuthUrl() {
+        _github.update { it.copy(authUrl = null) }
+    }
+
+    fun reportGithubError(message: String) {
+        _github.update { it.copy(error = message) }
+    }
+
+    /** Completes the link after the `github-callback` deep link, then refreshes. */
+    fun finishGithubLink(spaceId: String, code: String, state: String) {
+        viewModelScope.launch {
+            _github.update { it.copy(connectBusy = true, error = null) }
+            runCatching { github.connectFinish(code, state) }
+                .onSuccess {
+                    _github.update { it.copy(connectBusy = false) }
+                    loadGitHub(spaceId)
+                    loadAppRepos(spaceId)
+                }
+                .onFailure { e ->
+                    _github.update { it.copy(connectBusy = false, error = e.message) }
+                }
+        }
+    }
+
+    fun disconnectGithub(spaceId: String? = null) {
+        viewModelScope.launch {
+            _github.update { it.copy(connectBusy = true, error = null) }
+            runCatching { github.disconnectGitHub() }
+                .onSuccess {
+                    _appRepos.update { AppReposUiState() }
+                    _github.update { it.copy(connectBusy = false) }
+                    if (spaceId != null) loadGitHub(spaceId)
+                    else refreshConnection()
+                }
+                .onFailure { e ->
+                    _github.update { it.copy(connectBusy = false, error = e.message) }
+                }
+        }
+    }
+
+    /** Refreshes just the connection badge (e.g. Settings row after a link). */
+    fun refreshConnection() {
+        viewModelScope.launch {
+            runCatching { github.myConnection() }
+                .onSuccess { c -> _github.update { it.copy(connected = c) } }
+                .onFailure { e -> _github.update { it.copy(error = e.message) } }
+        }
+    }
+
+    // -- My repos picker: the linked account's repos BY NAME -------------------
+
+    data class AppReposUiState(
+        val login: String = "",
+        val repos: List<GithubAppRepo> = emptyList(),
+        val installUrl: String? = null,
+        val query: String = "",
+        val hideForks: Boolean = false,
+        /** Ids already linked in this space. */
+        val trackedIds: Set<Long> = emptySet(),
+        /** Checkbox state; Save links newly checked + unlinks newly unchecked. */
+        val selectedIds: Set<Long> = emptySet(),
+        val busy: Boolean = false,
+        val notConnected: Boolean = false,
+        val error: String? = null,
+    ) {
+        val visibleRepos: List<GithubAppRepo> =
+            filterGithubAppRepos(repos, query, hideForks)
+    }
+
+    private val _appRepos = MutableStateFlow(AppReposUiState())
+    val appReposState: StateFlow<AppReposUiState> = _appRepos.asStateFlow()
+
+    fun loadAppRepos(spaceId: String) {
+        viewModelScope.launch {
+            _appRepos.update { it.copy(busy = true, error = null, notConnected = false) }
+            runCatching {
+                val result = github.appRepos()
+                val tracked = github.spaceRepos(spaceId).map { it.id }.toSet()
+                Triple(result, tracked, tracked)
+            }.onSuccess { (result, tracked, selected) ->
+                _appRepos.update {
+                    it.copy(
+                        login = result.login,
+                        repos = result.repos,
+                        installUrl = result.installUrl,
+                        trackedIds = tracked,
+                        selectedIds = selected,
+                        busy = false,
+                    )
+                }
+            }.onFailure { e ->
+                if (e is GithubNotConnectedException) {
+                    _appRepos.update { it.copy(busy = false, notConnected = true) }
+                } else {
+                    _appRepos.update { it.copy(busy = false, error = e.message) }
+                }
+            }
+        }
+    }
+
+    fun setAppRepoQuery(query: String) {
+        _appRepos.update { it.copy(query = query) }
+    }
+
+    fun toggleAppRepo(id: Long) {
+        _appRepos.update {
+            val sel = if (id in it.selectedIds) it.selectedIds - id else it.selectedIds + id
+            it.copy(selectedIds = sel)
+        }
+    }
+
+    fun toggleHideAppForks() {
+        _appRepos.update { it.copy(hideForks = !it.hideForks) }
+    }
+
+    fun applyAppRepos(spaceId: String, onDone: () -> Unit = {}) {
+        val s = _appRepos.value
+        if (s.busy) return
+        viewModelScope.launch {
+            _appRepos.update { it.copy(busy = true, error = null) }
+            val byId = s.repos.associateBy { it.id }
+            val toLink = s.repos.filter { it.id in s.selectedIds && it.id !in s.trackedIds }
+            val toUnlink = s.trackedIds.filter { it !in s.selectedIds }
+            val failure = runCatching {
+                toLink.forEach {
+                    val known = byId[it.id]
+                    github.linkRepo(spaceId, it.id, it.fullName, known?.private ?: it.private)
+                }
+                toUnlink.forEach { github.unlinkRepo(it) }
+            }.exceptionOrNull()
+            if (failure != null) {
+                _appRepos.update { it.copy(busy = false, error = failure.message) }
+            } else {
+                _appRepos.update { it.copy(busy = false) }
+                loadGitHub(spaceId)
+                loadAppRepos(spaceId)
+                onDone()
+            }
         }
     }
 
@@ -294,6 +458,7 @@ class ProjectViewModel @Inject constructor(
             } else {
                 _browse.update { it.copy(busy = false) }
                 loadGitHub(spaceId)
+                loadAppRepos(spaceId)
                 onDone()
             }
         }

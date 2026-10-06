@@ -4,7 +4,12 @@ import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
 import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
+import com.moltrax.personalnoteapp.domain.model.GithubReposResult
 import kotlinx.coroutines.flow.Flow
+import java.io.IOException
+
+/** Thrown when the server has no GitHub connection for this user. */
+class GithubNotConnectedException : IOException("not_connected")
 
 /**
  * GitHub integration (Phase 7). No PAT on device: OAuth connects
@@ -37,6 +42,22 @@ interface GitHubRepository {
 
     /** Registers/refreshes this device's FCM token server-side. */
     suspend fun registerFcmToken(token: String)
+
+    /**
+     * GitHub App linking (spec github-link-spec.md). No token ever touches the
+     * device: `connectStart` returns the authorize URL to open in a browser,
+     * the `dailyhub://github-callback` deep link carries code+state back, and
+     * `connectFinish` completes the link server-side, returning the login.
+     */
+    suspend fun connectStart(): String
+    suspend fun connectFinish(code: String, state: String): String
+    suspend fun disconnectGitHub()
+
+    /**
+     * Repos the linked account can access through the App installation(s).
+     * Throws [GithubNotConnectedException] when no account is linked.
+     */
+    suspend fun appRepos(): GithubReposResult
 
     companion object {
         /** First event slice (toggles + feed stay in sync with the function). */
