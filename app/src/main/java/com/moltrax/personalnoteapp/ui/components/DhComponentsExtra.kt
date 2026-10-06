@@ -127,7 +127,7 @@ fun DhFormDialog(
     onDismiss: () -> Unit,
     confirmLabel: String,
     onConfirm: () -> Unit,
-    dismissLabel: String,
+    dismissLabel: String? = null,
     modifier: Modifier = Modifier,
     message: String? = null,
     confirmEnabled: Boolean = true,
@@ -166,7 +166,7 @@ fun DhFormDialog(
                 TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(dismissLabel) } },
+        dismissButton = dismissLabel?.let { label -> { TextButton(onClick = onDismiss) { Text(label) } } },
         shape = MaterialTheme.shapes.large,
     )
 }
