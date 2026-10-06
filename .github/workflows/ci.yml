@@ -19,6 +19,19 @@ jobs:
           java-version: 17
           cache: gradle
 
+      - name: Stub google-services.json (real file is gitignored; CI only needs the build to work)
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {"project_number": "000000000000", "project_id": "ci-stub", "storage_bucket": "ci-stub.appspot.com"},
+            "client": [{
+              "client_info": {"mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": {"package_name": "com.moltrax.personalnoteapp"}},
+              "api_key": [{"current_key": "ci-stub-key"}]
+            }],
+            "configuration_version": "1"
+          }
+          EOF
+
       - name: Debug build
         run: ./gradlew :app:assembleDebug --console=plain
 
