@@ -46,8 +46,12 @@ class MainActivity : ComponentActivity() {
     private val pendingWidgetAction = mutableStateOf<String?>(null)
     // Id carrying which task to open the screen for on a sport-task completion request.
     private val pendingWidgetTaskId = mutableStateOf<String?>(null)
+    // Event counter so the same widget action twice still fires twice (state change every tap).
+    private val pendingWidgetTick = mutableStateOf(0)
     // Developer-activity push tap (Phase 7): open this project space.
     private val pendingProjectSpaceId = mutableStateOf<String?>(null)
+    // Reminder tap: open this task once (mirrors pendingWidgetTaskId).
+    private val pendingReminderTaskId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +66,8 @@ class MainActivity : ComponentActivity() {
             pendingWidgetAction.value = intent?.getStringExtra(EXTRA_WIDGET_ACTION)
             pendingWidgetTaskId.value = intent?.getStringExtra(EXTRA_WIDGET_TASK_ID)
             pendingProjectSpaceId.value = intent?.getStringExtra(EXTRA_PROJECT_SPACE_ID)
+            if (pendingWidgetAction.value != null) pendingWidgetTick.value++
+            parseReminderTaskId(intent)?.let { pendingReminderTaskId.value = it }
         }
         enableEdgeToEdge()
         setContent {
@@ -95,12 +101,15 @@ class MainActivity : ComponentActivity() {
                         AppNavHost(
                             pendingWidgetAction = pendingWidgetAction.value,
                             pendingWidgetTaskId = pendingWidgetTaskId.value,
+                            pendingWidgetTick = pendingWidgetTick.value,
                             onWidgetActionConsumed = {
                                 pendingWidgetAction.value = null
                                 pendingWidgetTaskId.value = null
                             },
                             pendingProjectId = pendingProjectSpaceId.value,
                             onProjectConsumed = { pendingProjectSpaceId.value = null },
+                            pendingReminderTaskId = pendingReminderTaskId.value,
+                            onReminderConsumed = { pendingReminderTaskId.value = null },
                         )
                         // Opt-in auto-update prompt (Phase 9): renders nothing when off.
                         UpdatePrompt()
@@ -131,10 +140,14 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDeepLink(intent)
+        parseReminderTaskId(intent)?.let { pendingReminderTaskId.value = it }
         if (intent.data?.scheme == "dailyhub") return // auth/github callback: nothing to route
+        // personalnoteapp://reminder_tap carries no widget extras; still route the reminder.
+        if (intent.data?.scheme == "personalnoteapp") return
         pendingWidgetAction.value = intent.getStringExtra(EXTRA_WIDGET_ACTION)
         pendingWidgetTaskId.value = intent.getStringExtra(EXTRA_WIDGET_TASK_ID)
         intent.getStringExtra(EXTRA_PROJECT_SPACE_ID)?.let { pendingProjectSpaceId.value = it }
+        if (pendingWidgetAction.value != null) pendingWidgetTick.value++
     }
 
     /** Routes dailyhub:// deep links: github-callback → bus, auth → no-op. */
@@ -142,6 +155,17 @@ class MainActivity : ComponentActivity() {
         val data = intent?.data ?: return
         if (data.scheme != "dailyhub") return
         parseGithubCallback(data.toString())?.let { GitHubCallbackBus.emit(it) }
+    }
+
+    /** Extracts the task id from personalnoteapp://reminder_tap/<taskId>. Pure enough to keep local. */
+    private fun parseReminderTaskId(intent: Intent?): String? {
+        val data = intent?.data ?: return null
+        if (data.scheme != "personalnoteapp") return null
+        // Host is reminder_tap for personalnoteapp://reminder_tap/<id>.
+        if (data.host != "reminder_tap") return null
+        return data.lastPathSegment?.takeIf { it.isNotBlank() }?.let {
+            runCatching { android.net.Uri.decode(it) }.getOrDefault(it)
+        }
     }
 
     companion object {

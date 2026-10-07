@@ -32,4 +32,19 @@ class ProjectBoardTest {
         assertEquals(ProjectStatus.IDEA, projectStatusOf(null))
         assertEquals(ProjectStatus.FINISHED, projectStatusOf("FINISHED"))
     }
+
+    @Test
+    fun `unknown column items fold into idea with no data loss`() {
+        // Simulate a future status not in the rendered columns: it must appear
+        // in Idea rather than vanish.
+        val grouped = groupBoardItems(
+            listOf(
+                item("a", ProjectStatus.IDEA, 0L),
+                item("z", ProjectStatus.FINISHED, 1L),
+            ),
+            columns = listOf("Idea", "Planned"),
+        )
+        assertEquals(listOf("a", "z"), grouped["Idea"]!!.map { it.id })
+        assertEquals(2, grouped.values.sumOf { it.size })
+    }
 }

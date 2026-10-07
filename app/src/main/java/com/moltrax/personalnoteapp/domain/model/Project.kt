@@ -59,10 +59,14 @@ fun groupBoardItems(
     val byStatus = items.groupBy { it.status.name.lowercase() }
     val grouped = columns.associateWith { col ->
         byStatus[col.lowercase()].orEmpty().sortedBy { it.sortOrder }
-    }
-    // Unknown statuses (forward compat) land in their own trailing column.
+    }.toMutableMap()
+    // Unknown statuses (forward compat) must never vanish: fold them into the
+    // Idea column (first column) so no card is hidden with data loss.
     val known = columns.map { it.lowercase() }.toSet()
-    val extra = items.filter { it.status.name.lowercase() !in known }
-        .groupBy { it.status.name }.toSortedMap()
-    return grouped + extra
+    val unknown = items.filter { it.status.name.lowercase() !in known }.sortedBy { it.sortOrder }
+    if (unknown.isNotEmpty()) {
+        val ideaKey = columns.firstOrNull() ?: "Idea"
+        grouped[ideaKey] = (grouped[ideaKey].orEmpty() + unknown).sortedBy { it.sortOrder }
+    }
+    return grouped
 }

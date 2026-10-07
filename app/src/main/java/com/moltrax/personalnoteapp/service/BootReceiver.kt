@@ -13,7 +13,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         // The system alarm store can be reset/shifted on these events: trigger re-scheduling via a deduplicated
-        // job (KEEP); no double enqueueing.
+        // job (REPLACE so a stale pre-update work never blocks the fresh post-update request).
         val reschedule = action == Intent.ACTION_BOOT_COMPLETED ||
             action == Intent.ACTION_MY_PACKAGE_REPLACED ||
             action == Intent.ACTION_TIME_CHANGED ||
@@ -25,7 +25,7 @@ class BootReceiver : BroadcastReceiver() {
         if (!reschedule) return
         WorkManager.getInstance(context).enqueueUniqueWork(
             RescheduleNotificationsWorker.WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<RescheduleNotificationsWorker>().build(),
         )
     }
