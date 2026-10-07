@@ -471,7 +471,7 @@ private fun formatPlanned(ctx: Context, planned: PlannedSet): String {
     val reps = planned.reps
     val weight = planned.weightKg?.takeIf { it > 0 }?.let { trimKg(it) }
     return if (reps > 0 && weight != null) {
-        "$reps × $weight $kg"
+        ctx.getString(R.string.format_reps_times_weight, reps, ctx.getString(R.string.format_value_unit, weight, kg))
     } else if (reps > 0) {
         ctx.getString(R.string.logged_reps, reps)
     } else {
