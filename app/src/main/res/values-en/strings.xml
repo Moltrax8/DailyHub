@@ -633,4 +633,24 @@
     <string name="task_keep_when_empty">Keep category when empty</string>
     <string name="task_delete_title">Delete this task?</string>
     <string name="task_delete_message">“%1$s” will be deleted. This cannot be undone.</string>
+    <!-- GitHub import (Projects list) -->
+    <string name="projects_import_github">Import from GitHub</string>
+    <string name="projects_import_hint">Pick repos from your connected GitHub account. Each selected repo becomes a new project, or is added to an existing one.</string>
+    <string name="projects_import_new_each">New project each</string>
+    <string name="projects_import_add_existing">Add to existing</string>
+    <string name="projects_import_target">Target project</string>
+    <string name="projects_import_confirm">Import (%1$d)</string>
+    <string name="projects_import_sign_in_msg">Sign in to import repos.</string>
+    <string name="projects_import_progress">Importing %1$d of %2$d…</string>
+    <string name="projects_import_failed">Could not import: %1$s</string>
+    <string name="projects_import_partial">%1$d imported, %2$d failed</string>
+    <string name="projects_already_added">Already added</string>
+    <plurals name="projects_imported">
+        <item quantity="one">%1$d repo imported</item>
+        <item quantity="other">%1$d repos imported</item>
+    </plurals>
+    <plurals name="projects_repo_count">
+        <item quantity="one">%1$d repo</item>
+        <item quantity="other">%1$d repos</item>
+    </plurals>
 </resources>

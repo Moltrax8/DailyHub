@@ -12,8 +12,14 @@ enum class ProjectStatus {
     @SerialName("Finished") FINISHED,
 }
 
+/**
+ * Server values are "Idea" / "Planned" / "Developing" / "Finished" (see the @SerialName above), but the
+ * enum constants are upper case. A case-sensitive valueOf() mapped EVERYTHING except an exact "IDEA" to
+ * IDEA, so a moved card was saved correctly but always came back in the Idea column.
+ */
 fun projectStatusOf(raw: String?): ProjectStatus =
-    runCatching { ProjectStatus.valueOf(raw ?: "") }.getOrDefault(ProjectStatus.IDEA)
+    ProjectStatus.entries.firstOrNull { it.name.equals(raw?.trim(), ignoreCase = true) }
+        ?: ProjectStatus.IDEA
 
 @Serializable
 data class Project(
