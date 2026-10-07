@@ -49,7 +49,7 @@ interface GitHubRepository {
      * the `dailyhub://github-callback` deep link carries code+state back, and
      * `connectFinish` completes the link server-side, returning the login.
      */
-    suspend fun connectStart(): String
+    suspend fun connectStart(mode: String? = null): String
     suspend fun connectFinish(code: String, state: String): String
     suspend fun disconnectGitHub()
 

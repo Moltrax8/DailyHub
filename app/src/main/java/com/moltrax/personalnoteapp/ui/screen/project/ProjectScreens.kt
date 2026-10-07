@@ -807,7 +807,7 @@ private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -
                             description = stringResource(R.string.github_not_connected_desc),
                             actionLabel = stringResource(R.string.github_connect),
                             onAction = {
-                                vm.startGithubConnect { url ->
+                                vm.startGithubConnect(onUrl = { url ->
                                     if (!com.moltrax.personalnoteapp.domain.model.isTrustedGitHubOpenUrl(url)) {
                                         vm.reportGithubError(untrusted)
                                     } else {
@@ -820,7 +820,7 @@ private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -
                                             )
                                         }.onFailure { vm.reportGithubError(openFailed) }
                                     }
-                                }
+                                })
                             },
                         )
                     }

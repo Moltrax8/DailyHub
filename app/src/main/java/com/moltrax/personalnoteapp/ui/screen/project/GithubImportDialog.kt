@@ -162,6 +162,13 @@ fun GithubImportDialog(
                             actionLabel = stringResource(R.string.github_connect),
                             onAction = { vm.startGithubConnect(openUrl) },
                         )
+                        // The main button opens GitHub's one-screen "choose repos + authorize" page. An account that
+                        // already installed the App has nothing to install there, so offer the plain sign-in too.
+                        TextButton(
+                            onClick = { vm.startGithubConnect(openUrl, installFlow = false) },
+                            enabled = !gh.connectBusy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = DhTokens.MinTouchTarget),
+                        ) { Text(stringResource(R.string.github_already_installed)) }
                         if (gh.connectBusy) {
                             DhLoadingRow(message = stringResource(R.string.loading))
                         }

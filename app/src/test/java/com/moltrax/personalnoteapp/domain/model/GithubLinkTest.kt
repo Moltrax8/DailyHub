@@ -84,3 +84,22 @@ class GithubLinkTest {
         assertEquals("", sanitizePushText("  \n "))
     }
 }
+
+/** The install-and-authorize flow redirects with extra parameters; the callback parser must still work. */
+class GithubInstallCallbackTest {
+    @org.junit.Test fun parsesCodeAndStateAlongsideInstallationParams() {
+        val cb = parseGithubCallback(
+            "dailyhub://github-callback?code=abc123&installation_id=987654&setup_action=install&state=st4te.sig",
+        )
+        org.junit.Assert.assertNotNull(cb)
+        org.junit.Assert.assertEquals("abc123", cb!!.code)
+        org.junit.Assert.assertEquals("st4te.sig", cb.state)
+    }
+
+    @org.junit.Test fun rejectsInstallRedirectWithoutCode() {
+        // GitHub sends no code when the user only reconfigured an existing installation.
+        org.junit.Assert.assertNull(
+            parseGithubCallback("dailyhub://github-callback?installation_id=1&setup_action=update&state=x"),
+        )
+    }
+}

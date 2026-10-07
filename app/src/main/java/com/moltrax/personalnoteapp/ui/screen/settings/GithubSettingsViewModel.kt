@@ -43,10 +43,10 @@ class GithubSettingsViewModel @Inject constructor(
     }
 
     /** Starts the link flow; on success [onUrl] receives the authorize URL to open. */
-    fun startConnect(onUrl: (String) -> Unit) {
+    fun startConnect(onUrl: (String) -> Unit, installFlow: Boolean = true) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
-            runCatching { github.connectStart() }
+            runCatching { github.connectStart(if (installFlow) "install" else "authorize") }
                 .onSuccess { url -> _state.update { it.copy(busy = false) }; onUrl(url) }
                 .onFailure { e -> _state.update { it.copy(busy = false, error = e.message) } }
         }

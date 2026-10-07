@@ -147,8 +147,8 @@ class GitHubRepositoryImpl @Inject constructor(
     private fun functions(): GitHubConnectApi =
         connectApi ?: throw IllegalStateException("Supabase is not configured.")
 
-    override suspend fun connectStart(): String {
-        val res = functions().connect(bearer(), ConnectActionBody(action = "start"))
+    override suspend fun connectStart(mode: String?): String {
+        val res = functions().connect(bearer(), ConnectActionBody(action = "start", mode = mode))
         if (!res.isSuccessful) throw IOException("GitHub connect failed (HTTP ${res.code()}).")
         val url = res.body()?.url?.trim().orEmpty()
         if (url.isEmpty()) throw IOException("GitHub connect failed (empty authorize URL).")

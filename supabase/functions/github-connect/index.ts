@@ -24,6 +24,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const CLIENT_ID = Deno.env.get("GITHUB_APP_CLIENT_ID") ?? "";
+/** App slug (github.com/apps/<slug>): used for the one-screen install-and-authorize link. */
+const APP_SLUG = Deno.env.get("GITHUB_APP_SLUG") ?? "";
 const CLIENT_SECRET = Deno.env.get("GITHUB_APP_CLIENT_SECRET") ?? "";
 const STATE_SECRET = Deno.env.get("GITHUB_STATE_SECRET") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -141,6 +143,7 @@ Deno.serve(async (req: Request) => {
     action?: string;
     code?: string;
     state?: string;
+    mode?: string;
   } | null;
   const action = body?.action;
   if (!action) {
@@ -152,7 +155,13 @@ Deno.serve(async (req: Request) => {
   // ---- start: issue a signed authorize URL ----
   if (action === "start") {
     const state = await signState(userId);
-    const url = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(CLIENT_ID)}&state=${encodeURIComponent(state)}`;
+    // mode "install" (first-time connect): GitHub's install page lets the user choose which repos to share AND
+    // authorize in ONE screen (the App has "Request user authorization during installation" on), then redirects
+    // to the callback with ?code&state - the same `finish` handles it. Any other/absent mode keeps the plain
+    // authorize link (reconnect, or an account that already installed the App; old app versions).
+    const url = body?.mode === "install" && APP_SLUG
+      ? `https://github.com/apps/${encodeURIComponent(APP_SLUG)}/installations/new?state=${encodeURIComponent(state)}`
+      : `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(CLIENT_ID)}&state=${encodeURIComponent(state)}`;
     return json(200, { url });
   }
 

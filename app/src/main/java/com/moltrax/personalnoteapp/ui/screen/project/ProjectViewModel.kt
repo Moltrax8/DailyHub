@@ -226,10 +226,10 @@ class ProjectViewModel @Inject constructor(
     // -- GitHub App linking (connect / deep-link finish / disconnect) ----------
 
     /** Starts the link flow; on success [onUrl] receives the authorize URL to open. */
-    fun startGithubConnect(onUrl: (String) -> Unit) {
+    fun startGithubConnect(onUrl: (String) -> Unit, installFlow: Boolean = true) {
         viewModelScope.launch {
             _github.update { it.copy(connectBusy = true, error = null, authUrl = null) }
-            runCatching { github.connectStart() }
+            runCatching { github.connectStart(if (installFlow) "install" else "authorize") }
                 .onSuccess { url ->
                     _github.update { it.copy(connectBusy = false, authUrl = url) }
                     onUrl(url)

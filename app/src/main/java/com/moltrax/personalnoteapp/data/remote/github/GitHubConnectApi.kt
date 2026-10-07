@@ -35,6 +35,8 @@ data class ConnectActionBody(
     val action: String,
     val code: String? = null,
     val state: String? = null,
+    /** start only: "install" = one-screen install+authorize (first-time connect); absent = plain authorize. */
+    val mode: String? = null,
 )
 
 @Serializable

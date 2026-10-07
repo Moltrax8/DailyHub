@@ -508,8 +508,9 @@
     <string name="github_add_more">Add more repos on GitHub</string>
     <string name="github_access_hint">Only repos the DailyHub GitHub app has access to are listed (private ones included). Missing a repo? Give the app access to it on GitHub, then come back here.</string>
     <string name="github_refresh_list">Refresh</string>
+    <string name="github_already_installed">I already installed the app - just sign in</string>
     <string name="github_no_access_title">No repos shared yet</string>
-    <string name="github_no_access_body">Your GitHub account is connected, but the DailyHub app has not been given access to any repo yet. On GitHub, choose which repos to install it on (private ones included), then come back - the list refreshes by itself.</string>
+    <string name="github_no_access_body">Your GitHub account is connected, but the DailyHub app has not been given access to any repo yet. On GitHub, choose \"All repositories\" (so repos you create later appear here automatically) or pick specific ones - private repos included - then come back; the list refreshes by itself.</string>
     <string name="github_private_badge">private</string>
     <string name="github_not_connected_title">GitHub not connected</string>
     <string name="github_not_connected_desc">Connect your GitHub account first to pick repos by name. Your sign-in stays Google-only.</string>

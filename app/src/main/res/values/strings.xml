@@ -508,8 +508,9 @@
     <string name="github_add_more">GitHub\'da daha fazla depo ekle</string>
     <string name="github_access_hint">Yalnızca DailyHub GitHub uygulamasının erişimi olan depolar listelenir (özel depolar dahil). Bir depoyu göremiyorsan GitHub\'da uygulamaya o depo için erişim ver, sonra buraya dön.</string>
     <string name="github_refresh_list">Yenile</string>
+    <string name="github_already_installed">Uygulamayı zaten yükledim, sadece giriş yap</string>
     <string name="github_no_access_title">Henüz paylaşılan depo yok</string>
-    <string name="github_no_access_body">GitHub hesabın bağlandı, ancak DailyHub uygulamasının hiçbir depoya erişimi yok. GitHub\'da uygulamayı yüklemek istediğin depoları seç (özel depolar dahil), sonra buraya dön; liste kendiliğinden yenilenir.</string>
+    <string name="github_no_access_body">GitHub hesabın bağlandı, ancak DailyHub uygulamasının hiçbir depoya erişimi yok. GitHub\'da \"Tüm depolar\"ı seç (sonradan oluşturacağın depolar da burada otomatik görünür) ya da belirli depoları seç - özel depolar dahil - sonra buraya dön; liste kendiliğinden yenilenir.</string>
     <string name="github_private_badge">özel</string>
     <string name="github_not_connected_title">GitHub bağlı değil</string>
     <string name="github_not_connected_desc">Depoları isme göre seçmek için önce GitHub hesabını bağla. Giriş yöntemin değişmez, Google ile devam edersin.</string>
