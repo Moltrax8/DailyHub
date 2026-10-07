@@ -26,10 +26,13 @@ data class FocusState(
     val remainingSeconds: Int = 1500,
     val isRunning: Boolean = false,
     val isCompleted: Boolean = false,
+    val isLoading: Boolean = true,
 ) {
     val progress: Float get() = if (totalSeconds == 0) 0f else 1f - remainingSeconds.toFloat() / totalSeconds
     val minutesLeft: Int get() = remainingSeconds / 60
     val secondsLeft: Int get() = remainingSeconds % 60
+    /** Start is only meaningful once a real task finished loading. */
+    val canStart: Boolean get() = task != null && !isLoading
 }
 
 @HiltViewModel
@@ -53,14 +56,19 @@ class FocusTimerViewModel @Inject constructor(
     private var timerJob: Job? = null
 
     fun load(taskId: String) {
+        _state.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            val task = taskRepo.getById(taskId) ?: return@launch
-            _state.update { it.copy(task = task, totalSeconds = task.focusDurationSeconds, remainingSeconds = task.focusDurationSeconds) }
+            val task = taskRepo.getById(taskId)
+            if (task == null) {
+                _state.update { it.copy(task = null, isLoading = false) }
+                return@launch
+            }
+            _state.update { it.copy(task = task, totalSeconds = task.focusDurationSeconds, remainingSeconds = task.focusDurationSeconds, isLoading = false) }
         }
     }
 
     fun start() {
-        if (_state.value.isRunning) return
+        if (_state.value.isRunning || !_state.value.canStart) return
         _state.update { it.copy(isRunning = true) }
         timerJob = viewModelScope.launch {
             while (_state.value.remainingSeconds > 0 && _state.value.isRunning) {

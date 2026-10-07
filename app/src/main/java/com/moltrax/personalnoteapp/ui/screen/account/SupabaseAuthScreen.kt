@@ -21,11 +21,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +37,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.ui.components.DhTextField
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.navigation.Home
 import com.moltrax.personalnoteapp.ui.navigation.SupabaseAuth
 
@@ -61,7 +61,13 @@ fun SupabaseAuthScreen(nav: NavController, vm: SupabaseAuthViewModel = hiltViewM
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.supabase_auth_title)) }) },
+        topBar = {
+            DhTopBar(
+                title = stringResource(R.string.supabase_auth_title),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
+            )
+        },
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding()
@@ -106,21 +112,19 @@ private fun CredentialsForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
         else stringResource(R.string.supabase_auth_welcome),
         style = MaterialTheme.typography.headlineSmall,
     )
-    OutlinedTextField(
+    DhTextField(
         value = state.email,
         onValueChange = { v -> vm.update { it.copy(email = v) } },
-        label = { Text(stringResource(R.string.supabase_auth_email)) },
+        label = stringResource(R.string.supabase_auth_email),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        modifier = Modifier.fillMaxWidth(),
         singleLine = true,
     )
-    OutlinedTextField(
+    DhTextField(
         value = state.password,
         onValueChange = { v -> vm.update { it.copy(password = v) } },
-        label = { Text(stringResource(R.string.supabase_auth_password)) },
+        label = stringResource(R.string.supabase_auth_password),
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        modifier = Modifier.fillMaxWidth(),
         singleLine = true,
     )
     Button(
@@ -156,11 +160,10 @@ private fun UsernameForm(state: AuthUiState, vm: SupabaseAuthViewModel) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    OutlinedTextField(
+    DhTextField(
         value = state.username,
         onValueChange = { v -> vm.update { it.copy(username = v) } },
-        label = { Text(stringResource(R.string.supabase_auth_username)) },
-        modifier = Modifier.fillMaxWidth(),
+        label = stringResource(R.string.supabase_auth_username),
         singleLine = true,
     )
     Button(

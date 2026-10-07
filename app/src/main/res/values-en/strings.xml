@@ -658,4 +658,37 @@
         <item quantity="one">%1$d repo</item>
         <item quantity="other">%1$d repos</item>
     </plurals>
+    <!-- Fix batch review-ui (fx2): confirm dialogs, ViewModel error copy, format joins -->
+    <string name="spaces_note_delete_title">Delete this note?</string>
+    <string name="spaces_note_delete_confirm">The note will be deleted for all members. This cannot be undone.</string>
+    <string name="spaces_task_delete_title">Delete this shared task?</string>
+    <string name="spaces_task_delete_confirm">The shared task will be deleted for all members. This cannot be undone.</string>
+    <string name="focus_not_found_title">Task not found</string>
+    <string name="focus_not_found_desc">This task may have been deleted. Pick another task to start a focus session.</string>
+    <string name="task_subtask_delete_title">Remove this subtask?</string>
+    <string name="task_subtask_delete_confirm">The subtask will be removed. This cannot be undone.</string>
+    <string name="auth_err_credentials">Enter an email and a password (6+ chars).</string>
+    <string name="auth_err_signin">Sign-in failed.</string>
+    <string name="auth_err_username">Username: 3–20 chars, letters/digits/_/., starts with letter/digit.</string>
+    <string name="auth_err_session">Session lost — sign in again.</string>
+    <string name="auth_err_username_save">Username save failed (taken?).</string>
+    <string name="social_err_load">Load failed.</string>
+    <string name="space_err_invite_empty">Enter a username to invite.</string>
+    <string name="space_err_user_not_found">User \"%1$s\" not found — check the spelling.</string>
+    <string name="calendar_day_desc">%1$s, %2$d tasks</string>
+    <string name="format_name_dash_name">%1$s — %2$s</string>
+    <string name="task_program_day_option">%1$d. %2$s</string>
+    <string name="avatar_overflow_count">+%1$d</string>
+    <string name="logged_reps_weight">%1$s – %2$s%3$s</string>
+    <string name="logged_reps_weight_plus">%1$s (+%2$s%3$s)</string>
+    <string name="logged_minutes_steps">%1$s · %2$s</string>
+    <string name="widget_undo_title">✓ %1$s</string>
+    <string name="widget_dismiss">✕</string>
+    <string name="common_clear">Clear</string>
+    <string name="notif_untitled_task">Task</string>
+    <string name="logged_reps_bodyweight">%1$s (%2$s)</string>
+    <string name="plan_weight_at">@ %1$s %2$s</string>
+    <string name="plan_weight_plus">+%1$s %2$s</string>
+    <string name="format_value_unit">%1$s %2$s</string>
+    <string name="format_reps_times_weight">%1$d × %2$s</string>
 </resources>

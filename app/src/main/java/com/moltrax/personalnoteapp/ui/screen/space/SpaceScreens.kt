@@ -42,11 +42,12 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import com.moltrax.personalnoteapp.ui.components.DhCheck
+import com.moltrax.personalnoteapp.ui.components.DhCard
 import com.moltrax.personalnoteapp.ui.components.DhDivider
 import com.moltrax.personalnoteapp.ui.components.DhEmptyState
 import com.moltrax.personalnoteapp.ui.components.DhErrorState
@@ -304,6 +305,7 @@ private fun SpaceOverview(
 
 @Composable
 private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
+    var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -330,7 +332,7 @@ private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                             supporting = note.bodyMd?.takeIf { it.isNotBlank() },
                             trailing = {
                                 IconButton(
-                                    onClick = { vm.deleteNote(spaceId, note.id) },
+                                    onClick = { pendingDeleteId = note.id },
                                     modifier = Modifier.size(48.dp),
                                 ) {
                                     Icon(
@@ -346,10 +348,21 @@ private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
             }
         }
     }
+    if (pendingDeleteId != null) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.spaces_note_delete_title),
+            message = stringResource(R.string.spaces_note_delete_confirm),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { val id = pendingDeleteId; pendingDeleteId = null; if (id != null) vm.deleteNote(spaceId, id) },
+            onDismiss = { pendingDeleteId = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
+    }
 }
 
 @Composable
 private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
+    var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -374,9 +387,10 @@ private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                             Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Checkbox(
+                            DhCheck(
                                 checked = task.isDone,
                                 onCheckedChange = { vm.toggleSharedTask(spaceId, task) },
+                                contentDescription = task.title,
                             )
                             Text(
                                 task.title,
@@ -393,7 +407,7 @@ private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                                 overflow = TextOverflow.Ellipsis,
                             )
                             IconButton(
-                                onClick = { vm.deleteSharedTask(spaceId, task.id) },
+                                onClick = { pendingDeleteId = task.id },
                                 modifier = Modifier.size(48.dp),
                             ) {
                                 Icon(
@@ -407,6 +421,16 @@ private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                 }
             }
         }
+    }
+    if (pendingDeleteId != null) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.spaces_task_delete_title),
+            message = stringResource(R.string.spaces_task_delete_confirm),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { val id = pendingDeleteId; pendingDeleteId = null; if (id != null) vm.deleteSharedTask(spaceId, id) },
+            onDismiss = { pendingDeleteId = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
     }
 }
 
@@ -1045,9 +1069,9 @@ private fun EventDialog(onDismiss: () -> Unit, onConfirm: (String, Long, Long?) 
 /** Row for one space in lists (name + type label). */
 @Composable
 fun SpaceRow(spaceName: String, typeLabel: String, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    DhCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(spaceName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),

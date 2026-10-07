@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moltrax.personalnoteapp.R
@@ -83,7 +84,11 @@ private fun SyncBannerContent(
     Surface(
         color = color.copy(alpha = 0.15f),
         modifier = modifier.fillMaxWidth().then(
-            if (isError) Modifier else Modifier.clickable(onClick = onSync)
+            if (isError) Modifier else Modifier.clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.action_retry),
+                onClick = onSync,
+            )
         ),
     ) {
         Row(
@@ -93,7 +98,10 @@ private fun SyncBannerContent(
             Text(
                 if (isError) stringResource(R.string.sync_error_prefix, text) else text,
                 modifier = Modifier.weight(1f).then(
-                    if (isError) Modifier.clickable { showDetail = true } else Modifier
+                    if (isError) Modifier.clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.sync_detail),
+                    ) { showDetail = true } else Modifier
                 ),
                 style = MaterialTheme.typography.labelSmall, color = color,
                 maxLines = 2, overflow = TextOverflow.Ellipsis,

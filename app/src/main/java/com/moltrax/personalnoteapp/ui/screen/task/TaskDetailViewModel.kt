@@ -31,6 +31,13 @@ import kotlinx.serialization.json.Json
 import java.util.UUID
 import javax.inject.Inject
 
+/**
+ * Removes one subtask by id for the delete-confirm flow (the screen confirms,
+ * then calls [TaskDetailViewModel.removeSubtask]). Pure list op — unit-tested.
+ */
+internal fun List<SubTask>.withoutSubtask(id: String): List<SubTask> =
+    filterNot { it.id == id }
+
 data class TaskDetailState(
     val id: String = UUID.randomUUID().toString(),
     val title: String = "",
@@ -221,7 +228,7 @@ class TaskDetailViewModel @Inject constructor(
     /** Deletes a subtask. */
     fun removeSubtask(id: String) {
         _state.update { s ->
-            s.copy(subtasks = s.subtasks.filterNot { it.id == id })
+            s.copy(subtasks = s.subtasks.withoutSubtask(id))
         }
         persist(_state.value)
     }

@@ -136,7 +136,7 @@ fun LiveWorkoutScreen(nav: NavController, workoutId: String, groupId: String, vm
             }
         } else {
             LazyColumn(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier.fillMaxSize().padding(padding).imePadding(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -471,7 +471,7 @@ private fun formatPlanned(ctx: Context, planned: PlannedSet): String {
     val reps = planned.reps
     val weight = planned.weightKg?.takeIf { it > 0 }?.let { trimKg(it) }
     return if (reps > 0 && weight != null) {
-        "$reps × $weight $kg"
+        ctx.getString(R.string.format_reps_times_weight, reps, ctx.getString(R.string.format_value_unit, weight, kg))
     } else if (reps > 0) {
         ctx.getString(R.string.logged_reps, reps)
     } else {
@@ -483,19 +483,26 @@ private fun formatPlanned(ctx: Context, planned: PlannedSet): String {
 private fun formatLoggedSet(ctx: Context, type: ExerciseType, set: LoggedSet): String {
     val kg = ctx.getString(R.string.unit_kg)
     return when (type) {
-        ExerciseType.WEIGHTLIFTING ->
-            ctx.getString(R.string.logged_reps, set.reps) + (set.weightKg?.let { " – ${trimKg(it)}$kg" } ?: "")
-        ExerciseType.BODYWEIGHT ->
-            ctx.getString(R.string.logged_reps, set.reps) +
-                (set.weightKg?.takeIf { it > 0 }?.let { " (+${trimKg(it)}$kg)" }
-                    ?: " (${ctx.getString(R.string.logged_bodyweight)})")
+        ExerciseType.WEIGHTLIFTING -> {
+            val reps = ctx.getString(R.string.logged_reps, set.reps)
+            set.weightKg?.let { ctx.getString(R.string.logged_reps_weight, reps, trimKg(it), kg) } ?: reps
+        }
+        ExerciseType.BODYWEIGHT -> {
+            val reps = ctx.getString(R.string.logged_reps, set.reps)
+            set.weightKg?.takeIf { it > 0 }?.let { ctx.getString(R.string.logged_reps_weight_plus, reps, trimKg(it), kg) }
+                ?: ctx.getString(R.string.logged_reps_bodyweight, reps, ctx.getString(R.string.logged_bodyweight))
+        }
         ExerciseType.DURATION -> set.durationSeconds?.let { ctx.getString(R.string.logged_seconds, it) }
             ?: ctx.getString(R.string.logged_entry)
-        ExerciseType.CARDIO -> buildString {
-            set.durationSeconds?.let { append(ctx.getString(R.string.logged_minutes, it / 60)) }
-            set.steps?.let { append(" · " + ctx.getString(R.string.logged_steps, it)) }
-            set.distanceMeters?.let { append(" · ${trimKg(it)} ${ctx.getString(R.string.unit_m)}") }
-        }.ifBlank { ctx.getString(R.string.logged_entry) }
+        ExerciseType.CARDIO -> {
+            val parts = buildList {
+                set.durationSeconds?.let { add(ctx.getString(R.string.logged_minutes, it / 60)) }
+                set.steps?.let { add(ctx.getString(R.string.logged_steps, it)) }
+                set.distanceMeters?.let { add(ctx.getString(R.string.format_value_unit, trimKg(it), ctx.getString(R.string.unit_m))) }
+            }
+            if (parts.isEmpty()) ctx.getString(R.string.logged_entry)
+            else parts.reduce { a, b -> ctx.getString(R.string.logged_minutes_steps, a, b) }
+        }
     }
 }
 

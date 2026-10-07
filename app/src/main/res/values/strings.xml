@@ -658,4 +658,37 @@
         <item quantity="one">%1$d depo</item>
         <item quantity="other">%1$d depo</item>
     </plurals>
+    <!-- Fix batch review-ui (fx2): confirm dialogs, ViewModel error copy, format joins -->
+    <string name="spaces_note_delete_title">Bu not silinsin mi?</string>
+    <string name="spaces_note_delete_confirm">Not tüm üyeler için silinecek. Bu işlem geri alınamaz.</string>
+    <string name="spaces_task_delete_title">Bu paylaşılan görev silinsin mi?</string>
+    <string name="spaces_task_delete_confirm">Paylaşılan görev tüm üyeler için silinecek. Bu işlem geri alınamaz.</string>
+    <string name="focus_not_found_title">Görev bulunamadı</string>
+    <string name="focus_not_found_desc">Bu görev silinmiş olabilir. Odaklanmak için başka bir görev seç.</string>
+    <string name="task_subtask_delete_title">Bu alt görev kaldırılsın mı?</string>
+    <string name="task_subtask_delete_confirm">Alt görev kaldırılacak. Bu işlem geri alınamaz.</string>
+    <string name="auth_err_credentials">E-posta ve en az 6 karakterlik bir şifre girin.</string>
+    <string name="auth_err_signin">Giriş başarısız.</string>
+    <string name="auth_err_username">Kullanıcı adı: 3–20 karakter, harf/rakam/_/., harf veya rakamla başlar.</string>
+    <string name="auth_err_session">Oturum kayboldu — tekrar giriş yapın.</string>
+    <string name="auth_err_username_save">Kullanıcı adı kaydedilemedi (alınmış olabilir).</string>
+    <string name="social_err_load">Yükleme başarısız.</string>
+    <string name="space_err_invite_empty">Davet etmek için bir kullanıcı adı girin.</string>
+    <string name="space_err_user_not_found">\"%1$s\" kullanıcısı bulunamadı — yazımı kontrol edin.</string>
+    <string name="calendar_day_desc">%1$s, %2$d görev</string>
+    <string name="format_name_dash_name">%1$s — %2$s</string>
+    <string name="task_program_day_option">%1$d. %2$s</string>
+    <string name="avatar_overflow_count">+%1$d</string>
+    <string name="logged_reps_weight">%1$s – %2$s%3$s</string>
+    <string name="logged_reps_weight_plus">%1$s (+%2$s%3$s)</string>
+    <string name="logged_minutes_steps">%1$s · %2$s</string>
+    <string name="widget_undo_title">✓ %1$s</string>
+    <string name="widget_dismiss">✕</string>
+    <string name="common_clear">Temizle</string>
+    <string name="notif_untitled_task">Görev</string>
+    <string name="logged_reps_bodyweight">%1$s (%2$s)</string>
+    <string name="plan_weight_at">@ %1$s %2$s</string>
+    <string name="plan_weight_plus">+%1$s %2$s</string>
+    <string name="format_value_unit">%1$s %2$s</string>
+    <string name="format_reps_times_weight">%1$d × %2$s</string>
 </resources>
