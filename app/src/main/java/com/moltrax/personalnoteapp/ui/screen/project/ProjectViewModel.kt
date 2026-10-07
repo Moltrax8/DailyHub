@@ -650,8 +650,15 @@ class ProjectViewModel @Inject constructor(
                             name,
                             repo.description?.takeIf { it.isNotBlank() },
                         )
-                        taken += name
-                        github.linkRepo(space.id, repo.id, repo.fullName, repo.private)
+                        try {
+                            github.linkRepo(space.id, repo.id, repo.fullName, repo.private)
+                            taken += name
+                        } catch (e: Exception) {
+                            // Do not leave an empty orphan project behind (a retry would create a
+                            // second one): remove it, best effort, then report this repo as failed.
+                            runCatching { projects.deleteProject(space.id) }
+                            throw e
+                        }
                     }
                     if (res.isSuccess) {
                         ok++
