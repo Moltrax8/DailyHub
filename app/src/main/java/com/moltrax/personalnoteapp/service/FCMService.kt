@@ -61,7 +61,10 @@ class FCMService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val title = getString(R.string.github_push_title)
-        val text = if (repo.isNotBlank()) "$repo • $kind" else kind
+        // Server-provided text: strip newlines (no lock-screen phishing lines) and truncate.
+        val safeRepo = com.moltrax.personalnoteapp.domain.model.sanitizePushText(repo)
+        val safeKind = com.moltrax.personalnoteapp.domain.model.sanitizePushText(kind)
+        val text = if (safeRepo.isNotBlank()) "$safeRepo • $safeKind" else safeKind
         nm.notify(
             spaceId.hashCode(),
             NotificationCompat.Builder(this, CHANNEL_ID)

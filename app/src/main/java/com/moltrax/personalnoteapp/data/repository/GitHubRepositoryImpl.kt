@@ -119,6 +119,7 @@ class GitHubRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setNotifPref(spaceId: String, kind: String, enabled: Boolean) {
+        require(kind in GitHubRepository.KINDS) { "Unknown notification kind." }
         val res = api().setNotifPref(
             bearer(),
             body = buildJsonObject {

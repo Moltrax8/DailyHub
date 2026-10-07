@@ -1,7 +1,9 @@
 package com.moltrax.personalnoteapp.domain.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -63,5 +65,22 @@ class GithubLinkTest {
         // Query + fork hiding combine.
         assertEquals(emptyList<GithubAppRepo>(), filterGithubAppRepos(repos, "spoon", hideForks = true))
         assertEquals(listOf(repos[1]), filterGithubAppRepos(repos, "spoon", hideForks = false))
+    }
+
+    @Test
+    fun `only https github dot com opens`() {
+        assertTrue(isTrustedGitHubOpenUrl("https://github.com/login/oauth/authorize?x=1"))
+        assertFalse(isTrustedGitHubOpenUrl("http://github.com/login"))
+        assertFalse(isTrustedGitHubOpenUrl("https://evil.com/phish"))
+        assertFalse(isTrustedGitHubOpenUrl("https://github.com.evil.com/x"))
+        assertFalse(isTrustedGitHubOpenUrl("https://objects.githubusercontent.com/x.apk"))
+        assertFalse(isTrustedGitHubOpenUrl("not a url"))
+    }
+
+    @Test
+    fun `push text strips newlines and truncates`() {
+        assertEquals("a b c", sanitizePushText("a\nb\r\nc"))
+        assertEquals(80, sanitizePushText("x".repeat(200)).length)
+        assertEquals("", sanitizePushText("  \n "))
     }
 }

@@ -541,13 +541,18 @@ private fun GitHubRow(ghVm: GithubSettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     var showDisconnect by remember { mutableStateOf(false) }
     val openFailed = stringResource(R.string.github_open_failed)
+    val untrusted = stringResource(R.string.github_untrusted_link)
     val openUrl: (String) -> Unit = { url ->
-        runCatching {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-        }.onFailure { ghVm.reportError(openFailed) }
+        if (!com.moltrax.personalnoteapp.domain.model.isTrustedGitHubOpenUrl(url)) {
+            ghVm.reportError(untrusted)
+        } else {
+            runCatching {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.onFailure { ghVm.reportError(openFailed) }
+        }
     }
 
     // Finish a link started here (or in Projects): the browser returns via
