@@ -94,6 +94,20 @@ fun GithubImportDialog(
 
     LaunchedEffect(Unit) { vm.prepareImport() }
 
+    // After the user grants the GitHub App access to more repos on github.com and comes back, reload the list.
+    var openedInstallPage by remember { mutableStateOf(false) }
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && openedInstallPage) {
+                openedInstallPage = false
+                vm.loadImport()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Deep-link finish: dailyhub://github-callback?code=...&state=... — the
     // same bus the per-project GitHub tab uses; here it reloads the import.
     val pendingCallback by GitHubCallbackBus.pending.collectAsStateWithLifecycle()
@@ -188,6 +202,19 @@ fun GithubImportDialog(
                                 )
                             }
                         }
+                        // First-time state: GitHub Apps see NOTHING until the user installs them on repos, so a
+                        // brand-new connection always starts with an empty list. Explain it instead of "no match".
+                        if (st.repos.isEmpty() && !st.busy) {
+                            DhEmptyState(
+                                icon = Icons.Default.Hub,
+                                title = stringResource(R.string.github_no_access_title),
+                                description = stringResource(R.string.github_no_access_body),
+                                actionLabel = st.installUrl?.takeIf { it.isNotBlank() }
+                                    ?.let { stringResource(R.string.github_add_more) },
+                                onAction = st.installUrl?.takeIf { it.isNotBlank() }
+                                    ?.let { url -> { openedInstallPage = true; openUrl(url) } },
+                            )
+                        }
                         GithubRepoPickerList(
                             query = st.query,
                             onQueryChange = { vm.setImportQuery(it) },
@@ -202,11 +229,26 @@ fun GithubImportDialog(
                             lockedIds = st.alreadyAddedIds,
                             lockedLabel = stringResource(R.string.projects_already_added),
                         )
-                        st.installUrl?.takeIf { it.isNotBlank() }?.let { installUrl ->
+                        // Why a repo can be missing, and how to fix it: the list only contains repos the DailyHub
+                        // GitHub App has been given access to (private ones included).
+                        Text(
+                            stringResource(R.string.github_access_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        androidx.compose.foundation.layout.Row(
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                        ) {
+                            st.installUrl?.takeIf { it.isNotBlank() }?.let { installUrl ->
+                                androidx.compose.material3.FilledTonalButton(
+                                    onClick = { openedInstallPage = true; openUrl(installUrl) },
+                                    modifier = Modifier.heightIn(min = DhTokens.MinTouchTarget),
+                                ) { Text(stringResource(R.string.github_add_more)) }
+                            }
                             TextButton(
-                                onClick = { openUrl(installUrl) },
+                                onClick = { vm.loadImport() },
                                 modifier = Modifier.heightIn(min = DhTokens.MinTouchTarget),
-                            ) { Text(stringResource(R.string.github_add_more)) }
+                            ) { Text(stringResource(R.string.github_refresh_list)) }
                         }
                         urlError?.let {
                             Text(
