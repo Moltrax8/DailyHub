@@ -1,7 +1,9 @@
 package com.moltrax.personalnoteapp.ui.screen.social
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
 import com.moltrax.personalnoteapp.domain.model.FriendRequest
 import com.moltrax.personalnoteapp.domain.model.FriendRequestStatus
@@ -10,6 +12,7 @@ import com.moltrax.personalnoteapp.domain.model.isValidUsername
 import com.moltrax.personalnoteapp.domain.repository.ProfileRepository
 import com.moltrax.personalnoteapp.domain.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +39,7 @@ data class SocialUiState(
  */
 @HiltViewModel
 class SocialViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val auth: SupabaseAuthService,
     private val profiles: ProfileRepository,
     private val social: SocialRepository,
@@ -75,7 +79,7 @@ class SocialViewModel @Inject constructor(
                     )
                 }
             }.onFailure { e ->
-                _state.update { it.copy(busy = false, error = e.message ?: "Load failed.") }
+                _state.update { it.copy(busy = false, error = e.message ?: context.getString(R.string.social_err_load)) }
             }
         }
     }
@@ -107,7 +111,7 @@ class SocialViewModel @Inject constructor(
     fun renameMe(name: String, onDone: () -> Unit = {}) {
         val clean = name.trim()
         if (!isValidUsername(clean)) {
-            _state.update { it.copy(error = "Username: 3–20 chars, letters/digits/_/., starts with letter/digit.") }
+            _state.update { it.copy(error = context.getString(R.string.auth_err_username)) }
             return
         }
         viewModelScope.launch {

@@ -1,7 +1,9 @@
 package com.moltrax.personalnoteapp.ui.screen.account
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.data.remote.supabase.SessionState
 import com.moltrax.personalnoteapp.data.remote.supabase.SupabaseAuthService
@@ -9,6 +11,7 @@ import com.moltrax.personalnoteapp.domain.model.isValidUsername
 import com.moltrax.personalnoteapp.domain.repository.ProfileRepository
 import com.moltrax.personalnoteapp.domain.model.SupabaseProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +40,7 @@ data class AuthUiState(
  */
 @HiltViewModel
 class SupabaseAuthViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val auth: SupabaseAuthService,
     private val profiles: ProfileRepository,
     private val prefs: AppPreferences,
@@ -72,7 +76,7 @@ class SupabaseAuthViewModel @Inject constructor(
     fun submitCredentials() {
         val s = _state.value
         if (s.email.isBlank() || s.password.length < 6 || s.busy) {
-            _state.update { it.copy(error = "Enter an email and a password (6+ chars).") }
+            _state.update { it.copy(error = context.getString(R.string.auth_err_credentials)) }
             return
         }
         viewModelScope.launch {
@@ -84,7 +88,7 @@ class SupabaseAuthViewModel @Inject constructor(
                 _state.update { it.copy(busy = false) }
                 if (uid != null) enterUsernameIfNeeded(uid)
             }.onFailure { e ->
-                _state.update { it.copy(busy = false, error = e.message ?: "Sign-in failed.") }
+                _state.update { it.copy(busy = false, error = e.message ?: context.getString(R.string.auth_err_signin)) }
             }
         }
     }
@@ -101,20 +105,20 @@ class SupabaseAuthViewModel @Inject constructor(
     fun submitUsername() {
         val name = _state.value.username.trim()
         if (!isValidUsername(name)) {
-            _state.update { it.copy(error = "Username: 3–20 chars, letters/digits/_/., starts with letter/digit.") }
+            _state.update { it.copy(error = context.getString(R.string.auth_err_username)) }
             return
         }
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
             val uid = auth.currentUserId()
             if (uid == null) {
-                _state.update { it.copy(busy = false, error = "Session lost — sign in again.") }
+                _state.update { it.copy(busy = false, error = context.getString(R.string.auth_err_session)) }
                 return@launch
             }
             runCatching { profiles.upsertMyProfile(SupabaseProfile(id = uid, username = name)) }
                 .onSuccess { _state.update { it.copy(busy = false, step = AuthStep.Done) } }
                 .onFailure { e ->
-                    _state.update { it.copy(busy = false, error = e.message ?: "Username save failed (taken?).") }
+                    _state.update { it.copy(busy = false, error = e.message ?: context.getString(R.string.auth_err_username_save)) }
                 }
         }
     }

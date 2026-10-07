@@ -15,7 +15,17 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const TEXT = { headers: { "Content-Type": "application/json" } };
 
+/** Constant-time string compare (length mismatch -> false). */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 async function hmacValid(raw: string, signature: string | null): Promise<boolean> {
+  // Fail closed: with an empty secret anyone could compute a valid HMAC.
+  if (!WEBHOOK_SECRET) return false;
   if (!signature || !signature.startsWith("sha256=")) return false;
   const key = await crypto.subtle.importKey(
     "raw",
@@ -26,7 +36,7 @@ async function hmacValid(raw: string, signature: string | null): Promise<boolean
   );
   const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
   const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return hex === signature.slice("sha256=".length);
+  return constantTimeEqual(hex, signature.slice("sha256=".length));
 }
 
 type Mapped = { kind: string; repoFull: string; ref: Record<string, unknown> } | null;

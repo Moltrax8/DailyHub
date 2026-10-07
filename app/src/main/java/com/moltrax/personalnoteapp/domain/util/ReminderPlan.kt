@@ -23,7 +23,8 @@ data class ReminderPlan(
  */
 fun planReminder(dueDate: Long?, now: Long, reminderMinutes: Int): ReminderPlan? {
     if (dueDate == null || dueDate <= now) return null
-    val triggerAt = dueDate - reminderMinutes * 60_000L
+    val m = reminderMinutes.coerceAtLeast(0)
+    val triggerAt = dueDate - m * 60_000L
     val fireAt = if (triggerAt > now) triggerAt else dueDate
     if (fireAt <= now) return null
     return ReminderPlan(fireAt, ((dueDate - fireAt) / 60_000L).toInt())

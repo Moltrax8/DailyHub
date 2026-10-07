@@ -2,6 +2,7 @@ package com.moltrax.personalnoteapp.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -407,6 +408,54 @@ fun DhSwitch(
 }
 
 // ---------------------------------------------------------------------------
+// Check: ONE shared round Things-style check with a 48dp touch target.
+// ---------------------------------------------------------------------------
+
+/**
+ * The single shared round check for the whole app (task rows, subtask lists,
+ * shared-task lists). 26dp visual circle, checked = filled primary with
+ * onPrimary tick, unchecked = outline ring. Never use raw [Checkbox].
+ */
+@Composable
+fun DhCheck(
+    checked: Boolean,
+    onCheckedChange: () -> Unit,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Box(
+        modifier = modifier.size(48.dp).clickable(
+            enabled = enabled,
+            role = Role.Button,
+            onClickLabel = contentDescription,
+            onClick = onCheckedChange,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier.size(26.dp).clip(CircleShape)
+                .background(if (checked) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .border(
+                    1.5.dp,
+                    if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Top bar: one shared small (64dp) bar — title titleLarge, back at start,
 // actions at end. Used by every screen with a top bar so heights and title
 // styles match. The bar owns the ONE status-bar inset (via
@@ -623,6 +672,10 @@ fun DhTextField(
     error: String? = null,
     enabled: Boolean = true,
     singleLine: Boolean = true,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
+        androidx.compose.foundation.text.KeyboardOptions.Default,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
+        androidx.compose.ui.text.input.VisualTransformation.None,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -635,6 +688,8 @@ fun DhTextField(
             isError = error != null,
             enabled = enabled,
             singleLine = singleLine,
+            keyboardOptions = keyboardOptions,
+            visualTransformation = visualTransformation,
             trailingIcon = trailing,
             shape = MaterialTheme.shapes.small,
         )

@@ -55,10 +55,14 @@ fun AppNavHost(
     startDestination: Any = if (FeatureFlags.DRIVE_SYNC_ENABLED) Login else Home,
     pendingWidgetAction: String? = null,
     pendingWidgetTaskId: String? = null,
+    pendingWidgetTick: Int = 0,
     onWidgetActionConsumed: () -> Unit = {},
     // Developer-activity push tap (Phase 7): open this project space once.
     pendingProjectId: String? = null,
     onProjectConsumed: () -> Unit = {},
+    // Reminder tap: open this task once (mirrors pendingWidgetTaskId).
+    pendingReminderTaskId: String? = null,
+    onReminderConsumed: () -> Unit = {},
 ) {
     val nav = rememberNavController()
 
@@ -96,10 +100,19 @@ fun AppNavHost(
 
     // The widget's '+' button wants to open the new-task screen. Single-shot:
     // opened without delay via launchSingleTop; so repeated entries don't pile up.
-    LaunchedEffect(pendingWidgetAction) {
+    // pendingWidgetTick forces a re-fire when the same action repeats (state change every tap).
+    LaunchedEffect(pendingWidgetAction, pendingWidgetTick) {
         if (pendingWidgetAction == MainActivity.ACTION_NEW_TASK) {
             nav.navigate(TaskDetail("new")) { launchSingleTop = true }
             onWidgetActionConsumed()
+        }
+    }
+
+    // Reminder tap: open the task once, then consume (mirrors pendingWidgetTaskId).
+    LaunchedEffect(pendingReminderTaskId) {
+        if (pendingReminderTaskId != null) {
+            nav.navigate(TaskDetail(pendingReminderTaskId)) { launchSingleTop = true }
+            onReminderConsumed()
         }
     }
 
@@ -145,6 +158,7 @@ fun AppNavHost(
                     nav = nav,
                     pendingWidgetAction = pendingWidgetAction,
                     pendingWidgetTaskId = pendingWidgetTaskId,
+                    pendingWidgetTick = pendingWidgetTick,
                     onWidgetActionConsumed = onWidgetActionConsumed,
                 )
             }

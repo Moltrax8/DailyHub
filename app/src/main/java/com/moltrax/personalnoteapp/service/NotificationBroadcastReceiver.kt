@@ -26,7 +26,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val taskId    = intent.getStringExtra("task_id") ?: return
-        val title     = intent.getStringExtra("task_title") ?: "Task"
+        val title     = intent.getStringExtra("task_title") ?: context.getString(R.string.notif_untitled_task)
         val minutes   = intent.getIntExtra("reminder_minutes", 60)
         val pending = goAsync()
         scope.launch {

@@ -37,10 +37,11 @@ fun isUpdateAvailable(release: AppRelease, installedCode: Int): Boolean =
     release.versionCode > installedCode
 
 /**
- * APK downloads are only trusted from GitHub's own hosts, so a tampered
+ * APK downloads are only trusted from GitHub's own hosts over HTTPS, so a tampered
  * `app_releases` row cannot point users at an evil server. Pure (JVM-tested).
  */
 fun isAllowedApkHost(url: String): Boolean {
+    if (!url.startsWith("https://")) return false
     val host = runCatching { java.net.URI(url).host.orEmpty().lowercase() }.getOrDefault("")
     if (host.isBlank()) return false
     return host == "github.com" || host.endsWith(".github.com") ||

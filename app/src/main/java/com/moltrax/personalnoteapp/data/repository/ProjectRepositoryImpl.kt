@@ -80,20 +80,27 @@ class ProjectRepositoryImpl @Inject constructor(
             ),
             "Project space create failed",
         )
-        checked(api().addMember(token, body = mapOf("space_id" to spaceId, "user_id" to me, "role" to "owner")), "Join failed")
-        checked(
-            api().upsertProject(
-                token,
-                body = buildJsonObject {
-                    put("space_id", spaceId)
-                    put("description_md", descriptionMd?.takeIf { it.isNotBlank() })
-                    putJsonArray("board_columns") {
-                        listOf("Idea", "Planned", "Developing", "Finished").forEach { add(JsonPrimitive(it)) }
-                    }
-                },
-            ),
-            "Project row create failed",
-        )
+        try {
+            checked(api().addMember(token, body = mapOf("space_id" to spaceId, "user_id" to me, "role" to "owner")), "Join failed")
+            checked(
+                api().upsertProject(
+                    token,
+                    body = buildJsonObject {
+                        put("space_id", spaceId)
+                        put("description_md", descriptionMd?.takeIf { it.isNotBlank() })
+                        putJsonArray("board_columns") {
+                            listOf("Idea", "Planned", "Developing", "Finished").forEach { add(JsonPrimitive(it)) }
+                        }
+                    },
+                ),
+                "Project row create failed",
+            )
+        } catch (e: Exception) {
+            // Compensating rollback: do not leave an orphan space row behind.
+            // Covers both addMember and upsertProject failures after createSpace.
+            runCatching { api().deleteSpace(token, "eq.$spaceId") }
+            throw e
+        }
         pullProject(spaceId)
         // Mirror the space row too — the Projects list observes SpaceDao, and without
         // this the new project is invisible until an unrelated pullSpace happens.

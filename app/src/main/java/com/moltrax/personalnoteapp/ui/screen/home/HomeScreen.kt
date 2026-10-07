@@ -61,6 +61,7 @@ import com.moltrax.personalnoteapp.domain.model.SyncStatus
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.ui.SyncViewModel
 import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
+import com.moltrax.personalnoteapp.ui.components.DhCheck
 import com.moltrax.personalnoteapp.ui.components.DhEmptyState
 import com.moltrax.personalnoteapp.ui.components.DhFab
 import com.moltrax.personalnoteapp.ui.components.DhFilterChip
@@ -87,10 +88,12 @@ fun HomeScreen(
     // Redirection for "complete workout task" coming from the widget (consumed once it reaches Home).
     pendingWidgetAction: String? = null,
     pendingWidgetTaskId: String? = null,
+    pendingWidgetTick: Int = 0,
     onWidgetActionConsumed: () -> Unit = {},
 ) {
     // When a workout-linked task is checked from the widget: open the set/reps/weight entry screen here.
-    LaunchedEffect(pendingWidgetAction, pendingWidgetTaskId) {
+    // pendingWidgetTick forces a re-fire when the same action repeats.
+    LaunchedEffect(pendingWidgetAction, pendingWidgetTaskId, pendingWidgetTick) {
         if (pendingWidgetAction == com.moltrax.personalnoteapp.MainActivity.ACTION_COMPLETE_WORKOUT &&
             !pendingWidgetTaskId.isNullOrBlank()
         ) {
@@ -360,7 +363,7 @@ fun HomeScreen(
         if (showBirthday) {
             AlertDialog(
                 onDismissRequest = { vm.dismissBirthday() },
-                icon = { Icon(Icons.Default.Cake, contentDescription = null, tint = AppColors.Accent) },
+                icon = { Icon(Icons.Default.Cake, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 title = { Text(stringResource(R.string.birthday_title)) },
                 text = {
                     Text(
@@ -378,7 +381,7 @@ fun HomeScreen(
             val remaining = task.subtaskCount - task.doneSubtaskCount
             AlertDialog(
                 onDismissRequest = { confirmComplete = null },
-                icon = { Icon(Icons.Default.Checklist, contentDescription = null, tint = AppColors.Accent) },
+                icon = { Icon(Icons.Default.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 title = { Text(stringResource(R.string.subtasks_incomplete_title)) },
                 text = {
                     Text(stringResource(R.string.subtasks_incomplete_msg, remaining))
@@ -504,7 +507,7 @@ private fun CategoryEditRow(name: String, onRename: (String) -> Unit, onDelete: 
         )
         IconButton(onClick = { if (canSave) onRename(text.trim()) }, enabled = canSave) {
             Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_save_name),
-                tint = if (canSave) AppColors.Accent else MaterialTheme.colorScheme.onSurfaceVariant)
+                tint = if (canSave) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete), tint = AppColors.PriorityHigh)
@@ -795,9 +798,9 @@ fun TaskItem(
             Modifier.alpha(if (task.isDone) 0.62f else 1f).padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DhRoundCheck(
+            DhCheck(
                 checked = task.isDone,
-                onToggle = onToggle,
+                onCheckedChange = onToggle,
                 contentDescription = task.title,
             )
             Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
@@ -876,43 +879,6 @@ fun TaskItem(
                 }
             }
             dragHandle?.invoke()
-        }
-    }
-}
-
-/** Round Things-style checkbox with a full 48dp touch target (26dp visual circle). */
-@Composable
-private fun DhRoundCheck(
-    checked: Boolean,
-    onToggle: () -> Unit,
-    contentDescription: String?,
-) {
-    Box(
-        modifier = Modifier.size(48.dp).clickable(
-            role = Role.Button,
-            onClickLabel = contentDescription,
-            onClick = onToggle,
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier.size(26.dp).clip(CircleShape)
-                .background(if (checked) MaterialTheme.colorScheme.primary else Color.Transparent)
-                .border(
-                    1.5.dp,
-                    if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    CircleShape,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (checked) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
         }
     }
 }
@@ -1040,7 +1006,6 @@ private fun WorkoutCompletionSheet(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent),
             ) {
                 Icon(Icons.Default.CheckCircle, null)
                 Spacer(Modifier.width(8.dp))
@@ -1061,7 +1026,7 @@ private fun ExerciseAccordion(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        border = if (expanded) BorderStroke(1.dp, AppColors.Accent) else null,
+        border = if (expanded) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
         shape = RoundedCornerShape(12.dp),
     ) {
         Column(Modifier.animateContentSize().padding(14.dp)) {
@@ -1081,7 +1046,7 @@ private fun ExerciseAccordion(
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
-                    tint = AppColors.Accent,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -1147,12 +1112,12 @@ private fun SetEntryRow(
             }
         }
         if (canRemove) {
-            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_remove_set),
                     modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Spacer(Modifier.width(36.dp))
+            Spacer(Modifier.width(48.dp))
         }
     }
 }

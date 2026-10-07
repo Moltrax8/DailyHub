@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,14 +18,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
-import com.moltrax.personalnoteapp.ui.theme.AppColors
+import com.moltrax.personalnoteapp.ui.components.DhErrorState
+import com.moltrax.personalnoteapp.ui.components.DhLoadingState
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,21 +52,40 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
         }
     }
 
-    val accent = AppColors.Accent
-    val track  = AppColors.BorderSubtle
+    val accent = MaterialTheme.colorScheme.primary
+    val track = MaterialTheme.colorScheme.surfaceVariant
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(state.task?.title ?: stringResource(R.string.focus_title),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = { IconButton(onClick = { vm.pause(); nav.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } },
+            DhTopBar(
+                title = state.task?.title ?: stringResource(R.string.focus_title),
+                onBack = { vm.pause(); nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
-        Column(
+        when {
+            state.isLoading -> Column(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                DhLoadingState(message = stringResource(R.string.loading))
+            }
+            state.task == null -> Column(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                DhErrorState(
+                    title = stringResource(R.string.focus_not_found_title),
+                    description = stringResource(R.string.focus_not_found_desc),
+                    retryLabel = stringResource(R.string.action_retry),
+                    onRetry = { vm.load(taskId) },
+                )
+            }
+            else -> Column(
             modifier = Modifier.fillMaxSize().padding(padding)
                 .verticalScroll(rememberScrollState()).padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -89,7 +107,8 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
                 }
                 Text(
                     "%02d:%02d".format(state.minutesLeft, state.secondsLeft),
-                    fontSize = 52.sp, fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
@@ -97,11 +116,12 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
             Spacer(Modifier.height(48.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedButton(onClick = { vm.reset() }) {
+                OutlinedButton(onClick = { vm.reset() }, enabled = state.canStart) {
                     Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.focus_reset))
                 }
                 Button(
                     onClick = { if (state.isRunning) vm.pause() else vm.start() },
+                    enabled = state.canStart,
                     modifier = Modifier.size(72.dp),
                     shape = CircleShape,
                     contentPadding = PaddingValues(0.dp),
@@ -112,6 +132,7 @@ fun FocusScreen(nav: NavController, taskId: String, vm: FocusTimerViewModel = hi
                     )
                 }
             }
+        }
         }
     }
 }

@@ -75,16 +75,21 @@ fun GithubImportDialog(
     val gh by vm.githubState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val openFailed = stringResource(R.string.github_open_failed)
+    val untrusted = stringResource(R.string.github_untrusted_link)
     var urlError by remember { mutableStateOf<String?>(null) }
     val openUrl: (String) -> Unit = { url ->
-        runCatching {
-            context.startActivity(
-                android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse(url),
-                ),
-            )
-        }.onFailure { urlError = openFailed }
+        if (!com.moltrax.personalnoteapp.domain.model.isTrustedGitHubOpenUrl(url)) {
+            urlError = untrusted
+        } else {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(url),
+                    ),
+                )
+            }.onFailure { urlError = openFailed }
+        }
     }
 
     LaunchedEffect(Unit) { vm.prepareImport() }

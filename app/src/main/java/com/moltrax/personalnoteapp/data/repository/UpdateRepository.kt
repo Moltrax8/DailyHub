@@ -83,25 +83,40 @@ class UpdateRepository @Inject constructor(
     fun isNewerThanInstalled(release: AppRelease, installedCode: Int = BuildConfig.VERSION_CODE): Boolean =
         isUpdateAvailable(release, installedCode)
 
+    companion object {
+        /** Hard cap for APK downloads: abort and delete the partial file past this. */
+        const val MAX_APK_BYTES = 200L * 1024 * 1024
+    }
+
     /** Streams the APK to [dest] (cache). Throws on HTTP/network errors. */
     suspend fun downloadApk(apkUrl: String, dest: File, onProgress: (Long, Long?) -> Unit = { _, _ -> }) {
-        require(apkUrl.startsWith("https://")) { "Refusing non-HTTPS URL." }
-        require(isAllowedApkHost(apkUrl)) { "Refusing untrusted download host." }
-        val req = Request.Builder().url(apkUrl).get().build()
-        http.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) throw IOException("Download failed (HTTP ${resp.code}).")
-            val body = resp.body ?: throw IOException("Empty download.")
-            val total = body.contentLength().takeIf { it > 0 }
-            dest.parentFile?.mkdirs()
-            dest.outputStream().use { out ->
-                val buf = ByteArray(64 * 1024)
-                var read: Int
-                var done = 0L
-                while (body.byteStream().read(buf).also { read = it } != -1) {
-                    out.write(buf, 0, read)
-                    done += read
-                    onProgress(done, total)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            require(apkUrl.startsWith("https://")) { "Refusing non-HTTPS URL." }
+            require(isAllowedApkHost(apkUrl)) { "Refusing untrusted download host." }
+            val req = Request.Builder().url(apkUrl).get().build()
+            try {
+                http.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) throw IOException("Download failed (HTTP ${resp.code}).")
+                    val body = resp.body ?: throw IOException("Empty download.")
+                    val total = body.contentLength().takeIf { it > 0 }
+                    if (total != null && total > MAX_APK_BYTES) throw IOException("Update file too large.")
+                    dest.parentFile?.mkdirs()
+                    dest.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        var read: Int
+                        var done = 0L
+                        while (body.byteStream().read(buf).also { read = it } != -1) {
+                            done += read
+                            if (done > MAX_APK_BYTES) throw IOException("Update file too large.")
+                            out.write(buf, 0, read)
+                            onProgress(done, total)
+                        }
+                    }
                 }
+            } catch (e: Exception) {
+                // Never leave a truncated/oversized partial file behind.
+                runCatching { if (dest.exists()) dest.delete() }
+                throw e
             }
         }
     }

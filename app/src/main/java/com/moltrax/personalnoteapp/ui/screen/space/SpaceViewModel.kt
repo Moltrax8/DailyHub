@@ -1,7 +1,9 @@
 package com.moltrax.personalnoteapp.ui.screen.space
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.FeedEntry
 import com.moltrax.personalnoteapp.domain.model.SharedNote
 import com.moltrax.personalnoteapp.domain.model.SharedTask
@@ -15,6 +17,7 @@ import com.moltrax.personalnoteapp.domain.model.SpaceType
 import com.moltrax.personalnoteapp.domain.repository.SocialRepository
 import com.moltrax.personalnoteapp.domain.repository.SpaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +51,7 @@ data class SpaceDetailUiState(
  */
 @HiltViewModel
 class SpaceViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val spaces: SpaceRepository,
     private val social: SocialRepository,
 ) : ViewModel() {
@@ -224,14 +228,14 @@ class SpaceViewModel @Inject constructor(
     fun inviteByUsername(spaceId: String, username: String, onDone: () -> Unit = {}) {
         val clean = username.trim().trimStart('@')
         if (clean.isEmpty()) {
-            _detail.update { it.copy(error = "Enter a username to invite.") }
+            _detail.update { it.copy(error = context.getString(R.string.space_err_invite_empty)) }
             return
         }
         viewModelScope.launch {
             runCatching {
                 val match = social.searchByUsername(clean)
                     .firstOrNull { it.username.equals(clean, ignoreCase = true) }
-                    ?: throw IllegalStateException("User \"$clean\" not found — check the spelling.")
+                    ?: throw IllegalStateException(context.getString(R.string.space_err_user_not_found, clean))
                 spaces.inviteMember(spaceId, match.id)
             }.onSuccess { onDone() }
                 .onFailure { e -> _detail.update { it.copy(error = e.message) } }

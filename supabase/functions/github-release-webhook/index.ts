@@ -19,7 +19,20 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const TEXT = { headers: { "Content-Type": "application/json" } };
 
+/** Only this repo's releases may feed the in-app updater (an App webhook can deliver any installed repo). */
+const APP_REPO = "Moltrax8/DailyHub";
+
+/** Constant-time string compare (length mismatch -> false). */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 async function hmacValid(raw: string, signature: string | null): Promise<boolean> {
+  // Fail closed: with an empty secret anyone could compute a valid HMAC.
+  if (!WEBHOOK_SECRET) return false;
   if (!signature || !signature.startsWith("sha256=")) return false;
   const key = await crypto.subtle.importKey(
     "raw",
@@ -30,7 +43,7 @@ async function hmacValid(raw: string, signature: string | null): Promise<boolean
   );
   const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
   const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return hex === signature.slice("sha256=".length);
+  return constantTimeEqual(hex, signature.slice("sha256=".length));
 }
 
 function apkAssetUrl(body: any): string | null {
@@ -79,11 +92,17 @@ Deno.serve(async (req: Request) => {
   if (body?.action !== "published") {
     return new Response(JSON.stringify({ ok: true, skipped: true }), { status: 200, ...TEXT });
   }
+  if (body?.repository?.full_name !== APP_REPO || body?.release?.draft || body?.release?.prerelease) {
+    return new Response(JSON.stringify({ ok: true, skipped: true, reason: "not this app's stable release" }), {
+      status: 200,
+      ...TEXT,
+    });
+  }
 
   const tag: string | undefined = body?.release?.tag_name;
   const apkUrl = apkAssetUrl(body);
   const code = tag ? versionCodeFromTag(tag) : null;
-  if (!tag || !apkUrl || code === null) {
+  if (!tag || !apkUrl || !apkUrl.startsWith("https://github.com/") || code === null) {
     return new Response(JSON.stringify({ ok: true, skipped: true, reason: "no apk asset" }), {
       status: 200,
       ...TEXT,
