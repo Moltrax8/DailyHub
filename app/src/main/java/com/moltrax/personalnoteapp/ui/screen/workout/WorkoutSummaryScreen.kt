@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
@@ -29,6 +28,7 @@ import com.moltrax.personalnoteapp.domain.model.ExerciseType
 import com.moltrax.personalnoteapp.domain.model.LoggedExercise
 import com.moltrax.personalnoteapp.domain.model.LoggedSet
 import com.moltrax.personalnoteapp.domain.model.WorkoutSession
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.i18n.label
 import com.moltrax.personalnoteapp.ui.theme.AppColors
 import java.text.SimpleDateFormat
@@ -71,13 +71,10 @@ fun WorkoutSummaryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.workout_summary_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
-                    }
-                },
+            DhTopBar(
+                title = stringResource(R.string.workout_summary_title),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
                 actions = {
                     val s = session
                     if (s != null) {

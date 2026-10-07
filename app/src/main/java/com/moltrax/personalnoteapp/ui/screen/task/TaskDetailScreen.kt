@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
 import com.moltrax.personalnoteapp.ui.components.DhDivider
 import com.moltrax.personalnoteapp.ui.components.DhFilterChip
 import com.moltrax.personalnoteapp.ui.components.DhSection
@@ -585,6 +586,7 @@ private fun SubtaskSection(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        var pendingRemoveId by rememberSaveable { mutableStateOf<String?>(null) }
         val done = subtasks.count { it.isDone }
         if (subtasks.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -614,11 +616,21 @@ private fun SubtaskSection(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                IconButton(onClick = { onRemove(sub.id) }, modifier = Modifier.size(48.dp)) {
+                IconButton(onClick = { pendingRemoveId = sub.id }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.task_remove_subtask),
                         modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+        if (pendingRemoveId != null) {
+            DhConfirmDialog(
+                title = stringResource(R.string.task_subtask_delete_title),
+                message = stringResource(R.string.task_subtask_delete_confirm),
+                confirmLabel = stringResource(R.string.action_delete),
+                onConfirm = { val id = pendingRemoveId; pendingRemoveId = null; if (id != null) onRemove(id) },
+                onDismiss = { pendingRemoveId = null },
+                dismissLabel = stringResource(R.string.action_cancel),
+            )
         }
         var newSub by rememberSaveable { mutableStateOf("") }
         OutlinedTextField(

@@ -25,7 +25,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
+import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.navigation.Home
 import com.moltrax.personalnoteapp.ui.navigation.SupabaseAuth
 
@@ -61,7 +61,13 @@ fun SupabaseAuthScreen(nav: NavController, vm: SupabaseAuthViewModel = hiltViewM
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.supabase_auth_title)) }) },
+        topBar = {
+            DhTopBar(
+                title = stringResource(R.string.supabase_auth_title),
+                onBack = { nav.popBackStack() },
+                backContentDescription = stringResource(R.string.action_back),
+            )
+        },
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding()
