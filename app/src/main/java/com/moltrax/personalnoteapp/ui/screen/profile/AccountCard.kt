@@ -1,19 +1,19 @@
 package com.moltrax.personalnoteapp.ui.screen.profile
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -24,6 +24,8 @@ import com.moltrax.personalnoteapp.FeatureFlags
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.remote.supabase.SessionState
 import com.moltrax.personalnoteapp.domain.model.FriendRequestStatus
+import com.moltrax.personalnoteapp.ui.components.DhCard
+import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
 import com.moltrax.personalnoteapp.ui.navigation.SocialGraph
 import com.moltrax.personalnoteapp.ui.navigation.SupabaseAuth
 import com.moltrax.personalnoteapp.ui.screen.account.SupabaseAuthViewModel
@@ -44,13 +46,10 @@ fun AccountCard(
     if (!FeatureFlags.SUPABASE_ENABLED) return
     val session by authVm.sessionState.collectAsStateWithLifecycle()
     val social by socialVm.state.collectAsStateWithLifecycle()
+    var showSignOutConfirm by remember { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(stringResource(R.string.supabase_auth_title), style = MaterialTheme.typography.titleMedium)
+    DhCard(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.supabase_auth_title), style = MaterialTheme.typography.titleMedium)
             when (val s = session) {
                 SessionState.SignedOut -> {
                     Text(
@@ -79,12 +78,21 @@ fun AccountCard(
                             ) { Text(stringResource(R.string.social_title)) }
                         }
                         OutlinedButton(
-                            onClick = { authVm.signOut() },
+                            onClick = { showSignOutConfirm = true },
                             modifier = Modifier.weight(1f),
                         ) { Text(stringResource(R.string.profile_sign_out)) }
                     }
                 }
             }
-        }
+    }
+    if (showSignOutConfirm) {
+        DhConfirmDialog(
+            title = stringResource(R.string.profile_sign_out),
+            message = stringResource(R.string.profile_sign_out_confirm),
+            confirmLabel = stringResource(R.string.profile_sign_out),
+            onConfirm = { showSignOutConfirm = false; authVm.signOut() },
+            onDismiss = { showSignOutConfirm = false },
+            dismissLabel = stringResource(R.string.action_dismiss),
+        )
     }
 }

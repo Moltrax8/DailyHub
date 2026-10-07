@@ -356,7 +356,7 @@ fun TaskDetailScreen(
                     value = state.notes,
                     onValueChange = { vm.update { copy(notes = it) } },
                     label = { Text(stringResource(R.string.task_notes_field)) },
-                    modifier = Modifier.fillMaxWidth().padding(12.dp).height(120.dp),
+                    modifier = Modifier.fillMaxWidth().padding(12.dp).heightIn(min = 120.dp),
                     maxLines = 5,
                     shape = MaterialTheme.shapes.small,
                 )

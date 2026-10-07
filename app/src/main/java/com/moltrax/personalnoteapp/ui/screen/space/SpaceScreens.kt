@@ -304,6 +304,7 @@ private fun SpaceOverview(
 
 @Composable
 private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
+    var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -330,7 +331,7 @@ private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                             supporting = note.bodyMd?.takeIf { it.isNotBlank() },
                             trailing = {
                                 IconButton(
-                                    onClick = { vm.deleteNote(spaceId, note.id) },
+                                    onClick = { pendingDeleteId = note.id },
                                     modifier = Modifier.size(48.dp),
                                 ) {
                                     Icon(
@@ -346,10 +347,21 @@ private fun SharedNotesList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
             }
         }
     }
+    if (pendingDeleteId != null) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.spaces_note_delete_title),
+            message = stringResource(R.string.spaces_note_delete_confirm),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { val id = pendingDeleteId; pendingDeleteId = null; if (id != null) vm.deleteNote(spaceId, id) },
+            onDismiss = { pendingDeleteId = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
+    }
 }
 
 @Composable
 private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDetailUiState, onAdd: () -> Unit) {
+    var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -393,7 +405,7 @@ private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                                 overflow = TextOverflow.Ellipsis,
                             )
                             IconButton(
-                                onClick = { vm.deleteSharedTask(spaceId, task.id) },
+                                onClick = { pendingDeleteId = task.id },
                                 modifier = Modifier.size(48.dp),
                             ) {
                                 Icon(
@@ -407,6 +419,16 @@ private fun SharedTasksList(vm: SpaceViewModel, spaceId: String, state: SpaceDet
                 }
             }
         }
+    }
+    if (pendingDeleteId != null) {
+        com.moltrax.personalnoteapp.ui.components.DhConfirmDialog(
+            title = stringResource(R.string.spaces_task_delete_title),
+            message = stringResource(R.string.spaces_task_delete_confirm),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { val id = pendingDeleteId; pendingDeleteId = null; if (id != null) vm.deleteSharedTask(spaceId, id) },
+            onDismiss = { pendingDeleteId = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
     }
 }
 

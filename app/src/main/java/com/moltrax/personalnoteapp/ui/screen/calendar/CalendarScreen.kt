@@ -20,6 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -118,14 +122,14 @@ private fun MonthHeader(month: YearMonth, onPrev: () -> Unit, onNext: () -> Unit
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val locale = LocalConfiguration.current.locales[0]
-        IconButton(onClick = onPrev, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onPrev, modifier = Modifier.size(48.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.calendar_prev_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val label = "${month.month.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.uppercase() }} ${month.year}"
         Text(label, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-        IconButton(onClick = onNext, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.calendar_next_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -169,6 +173,7 @@ private fun MonthGrid(
                         val date = month.atDay(dayNum)
                         DayCell(
                             day = dayNum,
+                            date = date,
                             isToday = date == today,
                             isSelected = date == selected,
                             taskCount = occurrences[date]?.size ?: 0,
@@ -188,6 +193,7 @@ private fun MonthGrid(
 @Composable
 private fun DayCell(
     day: Int,
+    date: LocalDate,
     isToday: Boolean,
     isSelected: Boolean,
     taskCount: Int,
@@ -195,6 +201,12 @@ private fun DayCell(
     onClick: () -> Unit,
 ) {
     val shape = MaterialTheme.shapes.small
+    val locale = LocalConfiguration.current.locales[0]
+    val dateText = remember(date, locale) {
+        val d = Date(date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
+        SimpleDateFormat("d MMMM yyyy", locale).format(d)
+    }
+    val description = stringResource(R.string.calendar_day_desc, dateText, taskCount)
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -210,7 +222,11 @@ private fun DayCell(
                 if (isToday && !isSelected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape)
                 else Modifier
             )
-            .clickable(onClick = onClick),
+            .semantics {
+                selected = isSelected
+                contentDescription = description
+            }
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

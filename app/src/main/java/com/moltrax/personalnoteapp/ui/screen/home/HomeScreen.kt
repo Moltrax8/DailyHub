@@ -1147,12 +1147,12 @@ private fun SetEntryRow(
             }
         }
         if (canRemove) {
-            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_remove_set),
                     modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Spacer(Modifier.width(36.dp))
+            Spacer(Modifier.width(48.dp))
         }
     }
 }
