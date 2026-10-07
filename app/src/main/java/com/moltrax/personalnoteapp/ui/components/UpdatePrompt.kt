@@ -27,6 +27,18 @@ import com.moltrax.personalnoteapp.ui.UpdateViewModel
 @Composable
 fun UpdatePrompt(vm: UpdateViewModel = hiltViewModel()) {
     val state by vm.ui.collectAsStateWithLifecycle()
+
+    // Ask about a new version every time the app is opened (throttled in the ViewModel), so the prompt
+    // appears by itself and nobody has to dig through Settings.
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, vm) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) vm.checkOnAppOpen()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val candidate = state.candidate ?: return
 
     AlertDialog(

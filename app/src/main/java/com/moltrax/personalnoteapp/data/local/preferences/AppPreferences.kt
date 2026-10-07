@@ -127,6 +127,6 @@ class AppPreferences @Inject constructor(@ApplicationContext private val context
     }
 
     // Automatic update checks (Phase 9, opt-in, default OFF).
-    val autoUpdate: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_UPDATE] ?: false }
+    val autoUpdate: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_UPDATE] ?: true }
     suspend fun setAutoUpdate(v: Boolean) = context.dataStore.edit { it[Keys.AUTO_UPDATE] = v }
 }

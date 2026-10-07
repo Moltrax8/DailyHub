@@ -138,6 +138,8 @@ fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val appVm: AppViewModel = hiltViewModel(context.findActivity())
+    // Same activity-scoped instance the root UpdatePrompt dialog observes: handing it a release opens that dialog.
+    val updateVm: com.moltrax.personalnoteapp.ui.UpdateViewModel = hiltViewModel(context.findActivity())
     val themeMode by appVm.themeMode.collectAsStateWithLifecycle()
     var showKeyDialog by remember { mutableStateOf(false) }
     var keyInput by remember { mutableStateOf("") }
@@ -410,8 +412,10 @@ fun SettingsScreen(
                             updateResult = when (result) {
                                 UpdateCheck.UpToDate -> upToDateText
                                 UpdateCheck.Unavailable -> unavailableText
-                                is UpdateCheck.Available ->
+                                is UpdateCheck.Available -> {
+                                    updateVm.offerManual(result.release)
                                     context.getString(R.string.settings_update_available, result.release.versionName)
+                                }
                             }
                         }
                     },
