@@ -123,9 +123,14 @@ class SettingsViewModel @Inject constructor(
     fun syncNow() = viewModelScope.launch { syncRepo.sync(manual = true) }
     fun pullNow() = viewModelScope.launch { syncRepo.pullFromDrive(manual = true) }
 
-    /** One-shot manual update check for the About section. Null fetch = Unavailable. */
+    /**
+     * One-shot manual update check for the About section. A user-initiated tap may ask GitHub's public
+     * releases endpoint when the Supabase `app_releases` table has nothing (the background checks never do).
+     * Null fetch = Unavailable.
+     */
     suspend fun checkForUpdatesNow(): UpdateCheck {
-        val release = runCatching { updates.checkNow() }.getOrNull() ?: return UpdateCheck.Unavailable
+        val release = runCatching { updates.checkNow(allowGitHubFallback = true) }.getOrNull()
+            ?: return UpdateCheck.Unavailable
         return if (updates.isNewerThanInstalled(release)) UpdateCheck.Available(release)
         else UpdateCheck.UpToDate
     }

@@ -9,9 +9,15 @@ import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.GithubActivity
 import com.moltrax.personalnoteapp.domain.model.GithubAppRepo
 import com.moltrax.personalnoteapp.domain.model.GithubConnection
+import com.moltrax.personalnoteapp.domain.model.GithubImportTarget
 import com.moltrax.personalnoteapp.domain.model.GithubPublicRepo
 import com.moltrax.personalnoteapp.domain.model.GithubRepo
+import com.moltrax.personalnoteapp.domain.model.dedupeImportProjectName
 import com.moltrax.personalnoteapp.domain.model.filterGithubAppRepos
+import com.moltrax.personalnoteapp.domain.model.importAlreadyAddedIds
+import com.moltrax.personalnoteapp.domain.model.importProjectName
+import com.moltrax.personalnoteapp.domain.model.importRepoOwner
+import com.moltrax.personalnoteapp.domain.model.toggleImportSelection
 import com.moltrax.personalnoteapp.domain.repository.GithubNotConnectedException
 import com.moltrax.personalnoteapp.domain.model.Space
 import com.moltrax.personalnoteapp.domain.model.SpaceType
@@ -461,6 +467,255 @@ class ProjectViewModel @Inject constructor(
                 loadAppRepos(spaceId)
                 onDone()
             }
+        }
+    }
+
+    // -- Projects-list GitHub import (entry point on the list screen) --------
+
+    data class GithubImportUiState(
+        val repos: List<GithubAppRepo> = emptyList(),
+        val installUrl: String? = null,
+        val query: String = "",
+        val hideForks: Boolean = false,
+        /** Repo ids already linked to ANY project: shown, not selectable. */
+        val alreadyAddedIds: Set<Long> = emptySet(),
+        val selectedIds: Set<Long> = emptySet(),
+        val target: GithubImportTarget = GithubImportTarget.NEW_PROJECT_EACH,
+        val targetProjectId: String? = null,
+        val loading: Boolean = false,
+        val busy: Boolean = false,
+        /** Signed out of the DailyHub account (server reports "Not signed in."). */
+        val signedIn: Boolean = true,
+        val notConnected: Boolean = false,
+        val progressDone: Int = 0,
+        val progressTotal: Int = 0,
+        val error: String? = null,
+        val failedNames: List<String> = emptyList(),
+        val importedCount: Int = 0,
+        /** Set when a run finishes; consumed by the dialog (see [consumeImportResult]). */
+        val done: Boolean = false,
+    ) {
+        val visibleRepos: List<GithubAppRepo> =
+            filterGithubAppRepos(repos, query, hideForks)
+        val selectableCount: Int =
+            visibleRepos.count { it.id in selectedIds && it.id !in alreadyAddedIds }
+    }
+
+    private val _import = MutableStateFlow(GithubImportUiState())
+    val importState: StateFlow<GithubImportUiState> = _import.asStateFlow()
+
+    /** Resets the result flags, then loads connection + repos + cross-project links. */
+    fun prepareImport() {
+        _import.update {
+            it.copy(
+                done = false,
+                importedCount = 0,
+                failedNames = emptyList(),
+                error = null,
+                progressDone = 0,
+                progressTotal = 0,
+            )
+        }
+        loadImport()
+    }
+
+    fun loadImport() {
+        viewModelScope.launch {
+            _import.update { it.copy(loading = true, error = null) }
+            val connection = runCatching { github.myConnection() }.getOrElse { e ->
+                if (e.message == "Not signed in.") {
+                    _import.update { it.copy(loading = false, signedIn = false) }
+                } else {
+                    _import.update { it.copy(loading = false, error = e.message) }
+                }
+                return@launch
+            }
+            if (connection?.githubLogin == null) {
+                _import.update { it.copy(loading = false, signedIn = true, notConnected = true) }
+                return@launch
+            }
+            val result = runCatching { github.appRepos() }.getOrElse { e ->
+                if (e is GithubNotConnectedException) {
+                    _import.update { it.copy(loading = false, signedIn = true, notConnected = true) }
+                } else {
+                    _import.update { it.copy(loading = false, signedIn = true, error = e.message) }
+                }
+                return@launch
+            }
+            // Ids linked to ANY of my projects (existing functions only — no
+            // data-layer change). A repo id is unique per GitHub repo, so a
+            // match here means "Already added" regardless of the project.
+            val linked = runCatching {
+                myProjects.value.map { space ->
+                    github.spaceRepos(space.id).map { it.id }
+                }
+            }.getOrElse { e ->
+                _import.update { it.copy(loading = false, signedIn = true, error = e.message) }
+                return@launch
+            }
+            val already = importAlreadyAddedIds(linked)
+            _import.update {
+                it.copy(
+                    loading = false,
+                    signedIn = true,
+                    notConnected = false,
+                    repos = result.repos,
+                    installUrl = result.installUrl,
+                    alreadyAddedIds = already,
+                    // Drop selections that are stale or already linked.
+                    selectedIds = it.selectedIds
+                        .filter { id -> result.repos.any { r -> r.id == id } }
+                        .filter { id -> id !in already }
+                        .toSet(),
+                )
+            }
+        }
+    }
+
+    fun setImportQuery(query: String) {
+        _import.update { it.copy(query = query) }
+    }
+
+    fun toggleImportHideForks() {
+        _import.update { it.copy(hideForks = !it.hideForks) }
+    }
+
+    fun toggleImportRepo(id: Long) {
+        _import.update {
+            if (id in it.alreadyAddedIds) it
+            else it.copy(selectedIds = toggleImportSelection(it.selectedIds, id))
+        }
+    }
+
+    fun setImportTarget(target: GithubImportTarget) {
+        _import.update { it.copy(target = target) }
+    }
+
+    fun setImportTargetProject(spaceId: String?) {
+        _import.update { it.copy(targetProjectId = spaceId) }
+    }
+
+    /** Completes the connect flow started from the import dialog, then reloads. */
+    fun finishImportLink(code: String, state: String) {
+        viewModelScope.launch {
+            _import.update { it.copy(loading = true, error = null) }
+            runCatching { github.connectFinish(code, state) }
+                .onSuccess { loadImport() }
+                .onFailure { e ->
+                    _import.update { it.copy(loading = false, error = e.message) }
+                }
+        }
+    }
+
+    fun consumeImportResult() {
+        _import.update { it.copy(done = false) }
+    }
+
+    /**
+     * Runs the import: creates projects and/or links repos with the EXISTING
+     * repository functions. Per-repo failures are collected without losing
+     * the successful ones; [onResult] reports (imported, failedNames).
+     */
+    fun runImport(existingNames: List<String>, onResult: (Int, List<String>) -> Unit = { _, _ -> }) {
+        val s = _import.value
+        if (s.busy || s.loading) return
+        val picked = s.repos.filter { it.id in s.selectedIds && it.id !in s.alreadyAddedIds }
+        if (picked.isEmpty()) return
+        if (s.target == GithubImportTarget.EXISTING_PROJECT && s.targetProjectId == null) return
+        viewModelScope.launch {
+            _import.update {
+                it.copy(
+                    busy = true,
+                    error = null,
+                    failedNames = emptyList(),
+                    importedCount = 0,
+                    done = false,
+                    progressDone = 0,
+                    progressTotal = picked.size,
+                )
+            }
+            val failures = mutableListOf<String>()
+            val linkedOk = mutableListOf<Long>()
+            var ok = 0
+            if (s.target == GithubImportTarget.NEW_PROJECT_EACH) {
+                val taken = existingNames.toMutableList()
+                picked.forEach { repo ->
+                    val name = dedupeImportProjectName(
+                        importProjectName(repo.fullName),
+                        importRepoOwner(repo.fullName),
+                        taken,
+                    )
+                    val res = runCatching {
+                        val space = projects.createProject(
+                            name,
+                            repo.description?.takeIf { it.isNotBlank() },
+                        )
+                        try {
+                            github.linkRepo(space.id, repo.id, repo.fullName, repo.private)
+                            taken += name
+                        } catch (e: Exception) {
+                            // Do not leave an empty orphan project behind (a retry would create a
+                            // second one): remove it, best effort, then report this repo as failed.
+                            runCatching { projects.deleteProject(space.id) }
+                            throw e
+                        }
+                    }
+                    if (res.isSuccess) {
+                        ok++
+                        linkedOk += repo.id
+                    } else {
+                        failures += repo.fullName
+                    }
+                    _import.update { it.copy(progressDone = ok + failures.size) }
+                }
+            } else {
+                val targetId = s.targetProjectId ?: return@launch
+                picked.forEach { repo ->
+                    val res = runCatching {
+                        github.linkRepo(targetId, repo.id, repo.fullName, repo.private)
+                    }
+                    if (res.isSuccess) {
+                        ok++
+                        linkedOk += repo.id
+                    } else {
+                        failures += repo.fullName
+                    }
+                    _import.update { it.copy(progressDone = ok + failures.size) }
+                }
+            }
+            _import.update {
+                it.copy(
+                    busy = false,
+                    importedCount = ok,
+                    failedNames = failures,
+                    done = true,
+                    alreadyAddedIds = it.alreadyAddedIds + linkedOk,
+                    selectedIds = it.selectedIds - linkedOk.toSet(),
+                )
+            }
+            refreshRepoCounts()
+            onResult(ok, failures)
+        }
+    }
+
+    // -- Linked-repo counts for the project list cards (chip, read-only) ------
+
+    private val _repoCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val repoCounts: StateFlow<Map<String, Int>> = _repoCounts.asStateFlow()
+
+    /** Best-effort per-project repo counts; failures stay silent (chip hides). */
+    fun refreshRepoCounts() {
+        viewModelScope.launch {
+            val ids = myProjects.value.map { it.id }
+            if (ids.isEmpty()) {
+                _repoCounts.value = emptyMap()
+                return@launch
+            }
+            val counts = mutableMapOf<String, Int>()
+            runCatching {
+                ids.forEach { id -> counts[id] = github.spaceRepos(id).size }
+            }
+            _repoCounts.value = counts
         }
     }
 }

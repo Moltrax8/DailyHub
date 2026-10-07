@@ -7,6 +7,7 @@ import com.moltrax.personalnoteapp.di.SupabaseConfig
 import com.moltrax.personalnoteapp.domain.model.AppRelease
 import com.moltrax.personalnoteapp.domain.model.isAllowedApkHost
 import com.moltrax.personalnoteapp.domain.model.isUpdateAvailable
+import com.moltrax.personalnoteapp.domain.model.parseGithubLatestRelease
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,11 +42,32 @@ class UpdateRepository @Inject constructor(
 
     suspend fun setEnabled(v: Boolean) = prefs.setAutoUpdate(v)
 
-    /** Single startup check (also refreshes the flow). Null when unavailable. */
-    suspend fun checkNow(): AppRelease? {
-        val release = fetchLatest()
+    /**
+     * Single check (also refreshes the flow). Null when unavailable. [allowGitHubFallback] is for the
+     * user-initiated "Check for updates" tap only: when the Supabase `app_releases` table has no row
+     * (it is only filled by the release webhook) ONE request goes to GitHub's public releases endpoint.
+     * Background/startup checks keep it false, so the app still never polls GitHub on its own.
+     */
+    suspend fun checkNow(allowGitHubFallback: Boolean = false): AppRelease? {
+        val release = fetchLatest() ?: if (allowGitHubFallback) fetchLatestFromGitHub() else null
         if (release != null) _latest.update { release }
         return release
+    }
+
+    private suspend fun fetchLatestFromGitHub(): AppRelease? = kotlinx.coroutines.withContext(
+        kotlinx.coroutines.Dispatchers.IO,
+    ) {
+        val req = Request.Builder()
+            .url("https://api.github.com/repos/Moltrax8/DailyHub/releases/latest")
+            .header("Accept", "application/vnd.github+json")
+            .get()
+            .build()
+        runCatching {
+            http.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@use null
+                parseGithubLatestRelease(resp.body?.string().orEmpty())
+            }
+        }.getOrNull()
     }
 
     /** Live INSERT subscription on app_releases; returns a close handle. */

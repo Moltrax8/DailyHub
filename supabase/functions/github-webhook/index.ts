@@ -31,6 +31,49 @@ async function hmacValid(raw: string, signature: string | null): Promise<boolean
 
 type Mapped = { kind: string; repoFull: string; ref: Record<string, unknown> } | null;
 
+/** The only repo whose releases may feed the in-app updater (the GitHub App webhook delivers every installed repo). */
+const APP_REPO = "Moltrax8/DailyHub";
+
+/** Tag -> version code, same scheme as the app and github-release-webhook (major*10000 + minor*100 + patch). */
+function versionCodeFromTag(tag: string): number | null {
+  const m = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(tag.trim());
+  if (!m) return null;
+  const major = parseInt(m[1], 10);
+  const minor = m[2] ? parseInt(m[2], 10) : 0;
+  const patch = m[3] ? parseInt(m[3], 10) : 0;
+  if (major > 200) return null;
+  return major * 10000 + minor * 100 + patch;
+}
+
+/**
+ * release/published of THIS app's repo -> app_releases (what the updater reads). The repo webhook only points
+ * at this function, so github-release-webhook never received releases and the table stayed empty.
+ * Best effort: never blocks the activity feed.
+ */
+async function recordAppRelease(supa: any, body: any): Promise<void> {
+  try {
+    const rel = body?.release;
+    if (body?.repository?.full_name !== APP_REPO || rel?.draft || rel?.prerelease) return;
+    const tag: string | undefined = rel?.tag_name;
+    const code = tag ? versionCodeFromTag(tag) : null;
+    const apk = (rel?.assets ?? []).find((a: any) => typeof a?.name === "string" && a.name.endsWith(".apk"));
+    const apkUrl: string | undefined = apk?.browser_download_url;
+    if (!tag || code === null || !apkUrl || !apkUrl.startsWith("https://github.com/")) return;
+    await supa.from("app_releases").upsert(
+      {
+        version_name: tag,
+        version_code: code,
+        apk_url: apkUrl,
+        notes: typeof rel?.body === "string" ? rel.body.slice(0, 2000) : null,
+        published_at: rel?.published_at ?? new Date().toISOString(),
+      },
+      { onConflict: "version_code" },
+    );
+  } catch (_e) {
+    // swallow: the release table is secondary to the activity feed
+  }
+}
+
 /** First event slice (workflow_failed arrives in a later slice). */
 function mapEvent(event: string, action: string | null, body: any): Mapped {
   const repoFull: string | undefined = body?.repository?.full_name;
@@ -87,12 +130,16 @@ Deno.serve(async (req: Request) => {
   } catch {
     return new Response(JSON.stringify({ error: "bad json" }), { status: 400, ...TEXT });
   }
+  const supa = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  if (event === "release" && body?.action === "published") {
+    await recordAppRelease(supa, body);
+  }
+
   const mapped = mapEvent(event, body?.action ?? null, body);
   if (!mapped) {
     return new Response(JSON.stringify({ ok: true, skipped: true }), { status: 200, ...TEXT });
   }
-
-  const supa = createClient(SUPABASE_URL, SERVICE_KEY);
 
   // Repo id → linked space.
   const repoId: number | undefined = body?.repository?.id;

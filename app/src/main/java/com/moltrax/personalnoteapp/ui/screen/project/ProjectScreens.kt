@@ -61,6 +61,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -72,10 +74,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -88,6 +92,8 @@ import com.moltrax.personalnoteapp.domain.model.ProjectStatus
 import com.moltrax.personalnoteapp.domain.model.groupBoardItems
 import com.moltrax.personalnoteapp.ui.navigation.DuoHub
 import com.moltrax.personalnoteapp.ui.navigation.ProjectDetail
+import com.moltrax.personalnoteapp.ui.navigation.SupabaseAuth
+import kotlinx.coroutines.launch
 
 private val COLUMNS = listOf(
     ProjectStatus.IDEA to "Idea",
@@ -101,13 +107,60 @@ private val COLUMNS = listOf(
 @Composable
 fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
     val projects by vm.myProjects.collectAsStateWithLifecycle()
+    val repoCounts by vm.repoCounts.collectAsStateWithLifecycle()
     var showCreate by remember { mutableStateOf(false) }
+    var showImport by remember { mutableStateOf(false) }
+    var showFabMenu by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    LaunchedEffect(projects.map { it.id }) { vm.refreshRepoCounts() }
+
+    fun showImportResult(imported: Int, failed: List<String>) {
+        val msg = when {
+            imported > 0 && failed.isEmpty() ->
+                context.resources.getQuantityString(R.plurals.projects_imported, imported, imported)
+            imported > 0 ->
+                context.getString(R.string.projects_import_partial, imported, failed.size)
+            else ->
+                context.getString(R.string.projects_import_failed, failed.joinToString(", "))
+        }
+        scope.launch { snackbar.showSnackbar(msg) }
+    }
 
     Scaffold(
         topBar = { DhTopBar(title = stringResource(R.string.projects_title)) },
+        snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            DhFab(onClick = { showCreate = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+            Box {
+                DhFab(onClick = { showFabMenu = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
+                }
+                DropdownMenu(expanded = showFabMenu, onDismissRequest = { showFabMenu = false }) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.projects_new),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                        onClick = { showFabMenu = false; showCreate = true },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.projects_import_github),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        leadingIcon = { Icon(Icons.Default.Hub, contentDescription = null) },
+                        onClick = { showFabMenu = false; showImport = true },
+                    )
+                }
             }
         },
     ) { padding ->
@@ -125,17 +178,38 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
                         actionLabel = stringResource(R.string.projects_new),
                         onAction = { showCreate = true },
                     )
+                    OutlinedButton(
+                        onClick = { showImport = true },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.projects_import_github),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             items(projects, key = { it.id }) { space ->
                 ProjectListCard(
                     spaceId = space.id,
                     spaceName = space.name,
+                    repoCount = repoCounts[space.id] ?: 0,
                     vm = vm,
                     onOpen = { nav.navigate(ProjectDetail(space.id)) },
                 )
             }
         }
+    }
+
+    if (showImport) {
+        GithubImportDialog(
+            vm = vm,
+            projects = projects,
+            onDismiss = { showImport = false },
+            onSignIn = { showImport = false; nav.navigate(SupabaseAuth) },
+            onResult = { imported, failed -> showImportResult(imported, failed) },
+        )
     }
 
     if (showCreate) {
@@ -173,11 +247,12 @@ fun ProjectsScreen(nav: NavController, vm: ProjectViewModel = hiltViewModel()) {
     }
 }
 
-/** Project list card: name + description + chevron (board/repo detail lives in the hub). */
+/** Project list card: name + description + repo chip + chevron (board/repo detail lives in the hub). */
 @Composable
 private fun ProjectListCard(
     spaceId: String,
     spaceName: String?,
+    repoCount: Int,
     vm: ProjectViewModel,
     onOpen: () -> Unit,
 ) {
@@ -203,6 +278,12 @@ private fun ProjectListCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (repoCount > 0) {
+                    DhStatusChip(
+                        label = pluralStringResource(R.plurals.projects_repo_count, repoCount, repoCount),
+                        icon = Icons.Default.Hub,
                     )
                 }
             }
@@ -736,81 +817,18 @@ private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedTextField(
-                            value = state.query,
-                            onValueChange = { vm.setAppRepoQuery(it) },
-                            label = { Text(stringResource(R.string.github_search_repos)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
+                        GithubRepoPickerList(
+                            query = state.query,
+                            onQueryChange = { vm.setAppRepoQuery(it) },
+                            queryLabel = stringResource(R.string.github_search_repos),
+                            hideForks = state.hideForks,
+                            onToggleHideForks = { vm.toggleHideAppForks() },
+                            hideForksLabel = stringResource(R.string.github_hide_forks),
+                            repos = state.visibleRepos,
+                            selectedIds = state.selectedIds,
+                            onToggle = { vm.toggleAppRepo(it) },
+                            emptyLabel = stringResource(R.string.github_my_repos_empty),
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
-                        ) {
-                            androidx.compose.material3.Checkbox(
-                                checked = state.hideForks,
-                                onCheckedChange = { vm.toggleHideAppForks() },
-                            )
-                            Text(
-                                stringResource(R.string.github_hide_forks),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        if (state.visibleRepos.isEmpty()) {
-                            Text(
-                                stringResource(R.string.github_my_repos_empty),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        LazyColumn(
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            items(state.visibleRepos, key = { it.id }) { repo ->
-                                val checked = repo.id in state.selectedIds
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
-                                        .heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget)
-                                        .clickable { vm.toggleAppRepo(repo.id) },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    androidx.compose.material3.Checkbox(
-                                        checked = checked,
-                                        onCheckedChange = { vm.toggleAppRepo(repo.id) },
-                                    )
-                                    Column(Modifier.weight(1f)) {
-                                        Text(
-                                            repo.fullName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        )
-                                        repo.description?.takeIf { it.isNotBlank() }?.let {
-                                            Text(
-                                                it,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 2,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                            )
-                                        }
-                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            if (repo.private) {
-                                                com.moltrax.personalnoteapp.ui.components.DhStatusChip(
-                                                    label = stringResource(R.string.github_private_badge),
-                                                )
-                                            }
-                                            if (repo.fork) {
-                                                com.moltrax.personalnoteapp.ui.components.DhStatusChip(
-                                                    label = stringResource(R.string.github_fork_badge),
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         state.installUrl?.takeIf { it.isNotBlank() }?.let { installUrl ->
                             TextButton(
                                 onClick = {

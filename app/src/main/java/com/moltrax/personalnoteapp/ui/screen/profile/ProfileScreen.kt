@@ -257,14 +257,8 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
                     ) { Text(stringResource(R.string.supabase_auth_sign_in)) }
                 } else {
-                    email?.let {
-                        DhSettingsRow(
-                            title = it,
-                            supporting = headerUsername?.let { u -> "@$u" },
-                            leading = { DhTonalIcon(Icons.Filled.Person, contentDescription = null) },
-                        )
-                        DhDivider()
-                    }
+                    // The email and @handle already appear in the identity header above; repeating them
+                    // here showed both twice, so this block only holds the sign-out action.
                     OutlinedButton(
                         onClick = { showSignOutConfirm = true },
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
