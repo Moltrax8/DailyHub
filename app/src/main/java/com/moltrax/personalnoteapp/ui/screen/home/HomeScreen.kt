@@ -87,10 +87,12 @@ fun HomeScreen(
     // Redirection for "complete workout task" coming from the widget (consumed once it reaches Home).
     pendingWidgetAction: String? = null,
     pendingWidgetTaskId: String? = null,
+    pendingWidgetTick: Int = 0,
     onWidgetActionConsumed: () -> Unit = {},
 ) {
     // When a workout-linked task is checked from the widget: open the set/reps/weight entry screen here.
-    LaunchedEffect(pendingWidgetAction, pendingWidgetTaskId) {
+    // pendingWidgetTick forces a re-fire when the same action repeats.
+    LaunchedEffect(pendingWidgetAction, pendingWidgetTaskId, pendingWidgetTick) {
         if (pendingWidgetAction == com.moltrax.personalnoteapp.MainActivity.ACTION_COMPLETE_WORKOUT &&
             !pendingWidgetTaskId.isNullOrBlank()
         ) {

@@ -29,9 +29,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -61,13 +63,17 @@ class ProjectViewModel @Inject constructor(
     private val _detail = MutableStateFlow(ProjectDetailUiState())
     val detail: StateFlow<ProjectDetailUiState> = _detail.asStateFlow()
 
+    private var openJob: Job? = null
+    private var githubJob: Job? = null
+
     fun openProject(spaceId: String) {
         viewModelScope.launch {
             _detail.update { it.copy(busy = true, error = null) }
             runCatching { projects.pullProject(spaceId) }
                 .onFailure { e -> _detail.update { it.copy(busy = false, error = e.message) } }
         }
-        viewModelScope.launch {
+        openJob?.cancel()
+        openJob = viewModelScope.launch {
             projects.observeItems(spaceId).collect { items ->
                 _detail.update { it.copy(items = items, busy = false) }
             }
@@ -100,14 +106,25 @@ class ProjectViewModel @Inject constructor(
     fun moveItem(spaceId: String, item: ProjectItem, status: ProjectStatus) {
         if (item.status == status) return
         viewModelScope.launch {
-            runCatching { projects.moveItem(item, status); projects.pullProject(spaceId) }
+            val mutationError = runCatching { projects.moveItem(item, status) }.exceptionOrNull()
+            if (mutationError != null) {
+                _detail.update { it.copy(error = mutationError.message) }
+                return@launch
+            }
+            // Mutation succeeded: a refresh failure is a sync problem, not a move failure.
+            runCatching { projects.pullProject(spaceId) }
                 .onFailure { e -> _detail.update { it.copy(error = e.message) } }
         }
     }
 
     fun editItem(spaceId: String, itemId: String, title: String, body: String?, url: String?) {
         viewModelScope.launch {
-            runCatching { projects.editItem(itemId, title, body, url); projects.pullProject(spaceId) }
+            val mutationError = runCatching { projects.editItem(itemId, title, body, url) }.exceptionOrNull()
+            if (mutationError != null) {
+                _detail.update { it.copy(error = mutationError.message) }
+                return@launch
+            }
+            runCatching { projects.pullProject(spaceId) }
                 .onFailure { e -> _detail.update { it.copy(error = e.message) } }
         }
     }
@@ -175,7 +192,8 @@ class ProjectViewModel @Inject constructor(
                 _github.update { it.copy(busy = false, error = e.message) }
             }
         }
-        viewModelScope.launch {
+        githubJob?.cancel()
+        githubJob = viewModelScope.launch {
             github.observeActivity(spaceId).collect { feed ->
                 _github.update { it.copy(activity = feed) }
             }
@@ -542,11 +560,13 @@ class ProjectViewModel @Inject constructor(
                 }
                 return@launch
             }
-            // Ids linked to ANY of my projects (existing functions only — no
-            // data-layer change). A repo id is unique per GitHub repo, so a
-            // match here means "Already added" regardless of the project.
+            // Ids linked to ANY of my projects. Do not read myProjects.value here:
+            // on a cold start it is still the empty initial value, so previously
+            // linked repos would look selectable and fail with 409 on link.
+            // Suspend-collect the first real emission from the spaces source.
+            val mySpaces = spaces.observeSpaces().first().filter { it.type == SpaceType.PROJECT }
             val linked = runCatching {
-                myProjects.value.map { space ->
+                mySpaces.map { space ->
                     github.spaceRepos(space.id).map { it.id }
                 }
             }.getOrElse { e ->
@@ -711,9 +731,13 @@ class ProjectViewModel @Inject constructor(
                 _repoCounts.value = emptyMap()
                 return@launch
             }
-            val counts = mutableMapOf<String, Int>()
-            runCatching {
-                ids.forEach { id -> counts[id] = github.spaceRepos(id).size }
+            val counts = _repoCounts.value.toMutableMap()
+            // Drop rows for projects that no longer exist.
+            counts.keys.retainAll(ids.toSet())
+            ids.forEach { id ->
+                runCatching { github.spaceRepos(id).size }
+                    .onSuccess { counts[id] = it }
+                    // On failure keep the previous value for this id (no wipe).
             }
             _repoCounts.value = counts
         }

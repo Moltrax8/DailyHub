@@ -82,4 +82,16 @@ class ReminderPlanTest {
     fun `open dated task with alerts on stages`() {
         assertTrue(shouldStageReminder(isDeleted = false, isDone = false, dueDate = 9_999L, alertsEnabled = true))
     }
+
+    @Test
+    fun `negative lead is clamped to zero and never fires past deadline`() {
+        val now = 0L
+        val due = 10 * 60_000L
+        val plan = planReminder(due, now, -30)
+        assertNotNull(plan)
+        assertEquals(due, plan!!.fireAt)
+        assertEquals(0, plan.minutesLeftAtFire)
+        // Same as zero lead.
+        assertEquals(planReminder(due, now, 0), plan)
+    }
 }

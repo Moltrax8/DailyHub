@@ -44,8 +44,8 @@ class AppReleaseTest {
         assertTrue(isAllowedApkHost("https://release-assets.githubusercontent.com/abc/a.apk"))
         assertFalse(isAllowedApkHost("https://evil.com/a.apk"))
         assertFalse(isAllowedApkHost("https://github.com.evil.com/a.apk"))
-        // Scheme is enforced separately in downloadApk; the allowlist is host-only.
-        assertTrue(isAllowedApkHost("http://github.com/a.apk"))
+        // Scheme is enforced inside isAllowedApkHost: plain http never passes.
+        assertFalse(isAllowedApkHost("http://github.com/a.apk"))
         assertFalse(isAllowedApkHost("not a url"))
     }
 }

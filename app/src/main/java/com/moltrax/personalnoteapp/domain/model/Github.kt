@@ -137,3 +137,20 @@ fun filterGithubAppRepos(
             (q.isEmpty() || repo.fullName.lowercase().contains(q))
     }
 }
+
+/**
+ * Server-returned URLs opened in a browser must be https://github.com only.
+ * Blocks phishing rows (evil hosts, http, custom schemes). Pure (JVM-tested).
+ */
+fun isTrustedGitHubOpenUrl(url: String): Boolean {
+    if (!url.startsWith("https://")) return false
+    val host = runCatching { java.net.URI(url.trim()).host.orEmpty().lowercase() }.getOrDefault("")
+    return host == "github.com"
+}
+
+/**
+ * Server-provided push text (repo/kind) for lock-screen display: strip
+ * newlines (no multi-line phishing) and truncate to 80 chars. Pure (JVM-tested).
+ */
+fun sanitizePushText(raw: String): String =
+    raw.replace(Regex("[\\r\\n]+"), " ").trim().take(80)

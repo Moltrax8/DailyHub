@@ -1,6 +1,7 @@
 package com.moltrax.personalnoteapp.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
@@ -61,8 +62,13 @@ fun UpdatePrompt(vm: UpdateViewModel = hiltViewModel()) {
         },
         confirmButton = {
             if (state.needsUnknownSources) {
-                TextButton(onClick = { vm.openUnknownSourcesSettings() }) {
-                    Text(stringResource(R.string.update_open_settings))
+                Row {
+                    TextButton(onClick = { vm.openUnknownSourcesSettings() }) {
+                        Text(stringResource(R.string.update_open_settings))
+                    }
+                    TextButton(onClick = { vm.retryInstall() }) {
+                        Text(stringResource(R.string.action_retry))
+                    }
                 }
             } else {
                 TextButton(
