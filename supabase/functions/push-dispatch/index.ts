@@ -4,8 +4,11 @@
 //
 // Secrets (supabase secrets set): FCM_SERVICE_ACCOUNT (full service-account
 // JSON), plus the standard SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY.
-// Deploy: supabase functions deploy push-dispatch (JWT required — only the
-// service role may call it).
+// Deploy: supabase functions deploy push-dispatch --no-verify-jwt
+// AUTH: only the service role may call it. The gateway JWT check is OFF on purpose: this project uses the
+// new-style secret key (sb_secret_..., NOT a JWT), which a JWT-verifying gateway rejects, so
+// github-webhook's call never arrived. The function therefore checks `Authorization: Bearer <service key>`
+// itself (constant-time) and refuses everyone else.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -14,6 +17,20 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const SA_JSON = Deno.env.get("FCM_SERVICE_ACCOUNT") ?? "";
 
 const TEXT = { headers: { "Content-Type": "application/json" } };
+
+/** Constant-time string compare (length mismatch -> false). */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function callerIsServiceRole(req: Request): boolean {
+  if (!SERVICE_KEY) return false;
+  const m = (req.headers.get("Authorization") ?? "").match(/^Bearer\s+(.+)$/i);
+  return !!m && constantTimeEqual(m[1].trim(), SERVICE_KEY);
+}
 
 function b64url(data: Uint8Array | string): string {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -46,7 +63,7 @@ async function googleAccessToken(): Promise<string> {
   );
   const key = await crypto.subtle.importKey(
     "pkcs8",
-    pemToDer(sa.private_key),
+    pemToDer(sa.private_key) as unknown as ArrayBuffer, // typing only: newer Deno lib types reject Uint8Array<ArrayBufferLike>
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"],
@@ -66,6 +83,9 @@ async function googleAccessToken(): Promise<string> {
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "POST only" }), { status: 405, ...TEXT });
+  }
+  if (!callerIsServiceRole(req)) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, ...TEXT });
   }
   const { activity_id } = await req.json().catch(() => ({}));
   if (!activity_id) {

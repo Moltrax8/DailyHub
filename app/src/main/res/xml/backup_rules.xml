@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and lower (android:fullBackupContent). Keep in sync with data_extraction_rules.xml. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="app_prefs.preferences_pb"/>
+    <!-- Supabase session (GoTrue access/refresh token): never back up or transfer. -->
+    <exclude domain="sharedpref" path="supabase_session.xml"/>
     <exclude domain="database" path="personal_note_app.db"/>
     <exclude domain="database" path="personal_note_app.db-journal"/>
     <exclude domain="database" path="personal_note_app.db-shm"/>
