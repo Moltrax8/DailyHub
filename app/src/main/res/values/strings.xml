@@ -633,4 +633,24 @@
     <string name="task_keep_when_empty">Boşken kategoriyi koru</string>
     <string name="task_delete_title">Bu görev silinsin mi?</string>
     <string name="task_delete_message">“%1$s” silinecek. Bu işlem geri alınamaz.</string>
+    <!-- GitHub içe aktarma (Projeler listesi) -->
+    <string name="projects_import_github">GitHub\'dan içe aktar</string>
+    <string name="projects_import_hint">Bağlı GitHub hesabındaki depoları seç. Seçilen her depo için yeni bir proje oluşturulur ya da mevcut bir projeye eklenir.</string>
+    <string name="projects_import_new_each">Her biri yeni proje</string>
+    <string name="projects_import_add_existing">Mevcut projeye ekle</string>
+    <string name="projects_import_target">Hedef proje</string>
+    <string name="projects_import_confirm">İçe aktar (%1$d)</string>
+    <string name="projects_import_sign_in_msg">Depoları içe aktarmak için giriş yap.</string>
+    <string name="projects_import_progress">%2$d depodan %1$d içe aktarılıyor…</string>
+    <string name="projects_import_failed">İçe aktarılamadı: %1$s</string>
+    <string name="projects_import_partial">%1$d içe aktarıldı, %2$d başarısız</string>
+    <string name="projects_already_added">Zaten eklendi</string>
+    <plurals name="projects_imported">
+        <item quantity="one">%1$d depo içe aktarıldı</item>
+        <item quantity="other">%1$d depo içe aktarıldı</item>
+    </plurals>
+    <plurals name="projects_repo_count">
+        <item quantity="one">%1$d depo</item>
+        <item quantity="other">%1$d depo</item>
+    </plurals>
 </resources>
