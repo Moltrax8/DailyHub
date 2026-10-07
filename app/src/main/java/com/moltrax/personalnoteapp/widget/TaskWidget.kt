@@ -111,7 +111,14 @@ class TaskWidget : GlanceAppWidget() {
     }
 
     /** Fixed strings shown in the widget, resolved for the selected language (widget is not Compose). */
-    private data class WidgetStrings(val title: String, val error: String, val empty: String, val undo: String)
+    private data class WidgetStrings(
+        val title: String,
+        val error: String,
+        val empty: String,
+        val undo: String,
+        val doneTitleFormat: String,
+        val dismiss: String,
+    )
 
     private sealed interface UiState {
         data class Content(val tasks: List<TaskItem>, val titleOverride: String? = null) : UiState
@@ -132,6 +139,8 @@ class TaskWidget : GlanceAppWidget() {
             error = lc.getString(R.string.widget_error),
             empty = lc.getString(R.string.widget_empty),
             undo = lc.getString(R.string.undo),
+            doneTitleFormat = lc.getString(R.string.widget_undo_title),
+            dismiss = lc.getString(R.string.widget_dismiss),
         )
         provideContent {
             GlanceTheme { WidgetRoot(context, state, appWidgetId, strings) }
@@ -250,7 +259,7 @@ class TaskWidget : GlanceAppWidget() {
             // and disappears via "Undo"/"✕" or on refresh.
             if (!undoTitle.isNullOrBlank()) {
                 Spacer(GlanceModifier.height(8.dp))
-                UndoBar(undoTitle, strings.undo)
+                UndoBar(undoTitle, strings.undo, strings.doneTitleFormat, strings.dismiss)
             }
         }
     }
@@ -260,7 +269,7 @@ class TaskWidget : GlanceAppWidget() {
      * chip on the right. Undo runs [UndoTaskAction], ✕ runs [DismissUndoAction].
      */
     @Composable
-    private fun UndoBar(title: String, undoLabel: String) {
+    private fun UndoBar(title: String, undoLabel: String, doneTitleFormat: String, dismiss: String) {
         Row(
             modifier = GlanceModifier.fillMaxWidth()
                 .cornerRadius(12.dp)
@@ -269,7 +278,7 @@ class TaskWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "✓ $title",
+                text = doneTitleFormat.format(title),
                 style = TextStyle(color = ColorProvider(AppColors.TextSecondary), fontSize = 12.sp),
                 maxLines = 1,
                 modifier = GlanceModifier.defaultWeight(),
@@ -299,7 +308,7 @@ class TaskWidget : GlanceAppWidget() {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "✕",
+                    text = dismiss,
                     style = TextStyle(color = ColorProvider(AppColors.TextSecondary), fontSize = 13.sp),
                 )
             }

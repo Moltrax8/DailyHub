@@ -3,7 +3,6 @@ package com.moltrax.personalnoteapp.ui.screen.workout
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
@@ -29,8 +28,8 @@ import com.moltrax.personalnoteapp.domain.model.LoggedExercise
 import com.moltrax.personalnoteapp.domain.model.LoggedSet
 import com.moltrax.personalnoteapp.domain.model.WorkoutSession
 import com.moltrax.personalnoteapp.ui.components.DhTopBar
+import com.moltrax.personalnoteapp.ui.components.DhCard
 import com.moltrax.personalnoteapp.ui.i18n.label
-import com.moltrax.personalnoteapp.ui.theme.AppColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import kotlin.math.roundToInt
@@ -126,7 +125,7 @@ private fun SummaryContent(session: WorkoutSession, ctx: Context, modifier: Modi
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CheckCircle, null, tint = AppColors.Accent)
+                Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(session.workoutName, style = MaterialTheme.typography.titleLarge,
@@ -160,45 +159,34 @@ private fun SummaryContent(session: WorkoutSession, ctx: Context, modifier: Modi
 
 @Composable
 private fun SummaryStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(Modifier.padding(vertical = 14.dp, horizontal = 12.dp)) {
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(label, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    DhCard(modifier = modifier) {
+        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(
+            label, style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
 @Composable
 private fun ExerciseSummaryCard(exercise: LoggedExercise, ctx: Context) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                AssistChip(onClick = {}, enabled = false, label = { Text(exercise.type.label()) })
-            }
-            Spacer(Modifier.height(8.dp))
-            if (exercise.sets.isEmpty()) {
-                Text(stringResource(R.string.workout_summary_no_logged),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                exercise.sets.forEachIndexed { i, set ->
-                    Text(
-                        stringResource(R.string.set_index, i + 1, formatLoggedSetSummary(ctx, exercise.type, set)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 2.dp),
-                    )
-                }
+    DhCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            AssistChip(onClick = {}, enabled = false, label = { Text(exercise.type.label()) })
+        }
+        if (exercise.sets.isEmpty()) {
+            Text(stringResource(R.string.workout_summary_no_logged),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            exercise.sets.forEachIndexed { i, set ->
+                Text(
+                    stringResource(R.string.set_index, i + 1, formatLoggedSetSummary(ctx, exercise.type, set)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 2.dp),
+                )
             }
         }
     }
@@ -208,18 +196,25 @@ private fun ExerciseSummaryCard(exercise: LoggedExercise, ctx: Context) {
 private fun formatLoggedSetSummary(ctx: Context, type: ExerciseType, set: LoggedSet): String {
     val kg = ctx.getString(R.string.unit_kg)
     return when (type) {
-        ExerciseType.WEIGHTLIFTING ->
-            ctx.getString(R.string.logged_reps, set.reps) + (set.weightKg?.takeIf { it > 0 }?.let { " – ${trimKg(it)}$kg" } ?: "")
-        ExerciseType.BODYWEIGHT ->
-            ctx.getString(R.string.logged_reps, set.reps) +
-                (set.weightKg?.takeIf { it > 0 }?.let { " (+${trimKg(it)}$kg)" }
-                    ?: " (${ctx.getString(R.string.logged_bodyweight)})")
+        ExerciseType.WEIGHTLIFTING -> {
+            val reps = ctx.getString(R.string.logged_reps, set.reps)
+            set.weightKg?.takeIf { it > 0 }?.let { ctx.getString(R.string.logged_reps_weight, reps, trimKg(it), kg) } ?: reps
+        }
+        ExerciseType.BODYWEIGHT -> {
+            val reps = ctx.getString(R.string.logged_reps, set.reps)
+            set.weightKg?.takeIf { it > 0 }?.let { ctx.getString(R.string.logged_reps_weight_plus, reps, trimKg(it), kg) }
+                ?: ctx.getString(R.string.logged_reps_bodyweight, reps, ctx.getString(R.string.logged_bodyweight))
+        }
         ExerciseType.DURATION -> set.durationSeconds?.let { ctx.getString(R.string.logged_seconds, it) }
             ?: ctx.getString(R.string.logged_entry)
-        ExerciseType.CARDIO -> buildString {
-            set.durationSeconds?.let { append(ctx.getString(R.string.logged_minutes, it / 60)) }
-            set.steps?.let { if (isNotEmpty()) append(" · "); append(ctx.getString(R.string.logged_steps, it)) }
-        }.ifBlank { ctx.getString(R.string.logged_entry) }
+        ExerciseType.CARDIO -> {
+            val parts = buildList {
+                set.durationSeconds?.let { add(ctx.getString(R.string.logged_minutes, it / 60)) }
+                set.steps?.let { add(ctx.getString(R.string.logged_steps, it)) }
+            }
+            if (parts.isEmpty()) ctx.getString(R.string.logged_entry)
+            else parts.reduce { a, b -> ctx.getString(R.string.logged_minutes_steps, a, b) }
+        }
     }
 }
 

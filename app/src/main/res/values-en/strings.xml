@@ -681,4 +681,8 @@
     <string name="widget_dismiss">✕</string>
     <string name="common_clear">Clear</string>
     <string name="notif_untitled_task">Task</string>
+    <string name="logged_reps_bodyweight">%1$s (%2$s)</string>
+    <string name="plan_weight_at">@ %1$s %2$s</string>
+    <string name="plan_weight_plus">+%1$s %2$s</string>
+    <string name="format_value_unit">%1$s %2$s</string>
 </resources>

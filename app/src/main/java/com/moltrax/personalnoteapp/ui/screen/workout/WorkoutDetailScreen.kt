@@ -650,24 +650,35 @@ private fun plannedSummary(ctx: Context, type: ExerciseType, planned: List<Plann
     val plan = ctx.getString(R.string.plan_prefix)
     val kg = ctx.getString(R.string.unit_kg)
     return when (type) {
-        ExerciseType.WEIGHTLIFTING -> buildString {
-            append("$plan ${ctx.getString(R.string.plan_sets_reps, planned.size, first.reps)}")
-            first.weightKg?.takeIf { it > 0 }?.let { append(" @ ${trimKg(it)} $kg") }
+        ExerciseType.WEIGHTLIFTING -> {
+            val base = ctx.getString(R.string.format_value_unit, plan, ctx.getString(R.string.plan_sets_reps, planned.size, first.reps))
+            first.weightKg?.takeIf { it > 0 }
+                ?.let { ctx.getString(R.string.format_value_unit, base, ctx.getString(R.string.plan_weight_at, trimKg(it), kg)) }
+                ?: base
         }
-        ExerciseType.BODYWEIGHT -> buildString {
-            append("$plan ${ctx.getString(R.string.plan_sets_reps_bw, planned.size, first.reps)}")
-            first.weightKg?.takeIf { it > 0 }?.let { append(" +${trimKg(it)} $kg") }
+        ExerciseType.BODYWEIGHT -> {
+            val base = ctx.getString(R.string.format_value_unit, plan, ctx.getString(R.string.plan_sets_reps_bw, planned.size, first.reps))
+            first.weightKg?.takeIf { it > 0 }
+                ?.let { ctx.getString(R.string.format_value_unit, base, ctx.getString(R.string.plan_weight_plus, trimKg(it), kg)) }
+                ?: base
         }
         ExerciseType.DURATION -> buildString {
             append("$plan ${ctx.getString(R.string.plan_sets_x, planned.size)} ")
             append(first.durationSeconds?.takeIf { it > 0 }?.let { ctx.getString(R.string.logged_seconds, it) }
                 ?: ctx.getString(R.string.plan_duration))
         }
-        ExerciseType.CARDIO -> buildString {
-            append("$plan ")
-            first.durationSeconds?.takeIf { it > 0 }?.let { append(ctx.getString(R.string.logged_minutes, it / 60)) }
-            first.steps?.takeIf { it > 0 }?.let { append(" · " + ctx.getString(R.string.logged_steps, it)) }
-        }.takeIf { it.length > plan.length + 1 }
+        ExerciseType.CARDIO -> {
+            val parts = buildList {
+                first.durationSeconds?.takeIf { it > 0 }?.let { add(ctx.getString(R.string.logged_minutes, it / 60)) }
+                first.steps?.takeIf { it > 0 }?.let { add(ctx.getString(R.string.logged_steps, it)) }
+            }
+            if (parts.isEmpty()) null
+            else ctx.getString(
+                R.string.format_value_unit,
+                plan,
+                parts.reduce { a, b -> ctx.getString(R.string.logged_minutes_steps, a, b) },
+            )
+        }
     }
 }
 

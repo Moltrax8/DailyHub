@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
+import com.moltrax.personalnoteapp.ui.components.DhCheck
 import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
 import com.moltrax.personalnoteapp.ui.components.DhDivider
 import com.moltrax.personalnoteapp.ui.components.DhFilterChip
@@ -34,7 +35,6 @@ import com.moltrax.personalnoteapp.ui.components.DhSwitch
 import com.moltrax.personalnoteapp.ui.components.DhTonalIcon
 import com.moltrax.personalnoteapp.ui.components.DhTopBar
 import com.moltrax.personalnoteapp.ui.screen.settings.SettingsViewModel
-import com.moltrax.personalnoteapp.ui.theme.AppColors
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -147,7 +147,7 @@ fun TaskDetailScreen(
                 state.recurrenceType == RecurrenceType.DAILY -> stringResource(R.string.recurrence_daily)
                 state.recurrenceType == RecurrenceType.WEEKLY -> stringResource(R.string.recurrence_weekly)
                 state.recurrenceType == RecurrenceType.MONTHLY -> stringResource(R.string.recurrence_monthly)
-                else -> state.intervalDays?.let { stringResource(R.string.recurrence_interval) + " · $it" }
+                else -> state.intervalDays?.let { stringResource(R.string.logged_minutes_steps, stringResource(R.string.recurrence_interval), it) }
                     ?: stringResource(R.string.recurrence_interval)
             }
             DhSection(title = stringResource(R.string.task_section_schedule)) {
@@ -430,11 +430,11 @@ fun TaskDetailScreen(
                     LinkMode.WORKOUT -> {
                         val allWorkouts = workoutGroups.flatMap { g -> g.workouts.map { w -> g to w } }
                         val linkedName = allWorkouts.find { (_, w) -> w.id == state.linkedWorkoutId }
-                            ?.let { (g, w) -> "${g.name} — ${w.name}" } ?: stringResource(R.string.task_pick_workout)
+                            ?.let { (g, w) -> stringResource(R.string.format_name_dash_name, g.name, w.name) } ?: stringResource(R.string.task_pick_workout)
                         LabeledDropdown(label = stringResource(R.string.nav_workout_label), value = linkedName) { dismiss ->
                             allWorkouts.forEach { (g, w) ->
                                 DropdownMenuItem(
-                                    text = { Text("${g.name} — ${w.name}") },
+                                    text = { Text(stringResource(R.string.format_name_dash_name, g.name, w.name)) },
                                     onClick = { vm.update { copy(linkedWorkoutId = w.id) }; dismiss() },
                                     leadingIcon = { Icon(Icons.Default.FitnessCenter, null) },
                                 )
@@ -464,7 +464,7 @@ fun TaskDetailScreen(
                             LabeledDropdown(label = stringResource(R.string.task_start_day), value = startName) { dismiss ->
                                 program.workouts.forEachIndexed { idx, w ->
                                     DropdownMenuItem(
-                                        text = { Text("${idx + 1}. ${w.name}") },
+                                        text = { Text(stringResource(R.string.task_program_day_option, idx + 1, w.name)) },
                                         onClick = { vm.update { copy(programStartIndex = idx) }; dismiss() },
                                     )
                                 }
@@ -593,7 +593,7 @@ private fun SubtaskSection(
                 LinearProgressIndicator(
                     progress = { if (subtasks.isEmpty()) 0f else done.toFloat() / subtasks.size },
                     modifier = Modifier.weight(1f),
-                    color = AppColors.Accent,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -605,7 +605,11 @@ private fun SubtaskSection(
         }
         subtasks.forEach { sub ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = sub.isDone, onCheckedChange = { onToggle(sub.id) })
+                DhCheck(
+                    checked = sub.isDone,
+                    onCheckedChange = { onToggle(sub.id) },
+                    contentDescription = sub.title,
+                )
                 Text(
                     sub.title,
                     modifier = Modifier.weight(1f),
