@@ -103,3 +103,11 @@ $body = '{"repository":{"id":1,"full_name":"o/r"},"action":"opened","issue":{"nu
 ## Logs
 
 Dashboard → Edge Functions → function → Logs (or `supabase functions logs`).
+
+## Webhook secrets (two webhooks -> one function)
+`github-webhook` accepts signatures from BOTH GitHub webhooks, each with its own secret:
+- the GitHub App's webhook -> `GITHUB_WEBHOOK_SECRET` (the secret typed into the App settings), and
+- the repo-level webhook on `Moltrax8/DailyHub` -> `GITHUB_REPO_WEBHOOK_SECRET` (set on the repo hook via
+  `gh api -X PATCH repos/Moltrax8/DailyHub/hooks/<id> -f "config[secret]=..."`).
+Changing only one side makes every delivery fail with 401 (this broke the repo webhook for a day, so releases were
+never recorded into `app_releases`). To resend a failed event: `gh api -X POST repos/<owner>/<repo>/hooks/<hook>/deliveries/<delivery>/attempts`.

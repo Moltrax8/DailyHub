@@ -23,20 +23,36 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-async function hmacValid(raw: string, signature: string | null): Promise<boolean> {
-  // Fail closed: with an empty secret anyone could compute a valid HMAC.
-  if (!WEBHOOK_SECRET) return false;
-  if (!signature || !signature.startsWith("sha256=")) return false;
+/**
+ * Two webhooks feed this function, each with its OWN signing secret: the GitHub App's webhook
+ * (GITHUB_WEBHOOK_SECRET) and the repo-level webhook (GITHUB_REPO_WEBHOOK_SECRET). Setting the App's secret
+ * used to break the repo webhook (401 on every delivery), so both are accepted. Empty ones are ignored.
+ */
+const WEBHOOK_SECRETS = [WEBHOOK_SECRET, Deno.env.get("GITHUB_REPO_WEBHOOK_SECRET") ?? ""].filter((s) => s.length > 0);
+
+async function hmacHex(secret: string, raw: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(WEBHOOK_SECRET),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
   const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
-  const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return constantTimeEqual(hex, signature.slice("sha256=".length));
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hmacValid(raw: string, signature: string | null): Promise<boolean> {
+  // Fail closed: with no secret configured anyone could compute a valid HMAC.
+  if (WEBHOOK_SECRETS.length === 0) return false;
+  if (!signature || !signature.startsWith("sha256=")) return false;
+  const given = signature.slice("sha256=".length);
+  let ok = false;
+  for (const secret of WEBHOOK_SECRETS) {
+    // evaluate every secret (no early exit) so timing does not reveal which one matched
+    if (constantTimeEqual(await hmacHex(secret, raw), given)) ok = true;
+  }
+  return ok;
 }
 
 type Mapped = { kind: string; repoFull: string; ref: Record<string, unknown> } | null;
