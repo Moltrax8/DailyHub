@@ -2,12 +2,14 @@ package com.moltrax.personalnoteapp.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moltrax.personalnoteapp.BuildConfig
+import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.repository.UpdateRepository
 import com.moltrax.personalnoteapp.domain.model.AppRelease
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.security.MessageDigest
 import javax.inject.Inject
 
 data class UpdateUiState(
@@ -47,6 +50,8 @@ class UpdateViewModel @Inject constructor(
     private var subscription: com.moltrax.personalnoteapp.data.remote.supabase.RealtimeClient.Subscription? = null
     private var downloadJob: Job? = null
     private var snoozedCode: Int? = null
+    /** Last downloaded APK retained so install can be retried after unknown-sources consent. */
+    private var lastApk: File? = null
 
     init {
         viewModelScope.launch {
@@ -93,7 +98,8 @@ class UpdateViewModel @Inject constructor(
         if (downloadJob?.isActive == true) return
         downloadJob = viewModelScope.launch {
             _ui.update { it.copy(downloading = true, progress = 0, error = null) }
-            val dest = File(File(context.cacheDir, "updates"), "DailyHub-${release.versionName}.apk")
+            // Fixed filename: never interpolate the server-controlled versionName (path traversal).
+            val dest = File(File(context.cacheDir, "updates"), "update.apk")
             runCatching {
                 updates.downloadApk(release.apkUrl, dest) { done, total ->
                     val pct = total?.let { (done * 100 / it).toInt().coerceIn(0, 100) }
@@ -103,18 +109,39 @@ class UpdateViewModel @Inject constructor(
                 _ui.update { it.copy(downloading = false, progress = 100) }
                 install(dest)
             }.onFailure { e ->
-                _ui.update { it.copy(downloading = false, error = e.message) }
+                lastApk = null
+                val msg = if ((e.message ?: "").contains("too large", ignoreCase = true)) {
+                    context.getString(R.string.update_file_too_large)
+                } else {
+                    e.message
+                }
+                _ui.update { it.copy(downloading = false, error = msg) }
             }
         }
     }
 
+    /** Re-runs the installer for the already-downloaded file (no re-download). */
+    fun retryInstall() {
+        val f = lastApk
+        if (f == null || !f.exists()) return
+        install(f)
+    }
+
     private fun install(apk: File) {
+        lastApk = apk
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             !context.packageManager.canRequestPackageInstalls()
         ) {
             _ui.update { it.copy(needsUnknownSources = true) }
             return
         }
+        if (!isTrustedApk(apk)) {
+            runCatching { if (apk.exists()) apk.delete() }
+            lastApk = null
+            _ui.update { it.copy(error = context.getString(R.string.update_signature_mismatch)) }
+            return
+        }
+        _ui.update { it.copy(needsUnknownSources = false) }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
         runCatching {
             context.startActivity(
@@ -126,6 +153,57 @@ class UpdateViewModel @Inject constructor(
         }.onFailure { e ->
             _ui.update { it.copy(error = e.message) }
         }
+    }
+
+    /**
+     * Verifies the downloaded APK really is this app: package name must match
+     * and one signing-certificate SHA-256 digest must match the installed app.
+     */
+    private fun isTrustedApk(apk: File): Boolean {
+        return runCatching {
+            val pm = context.packageManager
+            val archive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageArchiveInfo(apk.absolutePath, PackageManager.GET_SIGNING_CERTIFICATES)
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageArchiveInfo(apk.absolutePath, PackageManager.GET_SIGNATURES)
+            } ?: return false
+            if (archive.packageName != context.packageName) return false
+            val archiveSigs = archiveSignatures(archive)
+            if (archiveSigs.isEmpty()) return false
+            val installed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+            }
+            val installedSigs = archiveSignatures(installed)
+            if (installedSigs.isEmpty()) return false
+            val archiveDigests = archiveSigs.map { sha256(it.toByteArray()) }.toSet()
+            val installedDigests = installedSigs.map { sha256(it.toByteArray()) }.toSet()
+            archiveDigests.intersect(installedDigests).isNotEmpty()
+        }.getOrDefault(false)
+    }
+
+    private fun archiveSignatures(info: android.content.pm.PackageInfo): List<android.content.pm.Signature> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val si = info.signingInfo
+            if (si == null) {
+                @Suppress("DEPRECATION")
+                info.signatures?.toList().orEmpty()
+            } else {
+                val current = si.apkContentsSigners?.toList().orEmpty()
+                if (current.isNotEmpty()) current else si.signingCertificateHistory?.toList().orEmpty()
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            info.signatures?.toList().orEmpty()
+        }
+    }
+
+    private fun sha256(bytes: ByteArray): String {
+        val d = MessageDigest.getInstance("SHA-256").digest(bytes)
+        return d.joinToString("") { "%02x".format(it) }
     }
 
     fun appVersionName(): String = BuildConfig.VERSION_NAME
