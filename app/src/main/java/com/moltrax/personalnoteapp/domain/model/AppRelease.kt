@@ -37,6 +37,14 @@ fun isUpdateAvailable(release: AppRelease, installedCode: Int): Boolean =
     release.versionCode > installedCode
 
 /**
+ * Whether the automatic "is there a new version?" check should run now. It runs every time the app is opened,
+ * but never more than once per [minIntervalMs] (so quickly switching apps does not hammer the server).
+ * [lastCheckAtMs] is null/0 before the first check. Pure (JVM-tested).
+ */
+fun shouldRunUpdateCheck(lastCheckAtMs: Long?, nowMs: Long, minIntervalMs: Long = 15 * 60 * 1000L): Boolean =
+    lastCheckAtMs == null || lastCheckAtMs <= 0L || nowMs < lastCheckAtMs || nowMs - lastCheckAtMs >= minIntervalMs
+
+/**
  * APK downloads are only trusted from GitHub's own hosts over HTTPS, so a tampered
  * `app_releases` row cannot point users at an evil server. Pure (JVM-tested).
  */

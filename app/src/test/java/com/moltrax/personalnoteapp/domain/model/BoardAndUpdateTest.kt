@@ -46,3 +46,22 @@ class BoardAndUpdateTest {
         assertNull(parseGithubLatestRelease("not json"))
     }
 }
+
+class UpdateCheckThrottleTest {
+    @org.junit.Test fun firstCheckAlwaysRuns() {
+        org.junit.Assert.assertTrue(shouldRunUpdateCheck(null, 1_000L))
+        org.junit.Assert.assertTrue(shouldRunUpdateCheck(0L, 1_000L))
+    }
+
+    @org.junit.Test fun skipsWithinFifteenMinutesThenRunsAgain() {
+        val t0 = 1_000_000L
+        org.junit.Assert.assertFalse(shouldRunUpdateCheck(t0, t0 + 60_000L))
+        org.junit.Assert.assertFalse(shouldRunUpdateCheck(t0, t0 + 14 * 60_000L))
+        org.junit.Assert.assertTrue(shouldRunUpdateCheck(t0, t0 + 15 * 60_000L))
+        org.junit.Assert.assertTrue(shouldRunUpdateCheck(t0, t0 + 3 * 3_600_000L))
+    }
+
+    @org.junit.Test fun clockGoingBackwardsRunsTheCheck() {
+        org.junit.Assert.assertTrue(shouldRunUpdateCheck(5_000_000L, 1_000L))
+    }
+}

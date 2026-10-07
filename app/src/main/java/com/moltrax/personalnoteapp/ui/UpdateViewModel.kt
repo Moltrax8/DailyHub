@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,12 +13,14 @@ import com.moltrax.personalnoteapp.BuildConfig
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.repository.UpdateRepository
 import com.moltrax.personalnoteapp.domain.model.AppRelease
+import com.moltrax.personalnoteapp.domain.model.shouldRunUpdateCheck
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -50,6 +53,8 @@ class UpdateViewModel @Inject constructor(
     private var subscription: com.moltrax.personalnoteapp.data.remote.supabase.RealtimeClient.Subscription? = null
     private var downloadJob: Job? = null
     private var snoozedCode: Int? = null
+    /** Declared BEFORE init: init may set it synchronously and a later initializer would reset it. */
+    private var lastCheckAtMs: Long? = null
     /** Last downloaded APK retained so install can be retried after unknown-sources consent. */
     private var lastApk: File? = null
 
@@ -63,12 +68,36 @@ class UpdateViewModel @Inject constructor(
                     snoozedCode = null
                     return@collect
                 }
-                // Single startup check (covers "app was closed at release time").
-                runCatching { updates.checkNow() }.getOrNull()?.let { offer(it) }
+                // Startup check (covers "app was closed at release time"). GitHub's public releases
+                // endpoint is the backup when the Supabase table has nothing, so a broken release webhook
+                // can never silently hide an update.
+                lastCheckAtMs = SystemClock.elapsedRealtime()
+                runCatching { updates.checkNow(allowGitHubFallback = true) }.getOrNull()?.let { offer(it) }
                 // Live notices while open (covers "app is open at release time").
                 subscription = updates.subscribeReleases { offer(it) }
             }
         }
+    }
+
+    /**
+     * Called every time the app comes to the foreground: asks about a new version when automatic checks are on,
+     * at most once per 15 minutes. The prompt then appears by itself - no need to open Settings.
+     */
+    fun checkOnAppOpen() {
+        viewModelScope.launch {
+            if (!updates.observeEnabled().first()) return@launch
+            val now = SystemClock.elapsedRealtime()
+            if (!shouldRunUpdateCheck(lastCheckAtMs, now)) return@launch
+            lastCheckAtMs = now
+            runCatching { updates.checkNow(allowGitHubFallback = true) }.getOrNull()?.let { offer(it) }
+        }
+    }
+
+    /** The Settings "Check for updates" row found a newer release: show the same download dialog right away. */
+    fun offerManual(release: AppRelease) {
+        if (!updates.isNewerThanInstalled(release)) return
+        snoozedCode = null
+        _ui.update { it.copy(candidate = release, error = null, needsUnknownSources = false) }
     }
 
     private fun offer(release: AppRelease) {
