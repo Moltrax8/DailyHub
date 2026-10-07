@@ -471,6 +471,7 @@ private fun BoardTab(
     onAdd: () -> Unit,
     onSelect: (ProjectItem) -> Unit,
 ) {
+    var pendingDelete by remember { mutableStateOf<ProjectItem?>(null) }
     if (state.busy) DhLoadingRow(message = stringResource(R.string.loading))
     state.error?.let {
         DhErrorState(
@@ -498,7 +499,7 @@ private fun BoardTab(
                             current = status,
                             onMove = { item, target -> vm.moveItem(spaceId, item, target) },
                             onTap = onSelect,
-                            onDelete = { vm.deleteItem(spaceId, it.id) },
+                            onDelete = { pendingDelete = it },
                         )
                     }
                 }
@@ -516,12 +517,22 @@ private fun BoardTab(
                             current = status,
                             onMove = { item, target -> vm.moveItem(spaceId, item, target) },
                             onTap = onSelect,
-                            onDelete = { vm.deleteItem(spaceId, it.id) },
+                            onDelete = { pendingDelete = it },
                         )
                     }
                 }
             }
         }
+    }
+    pendingDelete?.let { item ->
+        DhConfirmDialog(
+            title = stringResource(R.string.projects_card_delete_title),
+            message = stringResource(R.string.projects_card_delete_confirm, item.title),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { pendingDelete = null; vm.deleteItem(spaceId, item.id) },
+            onDismiss = { pendingDelete = null },
+            dismissLabel = stringResource(R.string.action_cancel),
+        )
     }
 }
 
@@ -534,15 +545,20 @@ private fun GitHubTab(vm: ProjectViewModel, spaceId: String) {
     var showBrowse by remember { mutableStateOf(false) }
     var showDisconnect by remember { mutableStateOf(false) }
     val openFailed = stringResource(R.string.github_open_failed)
+    val untrusted = stringResource(R.string.github_untrusted_link)
     val openUrl: (String) -> Unit = { url ->
-        runCatching {
-            context.startActivity(
-                android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse(url),
-                ),
-            )
-        }.onFailure { vm.reportGithubError(openFailed) }
+        if (!com.moltrax.personalnoteapp.domain.model.isTrustedGitHubOpenUrl(url)) {
+            vm.reportGithubError(untrusted)
+        } else {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(url),
+                    ),
+                )
+            }.onFailure { vm.reportGithubError(openFailed) }
+        }
     }
 
     // Deep link finish: dailyhub://github-callback?code=...&state=... (from MainActivity).
@@ -760,6 +776,7 @@ private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -
     val state by vm.appReposState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val openFailed = stringResource(R.string.github_open_failed)
+    val untrusted = stringResource(R.string.github_untrusted_link)
 
     LaunchedEffect(spaceId) { vm.loadAppRepos(spaceId) }
 
@@ -791,14 +808,18 @@ private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -
                             actionLabel = stringResource(R.string.github_connect),
                             onAction = {
                                 vm.startGithubConnect { url ->
-                                    runCatching {
-                                        context.startActivity(
-                                            android.content.Intent(
-                                                android.content.Intent.ACTION_VIEW,
-                                                android.net.Uri.parse(url),
-                                            ),
-                                        )
-                                    }.onFailure { vm.reportGithubError(openFailed) }
+                                    if (!com.moltrax.personalnoteapp.domain.model.isTrustedGitHubOpenUrl(url)) {
+                                        vm.reportGithubError(untrusted)
+                                    } else {
+                                        runCatching {
+                                            context.startActivity(
+                                                android.content.Intent(
+                                                    android.content.Intent.ACTION_VIEW,
+                                                    android.net.Uri.parse(url),
+                                                ),
+                                            )
+                                        }.onFailure { vm.reportGithubError(openFailed) }
+                                    }
                                 }
                             },
                         )
@@ -832,14 +853,18 @@ private fun MyReposDialog(spaceId: String, vm: ProjectViewModel, onDismiss: () -
                         state.installUrl?.takeIf { it.isNotBlank() }?.let { installUrl ->
                             TextButton(
                                 onClick = {
-                                    runCatching {
-                                        context.startActivity(
-                                            android.content.Intent(
-                                                android.content.Intent.ACTION_VIEW,
-                                                android.net.Uri.parse(installUrl),
-                                            ),
-                                        )
-                                    }.onFailure { vm.reportGithubError(openFailed) }
+                                    if (!com.moltrax.personalnoteapp.domain.model.isTrustedGitHubOpenUrl(installUrl)) {
+                                        vm.reportGithubError(untrusted)
+                                    } else {
+                                        runCatching {
+                                            context.startActivity(
+                                                android.content.Intent(
+                                                    android.content.Intent.ACTION_VIEW,
+                                                    android.net.Uri.parse(installUrl),
+                                                ),
+                                            )
+                                        }.onFailure { vm.reportGithubError(openFailed) }
+                                    }
                                 },
                                 modifier = Modifier.heightIn(min = com.moltrax.personalnoteapp.ui.theme.DhTokens.MinTouchTarget),
                             ) { Text(stringResource(R.string.github_add_more)) }

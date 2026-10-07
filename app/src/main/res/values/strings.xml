@@ -392,6 +392,8 @@
     <string name="update_install_prompt">Bilinmeyen kaynaklardan kuruluma izin verildikten sonra tekrar dene.</string>
     <string name="update_open_settings">Ayarları aç</string>
     <string name="update_failed">Güncelleme başarısız oldu.</string>
+    <string name="update_signature_mismatch">Güncelleme doğrulanamadı — imza uyuşmuyor. Dosya silindi.</string>
+    <string name="update_file_too_large">Güncelleme dosyası çok büyük (200 MB sınırı).</string>
 
     <!-- Shared spaces (Phase 5+) -->
     <string name="action_refresh">Yenile</string>
@@ -465,6 +467,8 @@
     <string name="projects_open_hub">Hub\'ı aç</string>
     <string name="projects_comment_hint">Yorum yaz…</string>
     <string name="projects_comment_add">Yorum ekle</string>
+    <string name="projects_card_delete_title">Bu kart silinsin mi?</string>
+    <string name="projects_card_delete_confirm">“%1$s” panodan silinecek. Bu işlem geri alınamaz.</string>
 
     <!-- GitHub integration (Phase 7+) -->
     <string name="projects_github">GitHub</string>
@@ -508,6 +512,7 @@
     <string name="github_my_repos_empty">Aramayla eşleşen depo yok.</string>
     <string name="github_link_selected">Seçilenleri bağla (%1$d)</string>
     <string name="github_open_failed">Bağlantıyı açacak tarayıcı bulunamadı.</string>
+    <string name="github_untrusted_link">Bu bağlantı güvenli değil — açılmadı.</string>
     <string name="settings_section_github">GitHub</string>
 
     <!-- Profil varsayılan -->
