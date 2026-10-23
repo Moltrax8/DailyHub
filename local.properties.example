@@ -1,0 +1,12 @@
+# Copy this file to local.properties.
+# NEVER commit it to git — it's already in .gitignore.
+
+# Android SDK path
+sdk.dir=C:\\Users\\<user>\\AppData\\Local\\Android\\Sdk
+
+# ── Release signing (only needed for release APK/AAB builds) ──
+# Keep the release.jks file in the project root; .gitignore already ignores *.jks.
+RELEASE_STORE_FILE=release.jks
+RELEASE_STORE_PASSWORD=your_keystore_password
+RELEASE_KEY_ALIAS=your_key_alias
+RELEASE_KEY_PASSWORD=your_key_password

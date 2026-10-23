@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_refresh">Refresh</string>
+    <string name="widget_content_options">Content and layout</string>
+    <string name="widget_tasks_only">Tasks only (hide note previews)</string>
+    <string name="widget_expand_default">Expand subtasks by default</string>
+    <string name="widget_show_done_subtasks">Show completed subtasks</string>
+    <string name="widget_compact">Compact spacing and single-line titles</string>
+    <string name="widget_sort">Sort tasks by</string>
+    <string name="widget_sort_manual">Manual order</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_refresh">Yenile</string>
+    <string name="widget_content_options">İçerik ve düzen</string>
+    <string name="widget_tasks_only">Yalnızca görevler (not önizlemelerini gizle)</string>
+    <string name="widget_expand_default">Alt görevleri varsayılan olarak aç</string>
+    <string name="widget_show_done_subtasks">Tamamlanan alt görevleri göster</string>
+    <string name="widget_compact">Sıkışık aralıklar ve tek satırlı başlıklar</string>
+    <string name="widget_sort">Görevleri sırala</string>
+    <string name="widget_sort_manual">Elle sıralama</string>
+</resources>

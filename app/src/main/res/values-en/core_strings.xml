@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="reminder_minutes_before">
+        <item quantity="one">%1$d minute before</item>
+        <item quantity="other">%1$d minutes before</item>
+    </plurals>
+    <plurals name="reminder_hours_before">
+        <item quantity="one">%1$d hour before</item>
+        <item quantity="other">%1$d hours before</item>
+    </plurals>
+    <string name="nav_notes">Notes</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_focus">Focus</string>
+    <string name="nav_settings">Settings</string>
+    <string name="home_search_hint">Search tasks, notes or tags</string>
+    <string name="notes_title">Notes</string>
+    <string name="notes_search_hint">Search notes</string>
+    <string name="notes_empty_title">No notes yet</string>
+    <string name="notes_empty_desc">Capture an idea. Your notes stay on this device.</string>
+    <string name="notes_no_results">No matching notes</string>
+    <string name="note_new">New note</string>
+    <string name="note_edit">Edit note</string>
+    <string name="note_missing">This note was deleted.</string>
+    <string name="note_untitled">Untitled</string>
+    <string name="note_pinned">Pinned</string>
+    <string name="note_pin">Pin note</string>
+    <string name="note_body">Note</string>
+    <string name="note_delete_title">Delete this note?</string>
+    <string name="note_delete_message">This note will be permanently deleted.</string>
+    <string name="focus_pick_task">Choose a task for a focus session.</string>
+    <string name="widget_mode_list">Task list / tag filters</string>
+    <string name="widget_mode_task">One selected task</string>
+    <string name="widget_task_missing">This task was deleted. Choose another task in widget settings.</string>
+    <string name="widget_subtasks_remaining">%1$d left</string>
+    <string name="widget_open_task">Open task</string>
+</resources>
