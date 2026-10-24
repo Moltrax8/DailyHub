@@ -12,3 +12,7 @@ data class SubTask(
     val title: String,
     val isDone: Boolean = false,
 )
+
+/** Toggles every matching id without changing order or mutating the original checklist. */
+internal fun List<SubTask>.toggledById(id: String): List<SubTask> =
+    map { if (it.id == id) it.copy(isDone = !it.isDone) else it }

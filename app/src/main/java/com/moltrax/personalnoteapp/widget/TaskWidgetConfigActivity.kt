@@ -65,8 +65,7 @@ class TaskWidgetConfigActivity : ComponentActivity() {
                                         prefs.remove(TaskWidget.SELECTED_TASK_IDS)
                                     }
                                     prefs.remove(TaskWidget.EXPANDED_TASK_IDS)
-                                    prefs.remove(TaskWidget.UNDO_TASK_JSON)
-                                    prefs.remove(TaskWidget.UNDO_TASK_TITLE)
+                                    prefs.clearTaskUndo()
                                 }
                                 TaskWidget().update(this@TaskWidgetConfigActivity, glanceId)
                                 finishAndRemoveTask()

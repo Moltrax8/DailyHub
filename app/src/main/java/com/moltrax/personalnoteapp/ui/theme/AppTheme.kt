@@ -176,8 +176,6 @@ fun AppTheme(
 
 /** Convenience accessors inside composition. */
 object Dh {
-    val spacing: DhSpacing
-        @Composable get() = LocalDhSpacing.current
     val extra: DhExtraColors
         @Composable get() = LocalDhExtraColors.current
 }

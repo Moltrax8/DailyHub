@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moltrax.personalnoteapp.domain.model.Category
 import com.moltrax.personalnoteapp.domain.model.Task
-import com.moltrax.personalnoteapp.domain.model.withCompletion
+import com.moltrax.personalnoteapp.domain.model.restoringCompletionFrom
+import com.moltrax.personalnoteapp.domain.model.toggledCompletion
 import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
+import com.moltrax.personalnoteapp.domain.util.matchesTags
+import com.moltrax.personalnoteapp.domain.util.orderInCategory
 import com.moltrax.personalnoteapp.widget.TaskWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -60,12 +63,12 @@ class HomeViewModel @Inject constructor(
                 task.notes?.contains(normalizedQuery, ignoreCase = true) == true ||
                 task.categoryNames.any { it.contains(normalizedQuery, ignoreCase = true) }
             val matchesCategory = selected.isEmpty() ||
-                selected.any { name -> task.categoryNames.any { it.equals(name, ignoreCase = true) } }
+                task.matchesTags(selected, matchAll = false)
             visible && matchesQuery && matchesCategory
         }
         HomeUiState(
             tasks = if (selected.size == 1) filtered.sortedBy { task ->
-                task.categoryOrders.entries.firstOrNull { it.key.equals(selected.single(), ignoreCase = true) }?.value ?: Long.MAX_VALUE
+                task.orderInCategory(selected.single()) ?: Long.MAX_VALUE
             } else filtered,
             categories = categories,
             selectedCategories = selected,
@@ -90,8 +93,7 @@ class HomeViewModel @Inject constructor(
     fun toggleDone(task: Task, onDone: (Task) -> Unit) {
         viewModelScope.launch {
             val current = taskRepo.getById(task.id) ?: return@launch
-            taskRepo.upsert(if (current.isDone) current.copy(isDone = false, completedAt = null,
-                updatedAt = System.currentTimeMillis()) else current.withCompletion())
+            taskRepo.upsert(current.toggledCompletion(System.currentTimeMillis()))
             TaskWidget.requestUpdate(context)
             onDone(current)
         }
@@ -100,8 +102,7 @@ class HomeViewModel @Inject constructor(
     fun undoCompletion(before: Task) {
         viewModelScope.launch {
             val current = taskRepo.getById(before.id) ?: return@launch
-            taskRepo.upsert(current.copy(isDone = before.isDone, completedAt = before.completedAt,
-                dueDate = before.dueDate, updatedAt = System.currentTimeMillis()))
+            taskRepo.upsert(current.restoringCompletionFrom(before, System.currentTimeMillis()))
         }
     }
 

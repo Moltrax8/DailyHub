@@ -5,9 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.moltrax.personalnoteapp.worker.RescheduleNotificationsWorker
+import com.moltrax.personalnoteapp.worker.enqueueReminderReschedule
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -23,10 +22,9 @@ class BootReceiver : BroadcastReceiver() {
             action == "android.intent.action.QUICKBOOT_POWERON" ||
             action == "com.htc.intent.action.QUICKBOOT_POWERON"
         if (!reschedule) return
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            RescheduleNotificationsWorker.WORK_NAME,
+        enqueueReminderReschedule(
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<RescheduleNotificationsWorker>().build(),
+            WorkManager.getInstance(context)::enqueueUniqueWork,
         )
     }
 }

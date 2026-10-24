@@ -50,13 +50,6 @@ data class Task(
 
     /** Total number of subtasks. */
     val subtaskCount: Int get() = subtasks.size
-
-    /** Whether there are still pending subtasks (at least one exists and not all are done). */
-    val hasIncompleteSubtasks: Boolean get() = subtasks.any { !it.isDone }
-
-    /** Subtask progress between 0f..1f (0 when there are no subtasks). */
-    val subtaskProgress: Float
-        get() = if (subtasks.isEmpty()) 0f else doneSubtaskCount.toFloat() / subtasks.size
 }
 
 /**

@@ -4,14 +4,13 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.data.repository.UpdateRepository
 import com.moltrax.personalnoteapp.domain.model.AppRelease
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.service.NotificationService
-import com.moltrax.personalnoteapp.worker.RescheduleNotificationsWorker
+import com.moltrax.personalnoteapp.worker.enqueueReminderReschedule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
@@ -75,10 +74,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun enqueueReschedule() {
-        WorkManager.getInstance(appContext).enqueueUniqueWork(
-            RescheduleNotificationsWorker.WORK_NAME,
+        enqueueReminderReschedule(
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<RescheduleNotificationsWorker>().build(),
+            WorkManager.getInstance(appContext)::enqueueUniqueWork,
         )
     }
 

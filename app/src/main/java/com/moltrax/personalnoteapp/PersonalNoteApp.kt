@@ -4,11 +4,10 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.widget.TaskWidget
-import com.moltrax.personalnoteapp.worker.RescheduleNotificationsWorker
+import com.moltrax.personalnoteapp.worker.enqueueReminderReschedule
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,11 +47,7 @@ class PersonalNoteApp : Application(), Configuration.Provider {
         // Re-install reminder alarms for pending tasks on every app launch
         // (safety net if the device rebooted or alarms were dropped). Deduplicated job
         // (KEEP): no duplicate enqueueing during a cold-start storm.
-        wm.enqueueUniqueWork(
-            RescheduleNotificationsWorker.WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<RescheduleNotificationsWorker>().build(),
-        )
+        enqueueReminderReschedule(ExistingWorkPolicy.KEEP, wm::enqueueUniqueWork)
 
         // Auto-refresh the widget whenever task data (including subtasks) changes — SINGLE source.
         // Glance widgets cannot listen to the flow on their own; they only redraw when updateAll

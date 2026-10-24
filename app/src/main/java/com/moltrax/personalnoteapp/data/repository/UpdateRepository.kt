@@ -44,8 +44,6 @@ class UpdateRepository @Inject constructor(
 
     fun observeEnabled(): Flow<Boolean> = prefs.autoUpdate.distinctUntilChanged()
 
-    suspend fun setEnabled(v: Boolean) = prefs.setAutoUpdate(v)
-
     /** One GitHub release check. Null when unavailable or the response is unusable. */
     suspend fun checkNow(): AppRelease? {
         val release = fetchLatestFromGitHub()

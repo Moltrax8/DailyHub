@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -23,11 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -40,12 +37,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -70,23 +65,6 @@ import com.moltrax.personalnoteapp.ui.theme.Dh
 // ---------------------------------------------------------------------------
 // Feedback: loading / empty / error / offline / sync
 // ---------------------------------------------------------------------------
-
-/** Inline loading row (non-blocking). Use for background refresh, not full screens. */
-@Composable
-fun DhLoadingRow(
-    message: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier.fillMaxWidth().padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-        Spacer(Modifier.width(10.dp))
-        Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
 
 /** Full-area loading state with message. */
 @Composable
@@ -163,47 +141,6 @@ fun DhErrorState(
             OutlinedButton(onClick = onRetry) { Text(retryLabel) }
         }
     }
-}
-
-/** Offline notice row — compact, not a banner that steals space. */
-@Composable
-fun DhOfflineRow(modifier: Modifier = Modifier, message: String) {
-    Row(
-        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-    ) {
-        Icon(Icons.Filled.CloudOff, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(message, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/** Sync progress row with determinate/indeterminate handling. */
-@Composable
-fun DhSyncRow(
-    message: String,
-    progress: Float? = null,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(message, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (progress != null) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-// Back-compat wrappers used by older screens (delegating to Dh*).
-@Composable
-fun SectionHeader(title: String, modifier: Modifier = Modifier, subtitle: String? = null, action: @Composable (() -> Unit)? = null) {
-    DhSectionHeader(title = title, modifier = modifier, subtitle = subtitle, action = action)
-}
-
-@Composable
-fun EmptyState(icon: ImageVector, title: String, description: String, modifier: Modifier = Modifier, action: @Composable (() -> Unit)? = null) {
-    DhEmptyState(icon = icon, title = title, description = description, modifier = modifier, actionLabel = null, onAction = null)
-    action?.let { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { it() } }
 }
 
 // ---------------------------------------------------------------------------
@@ -314,12 +251,6 @@ fun DhCard(
     } else {
         Card(modifier = modifier.fillMaxWidth(), shape = shape, colors = colors, border = border) { inner() }
     }
-}
-
-/** Back-compat: old ModernCard mapped onto DhCard. */
-@Composable
-fun ModernCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    DhCard(modifier = modifier, onClick = onClick) { content() }
 }
 
 /**
@@ -661,76 +592,9 @@ fun DhConfirmDialog(
     )
 }
 
-/** Standard single-line input with label + error + IME-safe defaults. */
-@Composable
-fun DhTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    label: String? = null,
-    placeholder: String? = null,
-    error: String? = null,
-    enabled: Boolean = true,
-    singleLine: Boolean = true,
-    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
-        androidx.compose.foundation.text.KeyboardOptions.Default,
-    visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
-        androidx.compose.ui.text.input.VisualTransformation.None,
-    trailing: @Composable (() -> Unit)? = null,
-) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = label?.let { { Text(it) } },
-            placeholder = placeholder?.let { { Text(it) } },
-            isError = error != null,
-            enabled = enabled,
-            singleLine = singleLine,
-            keyboardOptions = keyboardOptions,
-            visualTransformation = visualTransformation,
-            trailingIcon = trailing,
-            shape = MaterialTheme.shapes.small,
-        )
-        error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Misc: overdue dot, completion check, content width wrapper
 // ---------------------------------------------------------------------------
-
-/** Constrains phone-first columns on wide screens. */
-@Composable
-fun DhContentColumn(
-    modifier: Modifier = Modifier,
-    padding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.fillMaxWidth().padding(padding), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
-    }
-}
-
-/**
- * Design-system FAB: bright primary container (not the muted default
- * primaryContainer), shared by task and note screens.
- */
-@Composable
-fun DhFab(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    androidx.compose.material3.FloatingActionButton(
-        onClick = onClick,
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        content = content,
-    )
-}
 
 // ---------------------------------------------------------------------------
 // Previews (no Hilt/network dependencies)

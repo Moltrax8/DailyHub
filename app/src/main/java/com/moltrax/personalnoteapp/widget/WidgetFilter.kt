@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.moltrax.personalnoteapp.domain.util.matchesTags
+import com.moltrax.personalnoteapp.domain.util.orderInCategory
 
 enum class WidgetSort { MANUAL, DUE_DATE, TITLE }
 enum class WidgetTheme { DARK, LIGHT, SYSTEM }
@@ -83,12 +85,11 @@ data class WidgetFilter(
         if (taskId.isNotBlank()) return tasks.filter { it.id == taskId }
         return tasks.filter { task ->
             (showDone || !task.isDone) && (categoryNames.isEmpty() ||
-                categoryNames.map { name -> task.categoryNames.any { it.equals(name, ignoreCase = true) } }
-                    .let { hits -> if (matchAll) hits.all { it } else hits.any { it } })
+                task.matchesTags(categoryNames, matchAll))
         }.let { filtered ->
             when (sort) {
                 WidgetSort.MANUAL -> if (categoryNames.size == 1) filtered.sortedBy { task ->
-                    task.categoryOrders.entries.firstOrNull { it.key.equals(categoryNames.single(), ignoreCase = true) }?.value ?: task.sortOrder
+                    task.orderInCategory(categoryNames.single()) ?: task.sortOrder
                 } else filtered.sortedBy { it.sortOrder }
                 WidgetSort.DUE_DATE -> filtered.sortedWith(compareBy<com.moltrax.personalnoteapp.domain.model.Task> { it.dueDate ?: Long.MAX_VALUE }.thenBy { it.sortOrder })
                 WidgetSort.TITLE -> filtered.sortedBy { it.title.lowercase(java.util.Locale.ROOT) }

@@ -24,8 +24,7 @@ class UndoTaskAction : ActionCallback {
         if (taskJson != null) TaskWidget.restoreTask(context, taskJson)
         // Clear the undo info (the strip disappears).
         updateAppWidgetState(context, glanceId) { p ->
-            p.remove(TaskWidget.UNDO_TASK_TITLE)
-            p.remove(TaskWidget.UNDO_TASK_JSON)
+            p.clearTaskUndo()
         }
         TaskWidget.requestUpdate(context)
     }

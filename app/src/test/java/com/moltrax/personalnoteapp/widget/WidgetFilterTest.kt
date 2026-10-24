@@ -61,4 +61,22 @@ class WidgetFilterTest {
             tasks[1].copy(sortOrder = 1, categoryOrders = mapOf("Work" to 2)))
         assertEquals(listOf("b", "a"), WidgetFilter(categoryNames = setOf("work")).select(list).map { it.id })
     }
+
+    @Test fun emptyTagSelectionStillShowsAllTagsForBothAnyAndAll() {
+        for (matchAll in listOf(false, true)) {
+            assertEquals(tasks, WidgetFilter(showDone = true, matchAll = matchAll).select(tasks))
+        }
+    }
+
+    @Test fun missingTagOrderFallsBackToGlobalOrderAndLimitStillRunsLast() {
+        val list = listOf(tasks[0].copy(sortOrder = 20, categoryOrders = mapOf("Work" to 2L)),
+            tasks[1].copy(sortOrder = -10, categoryOrders = emptyMap()))
+        assertEquals(listOf("b"), WidgetFilter(categoryNames = setOf("WORK"), limit = 1).select(list).map { it.id })
+    }
+
+    @Test fun pinnedTaskStillBypassesTagStatusSortAndLimitPolicies() {
+        val list = listOf(tasks[2], tasks[0], tasks[2].copy(title = "Another matching id"))
+        assertEquals(listOf(list[0], list[2]), WidgetFilter(taskId = "c", categoryNames = setOf("missing"),
+            matchAll = true, limit = 1, sort = WidgetSort.TITLE).select(list))
+    }
 }

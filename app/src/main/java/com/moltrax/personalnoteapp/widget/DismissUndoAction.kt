@@ -18,8 +18,7 @@ class DismissUndoAction : ActionCallback {
         parameters: ActionParameters,
     ) {
         updateAppWidgetState(context, glanceId) { p ->
-            p.remove(TaskWidget.UNDO_TASK_TITLE)
-            p.remove(TaskWidget.UNDO_TASK_JSON)
+            p.clearTaskUndo()
         }
         TaskWidget.requestUpdate(context)
     }

@@ -9,6 +9,7 @@ import com.moltrax.personalnoteapp.domain.model.Priority
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
 import com.moltrax.personalnoteapp.domain.model.SubTask
 import com.moltrax.personalnoteapp.domain.model.Task
+import com.moltrax.personalnoteapp.domain.model.toggledById
 import com.moltrax.personalnoteapp.domain.repository.CategoryRepository
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.widget.TaskWidget
@@ -182,7 +183,7 @@ class TaskDetailViewModel @Inject constructor(
 
     fun toggleSubtask(id: String) {
         _state.update { s ->
-            s.copy(subtasks = s.subtasks.map { if (it.id == id) it.copy(isDone = !it.isDone) else it })
+            s.copy(subtasks = s.subtasks.toggledById(id))
         }
         persist(_state.value)
     }

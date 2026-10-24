@@ -50,10 +50,3 @@ val LocalDhExtraColors = staticCompositionLocalOf {
         accentSoft = AppColors.AccentSoftLight,
     )
 }
-
-object DhTokens {
-    /** Single-column content max width so tablets don't stretch phone rows. */
-    val MaxContentWidth = 720.dp
-    /** Minimum touch target per accessibility pass. */
-    val MinTouchTarget = 48.dp
-}

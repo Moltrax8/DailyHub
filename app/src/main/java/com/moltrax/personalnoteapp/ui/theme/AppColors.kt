@@ -11,13 +11,9 @@ import androidx.compose.ui.graphics.Color
  */
 object AppColors {
     // Brand accent (cool indigo/blue), restrained use.
-    val Accent = Color(0xFF4F6DF5)
     val AccentStrong = Color(0xFF3B5AE0)
     val AccentSoftLight = Color(0xFFE3E9FD)
     val AccentSoftDark = Color(0xFF25304D)
-
-    // Kept for backward-compatible references; mapped to new accent.
-    val AccentGlow = Color(0x1A4F6DF5)
 
     // Light theme surfaces (graphite-tinted neutrals, not pure white).
     val LightBackground = Color(0xFFF4F5F7)
@@ -50,13 +46,4 @@ object AppColors {
     val ErrorContainerLight = Color(0xFFF9DEDE)
     val ErrorContainerDark = Color(0xFF3E2222)
     val Info = Color(0xFF4F6DF5)
-
-    val PriorityHigh = Color(0xFFD64545)
-    val PriorityMedium = Color(0xFFB7791F)
-    val PriorityLow = Color(0xFF2E9E5B)
-
-    // Due-date tones.
-    val DueOverdue = Color(0xFFD64545)
-    val DueToday = Color(0xFFB7791F)
-    val DueUpcoming = Color(0xFF525B6B)
 }

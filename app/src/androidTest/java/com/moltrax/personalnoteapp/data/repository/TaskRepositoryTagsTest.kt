@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.moltrax.personalnoteapp.data.local.db.AppDatabase
 import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
+import com.moltrax.personalnoteapp.data.local.db.entity.toEntity
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.service.NotificationScheduler
 import com.moltrax.personalnoteapp.service.NotificationService
@@ -125,5 +126,42 @@ class TaskRepositoryTagsTest {
         listOf("a", "b", "c").forEachIndexed { index, id -> repo.upsert(task(id, index.toLong(), setOf("Work"))) }
         repo.reorderInCategory("Work", listOf("c", "a"))
         assertEquals(listOf("c", "b", "a"), repo.observeTasksForCategory("Work").first().map { it.id })
+    }
+
+    @Test fun singleCategoryViewExcludesLegacyTaggedTasksWithoutTheRequestedLink() = runBlocking {
+        // A legacy category makes this task match tag membership, but it has no xref/order.
+        db.taskDao().upsert(task("missing-link", -100, setOf("Work")).toEntity())
+        repo.upsert(task("linked", 0, setOf("Work")))
+        repo.upsert(task("other", 1, setOf("Other")))
+
+        assertEquals(setOf("Work"), repo.getById("missing-link")!!.categoryNames)
+        assertTrue(repo.getById("missing-link")!!.categoryOrders.isEmpty())
+        assertEquals(listOf("missing-link", "linked"),
+            repo.observeTasksForCategories(setOf("wOrK"), matchAll = false).first().map { it.id })
+        assertEquals(listOf("linked"), repo.observeTasksForCategory("wOrK").first().map { it.id })
+    }
+
+    @Test fun emptyAnySelectionMatchesNothingThroughTheRepositoryApi() = runBlocking {
+        repo.upsert(task("tagged", 0, setOf("Work")))
+        repo.upsert(task("untagged", 1))
+        assertTrue(repo.observeTasksForCategories(emptySet(), matchAll = false).first().isEmpty())
+    }
+
+    @Test fun emptyAllSelectionIncludesTaggedUntaggedAndCompletedTasksThroughTheRepositoryApi() = runBlocking {
+        repo.upsert(task("tagged", 0, setOf("Work")))
+        repo.upsert(task("untagged", 1))
+        repo.upsert(task("completed", 2, setOf("Home")).copy(isDone = true))
+        assertEquals(listOf("tagged", "untagged", "completed"),
+            repo.observeTasksForCategories(emptySet(), matchAll = true).first().map { it.id })
+    }
+
+    @Test fun repositoryTagApisPreserveUnicodeAndCaseInsensitiveMatching() = runBlocking {
+        repo.upsert(task("unicode", 0, setOf("İ", "Straße")))
+        repo.upsert(task("ascii", 1, setOf("Work")))
+        assertEquals(listOf("unicode"),
+            repo.observeTasksForCategories(setOf("i", "STRAßE"), matchAll = true).first().map { it.id })
+        assertEquals(listOf("unicode"), repo.observeTasksForCategory("i").first().map { it.id })
+        assertEquals(listOf("ascii"), repo.observeTasksForCategory("wOrK").first().map { it.id })
+        assertTrue(repo.observeTasksForCategories(setOf("STRASSE"), matchAll = false).first().isEmpty())
     }
 }

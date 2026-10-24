@@ -33,7 +33,9 @@ import com.moltrax.personalnoteapp.MainActivity
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.data.local.preferences.AppPreferences
 import com.moltrax.personalnoteapp.domain.model.Task
-import com.moltrax.personalnoteapp.domain.model.withCompletion
+import com.moltrax.personalnoteapp.domain.model.toggledById
+import com.moltrax.personalnoteapp.domain.model.restoringCompletionFrom
+import com.moltrax.personalnoteapp.domain.model.toggledCompletion
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.ui.i18n.localizedFor
 import dagger.hilt.EntryPoint
@@ -223,8 +225,7 @@ class TaskWidget : GlanceAppWidget() {
         suspend fun completeTask(context: Context, taskId: String): Task? {
             val repository = entryPoint(context).taskRepository()
             val task = repository.getById(taskId) ?: return null
-            repository.upsert(if (task.isDone) task.copy(isDone = false, completedAt = null, updatedAt = System.currentTimeMillis())
-                else task.withCompletion())
+            repository.upsert(task.toggledCompletion(System.currentTimeMillis()))
             return task
         }
 
@@ -233,7 +234,7 @@ class TaskWidget : GlanceAppWidget() {
             val task = repository.getById(taskId) ?: return
             if (task.subtasks.none { it.id == subtaskId }) return
             repository.upsert(task.copy(updatedAt = System.currentTimeMillis(),
-                subtasks = task.subtasks.map { if (it.id == subtaskId) it.copy(isDone = !it.isDone) else it }))
+                subtasks = task.subtasks.toggledById(subtaskId)))
         }
 
         fun encodeUndo(task: Task): String = json.encodeToString(WidgetUndoSnapshot(task))
@@ -243,8 +244,7 @@ class TaskWidget : GlanceAppWidget() {
             val repository = entryPoint(context).taskRepository()
             // A stale widget snapshot must never resurrect a task deleted in the app.
             val current = repository.getById(task.id) ?: return
-            repository.upsert(current.copy(isDone = task.isDone, completedAt = task.completedAt,
-                dueDate = task.dueDate, updatedAt = System.currentTimeMillis()))
+            repository.upsert(current.restoringCompletionFrom(task, System.currentTimeMillis()))
         }
     }
 }

@@ -11,6 +11,8 @@ import com.moltrax.personalnoteapp.data.local.db.entity.toDomain
 import com.moltrax.personalnoteapp.data.local.db.entity.toEntity
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
+import com.moltrax.personalnoteapp.domain.util.matchesTags
+import com.moltrax.personalnoteapp.domain.util.orderInCategory
 import com.moltrax.personalnoteapp.service.NotificationScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -46,19 +48,14 @@ class TaskRepositoryImpl @Inject constructor(
     override fun observeTasksForCategory(name: String): Flow<List<Task>> =
         observeAll().map { list ->
             list.mapNotNull { task ->
-                val order = task.categoryOrders.entries
-                    .firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
-                    ?: return@mapNotNull null
+                val order = task.orderInCategory(name) ?: return@mapNotNull null
                 task to order
             }.sortedBy { it.second }.map { it.first }
         }
 
     override fun observeTasksForCategories(names: Set<String>, matchAll: Boolean): Flow<List<Task>> =
         observeAll().map { list ->
-            list.filter { task ->
-                val hits = names.map { n -> task.categoryNames.any { it.equals(n, ignoreCase = true) } }
-                if (matchAll) hits.all { it } else hits.any { it }
-            }
+            list.filter { task -> task.matchesTags(names, matchAll) }
         }
 
     override suspend fun getAll(): List<Task> = attach(dao.getAll())
