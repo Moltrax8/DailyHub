@@ -124,6 +124,18 @@
     <string name="update_open_settings">Open settings</string>
     <string name="update_signature_mismatch">Update could not be verified. File deleted.</string>
     <string name="update_file_too_large">Update file too large (200 MB limit).</string>
+    <!-- Update prompt: release notes card -->
+    <string name="release_notes_badge">RELEASE NOTES</string>
+    <string name="release_notes_version">Version %1$s</string>
+    <string name="release_notes_title">What’s New</string>
+    <string name="release_notes_released">Released %1$s</string>
+    <string name="release_notes_changelog">Full changelog and technical details</string>
+    <string name="release_notes_download">Download update</string>
+    <string name="release_notes_section_features">New Features</string>
+    <string name="release_notes_section_improvements">Improvements</string>
+    <string name="release_notes_section_fixes">Bug Fixes</string>
+    <string name="release_notes_section_security">Security</string>
+    <string name="release_notes_section_notes">Important Notes</string>
     <string name="focus_play">Start</string>
     <string name="focus_pause">Pause</string>
     <string name="focus_reset">Reset</string>

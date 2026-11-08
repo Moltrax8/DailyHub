@@ -28,8 +28,8 @@ android {
         // Version codes follow the GitHub tag scheme (Phase 9 auto-update):
         // major*10000 + minor*100 + patch, so v1.0 == 10000 and plain integer
         // comparison decides updates (see versionCodeFromTag).
-        versionCode = 10301
-        versionName = "1.3.1"
+        versionCode = 10302
+        versionName = "1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

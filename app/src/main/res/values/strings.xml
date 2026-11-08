@@ -124,6 +124,18 @@
     <string name="update_open_settings">Ayarları aç</string>
     <string name="update_signature_mismatch">Güncelleme doğrulanamadı. Dosya silindi.</string>
     <string name="update_file_too_large">Güncelleme dosyası çok büyük (200 MB sınırı).</string>
+    <!-- Update prompt: release notes card -->
+    <string name="release_notes_badge">SÜRÜM NOTLARI</string>
+    <string name="release_notes_version">Sürüm %1$s</string>
+    <string name="release_notes_title">Yenilikler</string>
+    <string name="release_notes_released">%1$s tarihinde yayınlandı</string>
+    <string name="release_notes_changelog">Tam değişiklik günlüğü ve teknik detaylar</string>
+    <string name="release_notes_download">Güncellemeyi indir</string>
+    <string name="release_notes_section_features">Yeni Özellikler</string>
+    <string name="release_notes_section_improvements">İyileştirmeler</string>
+    <string name="release_notes_section_fixes">Hata Düzeltmeleri</string>
+    <string name="release_notes_section_security">Güvenlik</string>
+    <string name="release_notes_section_notes">Önemli Notlar</string>
     <string name="focus_play">Başlat</string>
     <string name="focus_pause">Duraklat</string>
     <string name="focus_reset">Sıfırla</string>
