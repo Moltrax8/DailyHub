@@ -17,15 +17,18 @@ object NetworkModule {
     @Provides @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true; isLenient = true }
 
+    /**
+     * Plain client for the release metadata call (`api.github.com`).
+     *
+     * Do NOT add the APK host guard here: it only allows download hosts and would
+     * reject the API request before it leaves the device (that is exactly how the
+     * update check silently broke). The guarded client is built inside
+     * `UpdateRepository.downloadHttp`, which keeps the download path pinned to
+     * GitHub's release hosts on every hop.
+     */
     @Provides @Singleton
     fun provideOkHttp(): OkHttpClient = OkHttpClient.Builder()
         .followSslRedirects(false)
-        .addNetworkInterceptor { chain ->
-            require(com.moltrax.personalnoteapp.domain.model.isAllowedApkHost(chain.request().url.toString())) {
-                "Refusing untrusted update host."
-            }
-            chain.proceed(chain.request())
-        }
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
             else HttpLoggingInterceptor.Level.NONE
