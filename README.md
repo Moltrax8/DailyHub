@@ -46,6 +46,12 @@ requires user consent. A release-signed APK cannot update a debug-signed install
 Release signing settings are documented in `local.properties.example`; never commit the keystore
 or passwords. Build a signed release with `:app:assembleRelease` only when you intend to release it.
 
+## Brand
+
+The DailyHub "Junction" identity — mark, palette, usage rules and the vector masters the
+launcher icon is built from — lives in [`brand/README.md`](brand/README.md). The brand
+palette is deliberately kept out of the Compose theme; app chrome stays graphite/indigo.
+
 ## Existing installations
 
 Room migration 22 → 23 preserves visible tasks, notes within tasks, subtasks, recurrence and tags.

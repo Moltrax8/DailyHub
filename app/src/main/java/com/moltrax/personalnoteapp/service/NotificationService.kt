@@ -1,7 +1,6 @@
 package com.moltrax.personalnoteapp.service
 
 import android.app.AlarmManager
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -10,15 +9,11 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
-import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.Task
 import com.moltrax.personalnoteapp.domain.util.planReminder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private const val CHANNEL_ID      = "task_reminders"
-private const val CHANNEL_NAME    = "Task Reminders"
 
 // Last-staged reminder diagnostics (Settings debug row + E2E assertions).
 private const val DIAG_PREFS            = "notification_diag"
@@ -60,22 +55,7 @@ class NotificationService @Inject constructor(
 
     private fun createChannels() {
         val nm = context.getSystemService(NotificationManager::class.java)
-        if (nm.getNotificationChannel(CHANNEL_ID) == null) {
-            val channel = NotificationChannel(
-                CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = context.getString(R.string.notif_channel_description)
-                setShowBadge(true)
-            }
-            nm.createNotificationChannel(channel)
-        } else {
-            // Refresh description/badge on the existing channel (fields updatable without deleting the channel).
-            nm.getNotificationChannel(CHANNEL_ID)?.let {
-                it.description = context.getString(R.string.notif_channel_description)
-                it.setShowBadge(true)
-                nm.createNotificationChannel(it)
-            }
-        }
+        ensureReminderChannel(context, nm, refreshExisting = true)
         // Gamification removed: clean up the legacy "System Messages" (Penalty Zone) channel.
         nm.deleteNotificationChannel("system_messages")
     }

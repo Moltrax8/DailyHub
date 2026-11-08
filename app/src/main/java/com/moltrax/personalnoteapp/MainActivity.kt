@@ -28,8 +28,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.moltrax.personalnoteapp.ui.AppViewModel
-import com.moltrax.personalnoteapp.ui.components.UpdatePrompt
+import com.moltrax.personalnoteapp.ui.app.AppViewModel
+import com.moltrax.personalnoteapp.ui.update.UpdatePrompt
 import com.moltrax.personalnoteapp.ui.i18n.localizedConfiguration
 import com.moltrax.personalnoteapp.ui.i18n.localizedFor
 import com.moltrax.personalnoteapp.ui.navigation.AppNavHost

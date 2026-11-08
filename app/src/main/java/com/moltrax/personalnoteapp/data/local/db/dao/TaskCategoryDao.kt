@@ -8,6 +8,8 @@ import com.moltrax.personalnoteapp.data.local.db.entity.TaskCategoryCrossRef
 import com.moltrax.personalnoteapp.data.local.db.entity.TaskEntity
 import kotlinx.coroutines.flow.Flow
 
+private const val SELECT_ALL_TASK_CATEGORY_LINKS = "SELECT * FROM task_category_cross_ref"
+
 /**
  * Per-category task positions (Phase 2, Room v20).
  *
@@ -19,10 +21,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskCategoryDao {
 
-    @Query("SELECT * FROM task_category_cross_ref")
+    @Query(SELECT_ALL_TASK_CATEGORY_LINKS)
     suspend fun getAllLinks(): List<TaskCategoryCrossRef>
 
-    @Query("SELECT * FROM task_category_cross_ref")
+    @Query(SELECT_ALL_TASK_CATEGORY_LINKS)
     fun observeAllLinks(): Flow<List<TaskCategoryCrossRef>>
 
     @Query("SELECT * FROM task_category_cross_ref WHERE taskId = :taskId")

@@ -43,7 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.BuildConfig
 import com.moltrax.personalnoteapp.R
-import com.moltrax.personalnoteapp.ui.AppViewModel
+import com.moltrax.personalnoteapp.ui.app.AppViewModel
 import com.moltrax.personalnoteapp.ui.components.DhDivider
 import com.moltrax.personalnoteapp.ui.components.DhSection
 import com.moltrax.personalnoteapp.ui.components.DhSegmentedControl
@@ -74,7 +74,7 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
-    val updateVm: com.moltrax.personalnoteapp.ui.UpdateViewModel = hiltViewModel(viewModelStoreOwner = activity)
+    val updateVm: com.moltrax.personalnoteapp.ui.update.UpdateViewModel = hiltViewModel(viewModelStoreOwner = activity)
     val scope = rememberCoroutineScope()
     var checking by remember { mutableStateOf(false) }
     var checkResult by remember { mutableStateOf<UpdateCheck?>(null) }

@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
+import com.moltrax.personalnoteapp.ui.components.DhAddItemField
 import com.moltrax.personalnoteapp.ui.components.DhCheck
 import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
 import com.moltrax.personalnoteapp.ui.components.DhDivider
@@ -337,23 +338,17 @@ fun TaskDetailScreen(
                     )
                 }
                 if (addingCategory) {
-                    OutlinedTextField(
+                    DhAddItemField(
                         value = newCategory,
                         onValueChange = { newCategory = it },
-                        label = { Text(stringResource(R.string.task_new_category)) },
+                        label = stringResource(R.string.task_new_category),
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                        singleLine = true,
-                        trailingIcon = {
-                            IconButton(
-                                onClick = {
-                                    vm.createCategory(newCategory, newCategoryPermanent)
-                                    newCategory = ""
-                                    newCategoryPermanent = false
-                                    addingCategory = false
-                                },
-                                enabled = newCategory.isNotBlank(),
-                                modifier = Modifier.size(48.dp),
-                            ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_category)) }
+                        addDescription = stringResource(R.string.task_add_category),
+                        onAdd = {
+                            vm.createCategory(newCategory, newCategoryPermanent)
+                            newCategory = ""
+                            newCategoryPermanent = false
+                            addingCategory = false
                         },
                     )
                     DhSettingsRow(
@@ -550,19 +545,13 @@ private fun SubtaskSection(
             )
         }
         var newSub by rememberSaveable { mutableStateOf("") }
-        OutlinedTextField(
+        DhAddItemField(
             value = newSub,
             onValueChange = { newSub = it },
-            label = { Text(stringResource(R.string.task_new_subtask)) },
+            label = stringResource(R.string.task_new_subtask),
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            trailingIcon = {
-                IconButton(
-                    onClick = { onAdd(newSub); newSub = "" },
-                    enabled = newSub.isNotBlank(),
-                    modifier = Modifier.size(48.dp),
-                ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.task_add_subtask)) }
-            },
+            addDescription = stringResource(R.string.task_add_subtask),
+            onAdd = { onAdd(newSub); newSub = "" },
         )
     }
 }

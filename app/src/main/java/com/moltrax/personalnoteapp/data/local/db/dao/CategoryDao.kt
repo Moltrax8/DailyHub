@@ -6,12 +6,14 @@ import androidx.room.Upsert
 import com.moltrax.personalnoteapp.data.local.db.entity.CategoryEntity
 import kotlinx.coroutines.flow.Flow
 
+private const val SELECT_ALL_CATEGORIES = "SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC"
+
 @Dao
 interface CategoryDao {
-    @Query("SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC")
+    @Query(SELECT_ALL_CATEGORIES)
     fun observeAll(): Flow<List<CategoryEntity>>
 
-    @Query("SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC")
+    @Query(SELECT_ALL_CATEGORIES)
     suspend fun getAll(): List<CategoryEntity>
 
     // NOCASE: "Work"/"work" spelling differences count as the same category (PK is BINARY, all access

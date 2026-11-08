@@ -1,6 +1,5 @@
 package com.moltrax.personalnoteapp.service
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -45,7 +44,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
         }.getOrDefault("en")
         val ctx = context.localizedFor(lang)
 
-        ensureChannel(ctx)
+        ensureReminderChannel(ctx, ctx.getSystemService(NotificationManager::class.java), refreshExisting = false)
 
         val tapIntent = Intent(ctx, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
@@ -68,7 +67,7 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
         }
         val body = ctx.getString(R.string.notif_body, title, timeLeft)
 
-        val notif = NotificationCompat.Builder(ctx, "task_reminders")
+        val notif = NotificationCompat.Builder(ctx, REMINDER_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(ctx.getString(R.string.notif_title))
             .setContentText(body)
@@ -83,21 +82,5 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         runCatching { nm.cancel(taskId.hashCode()) }
         nm.notify(taskId, 0, notif)
-    }
-
-    private fun ensureChannel(ctx: Context) {
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        if (nm.getNotificationChannel("task_reminders") == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(
-                    "task_reminders",
-                    "Task Reminders",
-                    NotificationManager.IMPORTANCE_HIGH,
-                ).apply {
-                    description = ctx.getString(R.string.notif_channel_description)
-                    setShowBadge(true)
-                },
-            )
-        }
     }
 }

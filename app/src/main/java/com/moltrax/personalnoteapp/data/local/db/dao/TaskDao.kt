@@ -6,12 +6,14 @@ import androidx.room.Upsert
 import com.moltrax.personalnoteapp.data.local.db.entity.TaskEntity
 import kotlinx.coroutines.flow.Flow
 
+private const val SELECT_ALL_TASKS = "SELECT * FROM tasks ORDER BY sortOrder ASC, createdAt DESC"
+
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks ORDER BY sortOrder ASC, createdAt DESC")
+    @Query(SELECT_ALL_TASKS)
     fun observeAll(): Flow<List<TaskEntity>>
 
-    @Query("SELECT * FROM tasks ORDER BY sortOrder ASC, createdAt DESC")
+    @Query(SELECT_ALL_TASKS)
     suspend fun getAll(): List<TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE id = :id")

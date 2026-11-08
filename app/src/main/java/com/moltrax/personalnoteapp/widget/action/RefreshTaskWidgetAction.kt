@@ -1,0 +1,29 @@
+package com.moltrax.personalnoteapp.widget.action
+
+import android.content.Context
+import androidx.glance.GlanceId
+import androidx.glance.action.ActionParameters
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.state.updateAppWidgetState
+import com.moltrax.personalnoteapp.widget.TaskWidget
+import com.moltrax.personalnoteapp.widget.clearTaskUndo
+
+/**
+ * Runs when the 'Refresh' button is tapped: triggers a widget update.
+ * updateAll means re-composition via provideGlance; since provideGlance freshly pulls data
+ * from the repository each time, the list is instantly refreshed. Any pending undo strip
+ * is also cleared on refresh (so no stale undo remains).
+ */
+class RefreshTaskWidgetAction : ActionCallback {
+
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) {
+        updateAppWidgetState(context, glanceId) { p ->
+            p.clearTaskUndo()
+        }
+        TaskWidget.requestUpdate(context)
+    }
+}

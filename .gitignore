@@ -51,11 +51,12 @@ ROADMAP.md
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 
-# Local development-agent configuration and internal working documents
+# Local development-agent configuration
 /.claude/
 /AGENTS.md
 /.mcp.json
 /opencode.json
 /.ignore
-/architecture.md
-/brand/
+
+# Legacy local consent logo (pre-Junction). Brand identity assets under brand/ are tracked.
+/brand/dailyhub-consent-logo-120.png

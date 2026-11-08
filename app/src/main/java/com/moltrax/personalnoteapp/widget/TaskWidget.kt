@@ -38,6 +38,12 @@ import com.moltrax.personalnoteapp.domain.model.restoringCompletionFrom
 import com.moltrax.personalnoteapp.domain.model.toggledCompletion
 import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.ui.i18n.localizedFor
+import com.moltrax.personalnoteapp.widget.action.CompleteTaskAction
+import com.moltrax.personalnoteapp.widget.action.DismissUndoAction
+import com.moltrax.personalnoteapp.widget.action.RefreshTaskWidgetAction
+import com.moltrax.personalnoteapp.widget.action.ToggleSubtaskAction
+import com.moltrax.personalnoteapp.widget.action.ToggleTaskExpansionAction
+import com.moltrax.personalnoteapp.widget.action.UndoTaskAction
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
