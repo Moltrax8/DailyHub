@@ -15,6 +15,8 @@ import com.moltrax.personalnoteapp.domain.repository.TaskRepository
 import com.moltrax.personalnoteapp.widget.TaskWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -105,8 +109,15 @@ class TaskDetailViewModel @Inject constructor(
         savedStateHandle[KEY_IS_NEW] = s.isNew
     }
 
-    private val _state = MutableStateFlow(restoreFromHandle() ?: TaskDetailState())
+    private val restoredState = restoreFromHandle()
+    private val _state = MutableStateFlow(restoredState ?: TaskDetailState())
     val state: StateFlow<TaskDetailState> = _state.asStateFlow()
+
+    /** True when the in-memory editor differs from what is stored in the database. */
+    private var dirty = restoredState != null
+    private var leaving = false
+    private var autoSaveJob: Job? = null
+    private val saveMutex = Mutex()
 
     val categories: StateFlow<List<Category>> = categoryRepo.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -122,11 +133,13 @@ class TaskDetailViewModel @Inject constructor(
             })
         }
         persist(_state.value)
+        scheduleAutoSave(immediate = true)
     }
 
     fun clearCategories() {
         _state.update { it.copy(categories = emptySet()) }
         persist(_state.value)
+        scheduleAutoSave(immediate = true)
     }
 
     fun createCategory(name: String, isPermanent: Boolean) {
@@ -138,6 +151,7 @@ class TaskDetailViewModel @Inject constructor(
                 s.copy(categories = if (s.categories.any { it.equals(n, ignoreCase = true) }) s.categories else s.categories + n)
             }
             persist(_state.value)
+            scheduleAutoSave(immediate = true)
         }
     }
 
@@ -172,6 +186,7 @@ class TaskDetailViewModel @Inject constructor(
             block(it).copy(intervalError = false, weeklyError = false)
         }
         persist(_state.value.copy(intervalError = false, weeklyError = false))
+        scheduleAutoSave()
     }
 
     fun addSubtask(title: String) {
@@ -179,6 +194,7 @@ class TaskDetailViewModel @Inject constructor(
         if (t.isBlank()) return
         _state.update { it.copy(subtasks = it.subtasks + SubTask(title = t)) }
         persist(_state.value)
+        scheduleAutoSave(immediate = true)
     }
 
     fun toggleSubtask(id: String) {
@@ -186,11 +202,24 @@ class TaskDetailViewModel @Inject constructor(
             s.copy(subtasks = s.subtasks.toggledById(id))
         }
         persist(_state.value)
+        scheduleAutoSave(immediate = true)
+    }
+
+    /** Renames an existing checklist item (used by tap-to-edit on the subtask row). */
+    fun renameSubtask(id: String, title: String) {
+        val t = title.trim()
+        if (t.isBlank()) return
+        _state.update { s ->
+            s.copy(subtasks = s.subtasks.map { if (it.id == id) it.copy(title = t) else it })
+        }
+        persist(_state.value)
+        scheduleAutoSave(immediate = true)
     }
 
     fun removeSubtask(id: String) {
         _state.update { s -> s.copy(subtasks = s.subtasks.withoutSubtask(id)) }
         persist(_state.value)
+        scheduleAutoSave(immediate = true)
     }
 
     fun toggleRecurrenceDay(dayIso: Int) {
@@ -200,6 +229,7 @@ class TaskDetailViewModel @Inject constructor(
             s.copy(recurrenceDaysOfWeek = days.sorted(), weeklyError = false)
         }
         persist(_state.value)
+        scheduleAutoSave()
     }
 
     private fun validateRecurrence(s: TaskDetailState): Boolean {
@@ -218,12 +248,23 @@ class TaskDetailViewModel @Inject constructor(
         return ok
     }
 
-    fun save(onDone: () -> Unit) {
-        if (_state.value.title.isBlank() || _state.value.isSaving) return
-        if (!validateRecurrence(_state.value)) return
-        viewModelScope.launch {
-            _state.update { it.copy(isSaving = true) }
-            val s = _state.value
+    private fun isRecurrenceValid(s: TaskDetailState): Boolean = when {
+        !s.isRecurring -> true
+        s.recurrenceType == RecurrenceType.INTERVAL -> (s.intervalDays ?: 0) > 0
+        s.recurrenceType == RecurrenceType.WEEKLY -> s.recurrenceDaysOfWeek.isNotEmpty()
+        else -> true
+    }
+
+    /**
+     * Persists the current editor state. Returns false when there is nothing safe to store
+     * (blank title or an incomplete recurrence rule). Serialized so auto-save and the
+     * explicit Save button can never write concurrently.
+     */
+    private suspend fun persistTask(showProgress: Boolean = false): Boolean = saveMutex.withLock {
+        val s = _state.value
+        if (s.title.isBlank() || !isRecurrenceValid(s)) return@withLock false
+        if (showProgress) _state.update { it.copy(isSaving = true) }
+        try {
             val now = System.currentTimeMillis()
             val existing = if (s.isNew) null else taskRepo.getById(s.id)
             val sortOrder = existing?.sortOrder
@@ -248,20 +289,79 @@ class TaskDetailViewModel @Inject constructor(
             s.categories.forEach { categoryRepo.ensureExists(it) }
             categoryRepo.cleanupTemporary()
             TaskWidget.requestUpdate(context)
-            _state.update { it.copy(isSaving = false) }
+            if (s.isNew) {
+                _state.update { it.copy(isNew = false) }
+                savedStateHandle[KEY_IS_NEW] = false
+            }
+            dirty = false
+            true
+        } finally {
+            if (showProgress) _state.update { it.copy(isSaving = false) }
+        }
+    }
+
+    /** Debounced write used after any edit, so closing the screen/app keeps the work. */
+    private fun scheduleAutoSave(immediate: Boolean = false) {
+        dirty = true
+        if (_state.value.title.isBlank()) return
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            if (!immediate) delay(AUTO_SAVE_DELAY_MS)
+            persistTask()
+        }
+    }
+
+    fun save(onDone: () -> Unit) {
+        if (!validateRecurrence(_state.value)) return
+        if (leaving) return
+        leaving = true
+        autoSaveJob?.cancel()
+        viewModelScope.launch {
+            if (persistTask(showProgress = true)) onDone()
+        }
+    }
+
+    /**
+     * Used by Back and by the screen leaving the foreground: stores pending edits before
+     * navigating away. A blank editor (new task with no title) is simply discarded.
+     */
+    fun saveIfNeeded(onDone: () -> Unit) {
+        if (leaving) return
+        leaving = true
+        autoSaveJob?.cancel()
+        if (!dirty) {
+            onDone()
+            return
+        }
+        viewModelScope.launch {
+            persistTask()
             onDone()
         }
     }
 
+    /** Immediate pending write for lifecycle pauses; does not block navigation. */
+    fun autoSaveNow() {
+        if (!dirty) return
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch { persistTask() }
+    }
+
     fun delete(onDone: () -> Unit) {
+        // Stop pending auto-save from re-creating the task after deletion.
+        leaving = true
+        dirty = false
+        autoSaveJob?.cancel()
         viewModelScope.launch {
-            if (!_state.value.isNew) taskRepo.delete(_state.value.id)
+            saveMutex.withLock {
+                if (!_state.value.isNew) taskRepo.delete(_state.value.id)
+            }
             TaskWidget.requestUpdate(context)
             onDone()
         }
     }
 
     companion object {
+        private const val AUTO_SAVE_DELAY_MS = 400L
         private const val KEY_ID = "task_id"
         private const val KEY_TITLE = "task_title"
         private const val KEY_NOTES = "task_notes"

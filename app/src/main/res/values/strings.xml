@@ -77,6 +77,8 @@
     <string name="task_subtasks">Alt görevler</string>
     <string name="task_remove_subtask">Alt görevi sil</string>
     <string name="task_new_subtask">Yeni alt görev</string>
+    <string name="task_show_completed_subtasks">Tamamlananları göster (%1$d)</string>
+    <string name="task_hide_completed_subtasks">Tamamlananları gizle (%1$d)</string>
     <string name="task_select_day_error">En az bir gün seç</string>
     <string name="task_section_schedule">Zamanlama</string>
     <string name="task_add_subtask">Alt görev ekle</string>

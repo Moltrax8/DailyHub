@@ -1,7 +1,10 @@
 package com.moltrax.personalnoteapp.ui.screen.task
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -12,19 +15,26 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.moltrax.personalnoteapp.R
 import com.moltrax.personalnoteapp.domain.model.RecurrenceType
+import com.moltrax.personalnoteapp.domain.model.SubTask
 import com.moltrax.personalnoteapp.ui.components.DhAddItemField
 import com.moltrax.personalnoteapp.ui.components.DhCheck
 import com.moltrax.personalnoteapp.ui.components.DhConfirmDialog
@@ -41,6 +51,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.TimeZone
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -80,6 +93,18 @@ fun TaskDetailScreen(
 
     LaunchedEffect(taskId) { vm.load(taskId) }
 
+    // Leaving the editor (system back, top-bar back, app backgrounded) stores pending edits
+    // instead of silently dropping them when Save was never tapped.
+    BackHandler { vm.saveIfNeeded { nav.popBackStack() } }
+    val lifecycle = LocalLifecycleOwner.current
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) vm.autoSaveNow()
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer) }
+    }
+
     if (confirmDelete) DhConfirmDialog(
         title = stringResource(R.string.task_delete_title),
         message = stringResource(R.string.task_delete_message, state.title),
@@ -93,7 +118,7 @@ fun TaskDetailScreen(
         topBar = {
             DhTopBar(
                 title = stringResource(if (state.isNew) R.string.task_new else R.string.task_edit),
-                onBack = { nav.popBackStack() },
+                onBack = { vm.saveIfNeeded { nav.popBackStack() } },
                 backContentDescription = stringResource(R.string.action_back),
                 actions = {
                     if (!state.isNew) {
@@ -382,6 +407,7 @@ fun TaskDetailScreen(
                     subtasks = state.subtasks,
                     onAdd = vm::addSubtask,
                     onToggle = vm::toggleSubtask,
+                    onEdit = vm::renameSubtask,
                     onRemove = vm::removeSubtask,
                 )
             }
@@ -478,16 +504,24 @@ private fun mergeTime(current: Long?, hour: Int, minute: Int): Long {
     return cal.timeInMillis
 }
 
+/** How long a just-checked subtask stays visible before it drops off the checklist. */
+private const val DONE_SUBTASK_LINGER_MS = 800L
+
 /**
  * Subtask (checklist) editing content for the subtasks group: progress + counter,
- * existing items (check/delete) and a new-item add row at the bottom. Item states
- * are kept only in this state; "Save" persists them.
+ * editable existing items (check / rename / delete) and a new-item add row at the bottom.
+ * Item states live in the ViewModel; edits auto-save.
+ *
+ * Completed items linger briefly so the checkmark is visibly acknowledged, then hide.
+ * Items that were already done when the screen opened are hidden behind the
+ * "Show completed" control.
  */
 @Composable
 private fun SubtaskSection(
-    subtasks: List<com.moltrax.personalnoteapp.domain.model.SubTask>,
+    subtasks: List<SubTask>,
     onAdd: (String) -> Unit,
     onToggle: (String) -> Unit,
+    onEdit: (String, String) -> Unit,
     onRemove: (String) -> Unit,
 ) {
     Column(
@@ -495,6 +529,42 @@ private fun SubtaskSection(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         var pendingRemoveId by rememberSaveable { mutableStateOf<String?>(null) }
+        var showDone by rememberSaveable { mutableStateOf(false) }
+        var editingId by rememberSaveable { mutableStateOf<String?>(null) }
+        var editText by rememberSaveable { mutableStateOf("") }
+        // Ids completed in this session, kept on screen until their hide job fires.
+        var lingeringDone by remember { mutableStateOf(emptySet<String>()) }
+        val hideJobs = remember { mutableMapOf<String, Job>() }
+        val scope = rememberCoroutineScope()
+        DisposableEffect(Unit) { onDispose { hideJobs.values.forEach { it.cancel() } } }
+
+        fun toggle(sub: SubTask) {
+            hideJobs.remove(sub.id)?.cancel()
+            if (sub.isDone) {
+                lingeringDone = lingeringDone - sub.id
+            } else {
+                lingeringDone = lingeringDone + sub.id
+                hideJobs[sub.id] = scope.launch {
+                    delay(DONE_SUBTASK_LINGER_MS)
+                    lingeringDone = lingeringDone - sub.id
+                    hideJobs.remove(sub.id)
+                }
+            }
+            onToggle(sub.id)
+        }
+
+        fun commitEdit() {
+            val id = editingId ?: return
+            if (editText.isNotBlank()) onEdit(id, editText)
+            editingId = null
+        }
+
+        fun startEdit(sub: SubTask) {
+            if (editingId != null && editingId != sub.id) commitEdit()
+            editingId = sub.id
+            editText = sub.title
+        }
+
         val done = subtasks.count { it.isDone }
         if (subtasks.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -509,28 +579,70 @@ private fun SubtaskSection(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (done > 0) {
+                    TextButton(
+                        onClick = { showDone = !showDone },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.defaultMinSize(minWidth = 1.dp, minHeight = 32.dp),
+                    ) {
+                        Text(
+                            stringResource(
+                                if (showDone) R.string.task_hide_completed_subtasks
+                                else R.string.task_show_completed_subtasks,
+                                done,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
             }
         }
-        subtasks.forEach { sub ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                DhCheck(
-                    checked = sub.isDone,
-                    onCheckedChange = { onToggle(sub.id) },
-                    contentDescription = sub.title,
-                )
-                Text(
-                    sub.title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (sub.isDone) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface,
-                    textDecoration = if (sub.isDone) TextDecoration.LineThrough else TextDecoration.None,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                IconButton(onClick = { pendingRemoveId = sub.id }, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.task_remove_subtask),
-                        modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        subtasks.filter { !it.isDone || showDone || it.id in lingeringDone }.forEach { sub ->
+            key(sub.id) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (editingId == sub.id) {
+                        val focusRequester = remember { FocusRequester() }
+                        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+                        OutlinedTextField(
+                            value = editText,
+                            onValueChange = { editText = it },
+                            modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { commitEdit() }),
+                        )
+                        IconButton(
+                            onClick = { commitEdit() },
+                            enabled = editText.isNotBlank(),
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = stringResource(R.string.action_save),
+                                modifier = Modifier.size(18.dp))
+                        }
+                    } else {
+                        DhCheck(
+                            checked = sub.isDone,
+                            onCheckedChange = { toggle(sub) },
+                            contentDescription = sub.title,
+                        )
+                        Text(
+                            sub.title,
+                            modifier = Modifier.weight(1f).clickable {
+                                startEdit(sub)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (sub.isDone) MaterialTheme.colorScheme.onSurfaceVariant
+                                    else MaterialTheme.colorScheme.onSurface,
+                            textDecoration = if (sub.isDone) TextDecoration.LineThrough else TextDecoration.None,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        IconButton(onClick = { pendingRemoveId = sub.id }, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.task_remove_subtask),
+                                modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }

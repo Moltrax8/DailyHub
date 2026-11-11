@@ -28,8 +28,10 @@ Detail/editor and focus-timer routes hide the root bar. Wide screens use a rail.
 No login gate exists. Notification taps open task details.
 
 Notes are standalone local records with title/body, pin state and timestamps.
-Search filters locally. Editors preserve drafts in SavedStateHandle and use an
-explicit Save action. Task notes remain separate from standalone notes.
+Search filters locally. Standalone note editors preserve drafts in SavedStateHandle
+and use an explicit Save action. Task editors auto-save shortly after edits, on Back,
+and when the app is backgrounded; the toolbar Save action saves and closes.
+Task notes remain separate from standalone notes.
 
 ## Widgets
 
@@ -41,7 +43,8 @@ Appearance and content settings are per-instance too: dark/light/system palette,
 note previews (or tasks only), manual/deadline/title sorting, default expansion and completed subtasks.
 
 Tapping a task expands/collapses its checklist inline. Checklist items are separate
-scrollable lazy rows and can be toggled locally. The pill is completed/total
+scrollable lazy rows and can be toggled locally; a completed item is shown briefly and
+then drops off unless the widget is set to keep completed subtasks. The pill is completed/total
 (`2/5`); adjacent text shows unfinished subtasks. Undo uses a local serializable
 snapshot, never a cloud format, and does not resurrect deleted tasks.
 

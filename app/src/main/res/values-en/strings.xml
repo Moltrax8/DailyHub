@@ -77,6 +77,8 @@
     <string name="task_subtasks">Subtasks</string>
     <string name="task_remove_subtask">Remove subtask</string>
     <string name="task_new_subtask">New subtask</string>
+    <string name="task_show_completed_subtasks">Show completed (%1$d)</string>
+    <string name="task_hide_completed_subtasks">Hide completed (%1$d)</string>
     <string name="task_select_day_error">Select at least one day</string>
     <string name="task_section_schedule">Scheduling</string>
     <string name="task_add_subtask">Add subtask</string>

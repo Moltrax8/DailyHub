@@ -138,7 +138,9 @@ class TaskWidget : GlanceAppWidget() {
                                     }))
                             }
                             // Separate lazy rows keep long checklists scrollable rather than clipping one giant card.
-                            if (filter.expandSubtasks.xor(task.id in expanded)) task.subtasks.filter { filter.showDoneSubtasks || !it.isDone }.forEach { sub ->
+                            if (filter.expandSubtasks.xor(task.id in expanded)) task.subtasks
+                                .filter { !it.isDone || filter.showDoneSubtasks || isSubtaskLingering(task.id, it.id) }
+                                .forEach { sub ->
                                 item {
                                     Row(GlanceModifier.fillMaxWidth().padding(start = 18.dp, bottom = 4.dp)
                                         .background(ColorProvider(colors.card)).cornerRadius(8.dp),
@@ -223,6 +225,30 @@ class TaskWidget : GlanceAppWidget() {
         val UNDO_TASK_JSON = stringPreferencesKey("undo_task_json")
         private val json = Json { ignoreUnknownKeys = true }
 
+        /** How long a just-checked subtask stays visible before it drops off the widget. */
+        const val DONE_SUBTASK_LINGER_MS = 1_200L
+        private val lingeringDone = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+        private fun lingeringKey(taskId: String, subtaskId: String) = "$taskId/$subtaskId"
+
+        fun markSubtaskLingering(taskId: String, subtaskId: String) {
+            lingeringDone[lingeringKey(taskId, subtaskId)] = System.currentTimeMillis()
+        }
+
+        fun clearSubtaskLingering(taskId: String, subtaskId: String) {
+            lingeringDone.remove(lingeringKey(taskId, subtaskId))
+        }
+
+        fun isSubtaskLingering(taskId: String, subtaskId: String): Boolean {
+            val key = lingeringKey(taskId, subtaskId)
+            val markedAt = lingeringDone[key] ?: return false
+            if (System.currentTimeMillis() - markedAt >= DONE_SUBTASK_LINGER_MS) {
+                lingeringDone.remove(key)
+                return false
+            }
+            return true
+        }
+
         fun entryPoint(context: Context): TaskWidgetEntryPoint = EntryPointAccessors.fromApplication(
             context.applicationContext, TaskWidgetEntryPoint::class.java)
 
@@ -235,12 +261,14 @@ class TaskWidget : GlanceAppWidget() {
             return task
         }
 
-        suspend fun toggleSubtask(context: Context, taskId: String, subtaskId: String) {
+        /** Flips the subtask and reports whether it just became done. */
+        suspend fun toggleSubtask(context: Context, taskId: String, subtaskId: String): Boolean {
             val repository = entryPoint(context).taskRepository()
-            val task = repository.getById(taskId) ?: return
-            if (task.subtasks.none { it.id == subtaskId }) return
+            val task = repository.getById(taskId) ?: return false
+            val subtask = task.subtasks.firstOrNull { it.id == subtaskId } ?: return false
             repository.upsert(task.copy(updatedAt = System.currentTimeMillis(),
                 subtasks = task.subtasks.toggledById(subtaskId)))
+            return !subtask.isDone
         }
 
         fun encodeUndo(task: Task): String = json.encodeToString(WidgetUndoSnapshot(task))
